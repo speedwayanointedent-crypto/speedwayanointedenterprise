@@ -14,6 +14,8 @@ import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
 import { VerifyEmailPage } from "./pages/auth/VerifyEmailPage";
 import { OrdersPage } from "./pages/OrdersPage";
+import { AccountPage } from "./pages/AccountPage";
+import { InvoicePage } from "./pages/InvoicePage";
 import { ContactPage } from "./pages/ContactPage";
 import { AboutPage } from "./pages/AboutPage";
 import { ReviewsPage } from "./pages/ReviewsPage";
@@ -28,6 +30,8 @@ import { AdminInventoryPage } from "./pages/admin/AdminInventoryPage";
 import { AdminReportsPage } from "./pages/admin/AdminReportsPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
+import { AdminAuditLogsPage } from "./pages/admin/AdminAuditLogsPage";
+import { AdminSystemHealthPage } from "./pages/admin/AdminSystemHealthPage";
 
 const App: React.FC = () => {
   return (
@@ -41,6 +45,8 @@ const App: React.FC = () => {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/account" element={<AccountPage />} />
+          <Route path="/invoice/:id" element={<InvoicePage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/reviews" element={<ReviewsPage />} />
@@ -65,6 +71,8 @@ const App: React.FC = () => {
             <Route path="/admin/reports" element={<AdminReportsPage />} />
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/admin/settings" element={<AdminSettingsPage />} />
+            <Route path="/admin/audit-logs" element={<AdminAuditLogsPage />} />
+            <Route path="/admin/system-health" element={<AdminSystemHealthPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
