@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
@@ -52,7 +52,7 @@ export const CartPage: React.FC = () => {
   return (
     <div className="page-shell">
       <PublicNavbar />
-      <div className="mx-auto max-w-6xl px-4 pb-16 pt-20 md:px-6">
+      <div className="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:pt-20 md:px-6">
         <PageHeader
           title="Shopping cart"
           subtitle="Review items before checkout."
@@ -72,7 +72,7 @@ export const CartPage: React.FC = () => {
         />
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.4fr)]">
-          <div className="card p-5">
+          <div className="card p-4 sm:p-5">
             {items.length === 0 ? (
               <EmptyState
                 title="Your cart is empty"
@@ -94,7 +94,7 @@ export const CartPage: React.FC = () => {
                       <img
                         src={item.image || "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?q=80&w=1200&auto=format&fit=crop"}
                         alt={item.name}
-                        className="h-20 w-20 rounded-xl object-cover"
+                        className="h-16 w-16 rounded-xl object-cover sm:h-20 sm:w-20"
                       />
                       <div>
                         <p className="text-sm font-semibold text-foreground">
