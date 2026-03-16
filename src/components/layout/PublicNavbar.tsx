@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Menu, Sun, Moon, ShoppingCart, User } from "lucide-react";
 import { useTheme } from "../../lib/theme";
@@ -85,7 +85,7 @@ export const PublicNavbar: React.FC = () => {
   ];
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-white/95 dark:bg-slate-900/90 backdrop-blur shadow-md rounded-b-xl">
+    <header className="sticky top-0 z-40 border-b border-border bg-white/95 dark:bg-slate-900/95 backdrop-blur shadow-md rounded-b-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6">
         <Link to="/" className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
@@ -166,7 +166,7 @@ export const PublicNavbar: React.FC = () => {
         <div
           id="mobile-nav"
           ref={mobileMenuRef}
-          className="md:hidden fixed inset-0 z-50 bg-background"
+          className="md:hidden fixed inset-0 z-[60] bg-white/98 text-foreground shadow-2xl backdrop-blur dark:bg-slate-900/98"
           role="dialog"
           aria-modal="true"
           aria-label="Mobile navigation"
@@ -188,10 +188,10 @@ export const PublicNavbar: React.FC = () => {
                 to={link.path}
                 onClick={() => setMobileMenuOpen(false)}
                 className={({ isActive }) =>
-                  `rounded-xl px-3 py-2 text-sm font-medium ${
+                  `rounded-xl px-3 py-2 text-sm font-semibold ${
                     isActive
-                      ? "bg-muted text-foreground"
-                      : "text-muted-foreground hover:bg-muted"
+                      ? "bg-secondary text-foreground"
+                      : "text-foreground/90 hover:bg-secondary"
                   }`
                 }
               >
