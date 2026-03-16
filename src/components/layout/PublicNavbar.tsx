@@ -81,6 +81,13 @@ export const PublicNavbar: React.FC = () => {
     };
   }, [mobileMenuOpen]);
 
+  const signOut = () => {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_role");
+    setIsAuthed(false);
+    setRole(null);
+  };
+
   const navLinks = [
     { label: "Home", path: "/" },
     { label: "Shop", path: "/shop" },
@@ -146,13 +153,18 @@ export const PublicNavbar: React.FC = () => {
             {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
           {isAuthed ? (
-            <Link
-              to="/account"
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary"
-            >
-              <User className="h-4 w-4" />
-              {role ? role[0].toUpperCase() + role.slice(1) : "Account"}
-            </Link>
+            <>
+              <Link
+                to="/account"
+                className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary"
+              >
+                <User className="h-4 w-4" />
+                {role ? role[0].toUpperCase() + role.slice(1) : "Account"}
+              </Link>
+              <button className="btn-outline h-9 px-3 text-sm" onClick={signOut}>
+                Sign out
+              </button>
+            </>
           ) : (
             <Link to="/login" className="btn-primary">
               Sign In
@@ -238,15 +250,12 @@ export const PublicNavbar: React.FC = () => {
                 <button
                   className="btn-destructive h-9 text-sm"
                   onClick={() => {
-                    localStorage.removeItem("auth_token");
-                    localStorage.removeItem("user_role");
-                    setIsAuthed(false);
-                    setRole(null);
+                    signOut();
                     setMobileMenuOpen(false);
                   }}
                 >
                   Sign Out
-                    </button>
+                </button>
                   ) : (
                     <Link
                       to="/login"
