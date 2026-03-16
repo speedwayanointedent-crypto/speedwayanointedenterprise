@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Edit3, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
@@ -31,7 +31,9 @@ export const AdminInventoryPage: React.FC = () => {
   const { push } = useToast();
   const navigate = useNavigate();
 
-  const [adjustQty, setAdjustQty] = React.useState("");
+  const [adjustDelta, setAdjustDelta] = React.useState("");
+  const [adjustReason, setAdjustReason] = React.useState("restock");
+  const [adjustNote, setAdjustNote] = React.useState("");
 
   React.useEffect(() => {
     async function load() {
@@ -51,18 +53,24 @@ export const AdminInventoryPage: React.FC = () => {
   const filtered = items.filter((item) =>
     item.name.toLowerCase().includes(query.toLowerCase())
   );
+  const lowStock = items.filter((item) => item.quantity <= 5).slice(0, 5);
 
   const onAdjust = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected) return;
     try {
-      await api.put(`/products/${selected.id}`, {
-        quantity: Number(adjustQty)
+      await api.post("/inventory/adjust", {
+        product_id: selected.id,
+        delta: Number(adjustDelta),
+        reason: adjustReason,
+        note: adjustNote || null
       });
-      push("Inventory updated", "success");
+      push("Inventory adjusted", "success");
       setAdjustOpen(false);
       setSelected(null);
-      setAdjustQty("");
+      setAdjustDelta("");
+      setAdjustReason("restock");
+      setAdjustNote("");
       const res = await api.get<Product[]>("/products");
       setItems(res.data);
     } catch {
@@ -87,6 +95,44 @@ export const AdminInventoryPage: React.FC = () => {
           </button>
         }
       />
+
+      {lowStock.length > 0 ? (
+        <div className="card p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold">Low stock alerts</div>
+              <div className="text-xs text-muted-foreground">
+                Reorder suggestions for fast-moving items.
+              </div>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {lowStock.length} items
+            </span>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {lowStock.map((item) => (
+              <div key={item.id} className="rounded-xl border border-border p-3">
+                <div className="text-sm font-semibold">{item.name}</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Stock: {item.quantity}
+                </div>
+                <button
+                  className="btn-outline mt-3 h-8 text-xs"
+                  onClick={() => {
+                    setSelected(item);
+                    setAdjustDelta("");
+                    setAdjustReason("restock");
+                    setAdjustNote("");
+                    setAdjustOpen(true);
+                  }}
+                >
+                  Create restock
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="card p-4">
         <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
@@ -152,7 +198,9 @@ export const AdminInventoryPage: React.FC = () => {
                         className="btn-outline h-8 px-3 text-xs"
                         onClick={() => {
                           setSelected(item);
-                          setAdjustQty(String(item.quantity));
+                          setAdjustDelta("");
+                          setAdjustReason("restock");
+                          setAdjustNote("");
                           setAdjustOpen(true);
                         }}
                       >
@@ -183,8 +231,25 @@ export const AdminInventoryPage: React.FC = () => {
             required
             type="number"
             className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
-            value={adjustQty}
-            onChange={(e) => setAdjustQty(e.target.value)}
+            placeholder="Adjustment (e.g. 5 or -3)"
+            value={adjustDelta}
+            onChange={(e) => setAdjustDelta(e.target.value)}
+          />
+          <select
+            className="form-input"
+            value={adjustReason}
+            onChange={(e) => setAdjustReason(e.target.value)}
+          >
+            <option value="restock">Restock</option>
+            <option value="damage">Damaged stock</option>
+            <option value="correction">Stock correction</option>
+            <option value="transfer">Transfer</option>
+          </select>
+          <input
+            className="form-input"
+            placeholder="Note (optional)"
+            value={adjustNote}
+            onChange={(e) => setAdjustNote(e.target.value)}
           />
           <button className="btn-primary w-full">Update quantity</button>
         </form>
