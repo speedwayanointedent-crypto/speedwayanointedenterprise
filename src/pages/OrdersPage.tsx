@@ -41,7 +41,7 @@ export const OrdersPage: React.FC = () => {
   return (
     <div className="page-shell">
       <PublicNavbar />
-      <div className="mx-auto max-w-5xl px-4 pb-16 pt-20 md:px-6">
+      <div className="mx-auto max-w-5xl px-4 pb-16 pt-16 sm:pt-20 md:px-6">
         <PageHeader
           title="My orders"
           subtitle="Track your recent purchases and delivery status."
@@ -57,42 +57,68 @@ export const OrdersPage: React.FC = () => {
               description="When you place an order, it will show up here with tracking details."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="table text-sm">
-                <thead>
-                  <tr>
-                    <th>Order</th>
-                    <th>Date</th>
-                    <th className="text-right">Total</th>
-                    <th className="text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((o) => (
-                    <tr key={o.id}>
-                      <td className="font-semibold text-foreground">
-                        #{o.id.toString().padStart(4, "0")}
-                      </td>
-                      <td className="text-muted-foreground">
-                        {new Date(o.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="text-right font-semibold text-foreground">
-                        GHS {o.total.toLocaleString()}
-                      </td>
-                      <td className="text-right">
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                            statusStyles[o.status] || "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {o.status}
-                        </span>
-                      </td>
+            <>
+              <div className="space-y-3 sm:hidden">
+                {orders.map((o) => (
+                  <div key={o.id} className="rounded-xl border border-border bg-background p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-semibold text-foreground">
+                        Order #{o.id.toString().padStart(4, "0")}
+                      </div>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          statusStyles[o.status] || "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {o.status}
+                      </span>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      {new Date(o.created_at).toLocaleDateString()}
+                    </div>
+                    <div className="mt-2 text-sm font-semibold text-foreground">
+                      GHS {o.total.toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden overflow-x-auto sm:block">
+                <table className="table text-sm">
+                  <thead>
+                    <tr>
+                      <th>Order</th>
+                      <th>Date</th>
+                      <th className="text-right">Total</th>
+                      <th className="text-right">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {orders.map((o) => (
+                      <tr key={o.id}>
+                        <td className="font-semibold text-foreground">
+                          #{o.id.toString().padStart(4, "0")}
+                        </td>
+                        <td className="text-muted-foreground">
+                          {new Date(o.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="text-right font-semibold text-foreground">
+                          GHS {o.total.toLocaleString()}
+                        </td>
+                        <td className="text-right">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                              statusStyles[o.status] || "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {o.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>
