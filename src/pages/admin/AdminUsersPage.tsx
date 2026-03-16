@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Search, Users } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
@@ -10,7 +10,7 @@ type User = {
   id: string;
   email: string;
   full_name: string;
-  role: "admin" | "customer";
+  role: "admin" | "manager" | "staff" | "customer";
   created_at: string;
 };
 
@@ -38,7 +38,7 @@ export const AdminUsersPage: React.FC = () => {
     load();
   }, [load]);
 
-  const updateRole = async (id: string, role: "admin" | "customer") => {
+  const updateRole = async (id: string, role: "admin" | "manager" | "staff" | "customer") => {
     try {
       await api.patch(`/users/${id}/role`, { role });
       push("User role updated", "success");
@@ -127,10 +127,15 @@ export const AdminUsersPage: React.FC = () => {
                         className="form-input h-8 py-1 text-xs"
                         value={u.role}
                         onChange={(e) =>
-                          updateRole(u.id, e.target.value as "admin" | "customer")
+                          updateRole(
+                            u.id,
+                            e.target.value as "admin" | "manager" | "staff" | "customer"
+                          )
                         }
                       >
                         <option value="customer">Customer</option>
+                        <option value="staff">Staff</option>
+                        <option value="manager">Manager</option>
                         <option value="admin">Admin</option>
                       </select>
                     </td>
