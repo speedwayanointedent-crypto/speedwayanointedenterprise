@@ -45,8 +45,8 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="page-shell">
       <PublicNavbar />
-      <main className="mx-auto flex max-w-7xl items-center justify-center px-4 pb-16 pt-20 md:px-6">
-        <div className="card w-full max-w-md p-8">
+      <main className="mx-auto flex max-w-7xl items-center justify-center px-4 pb-16 pt-16 sm:pt-20 md:px-6">
+        <div className="card w-full max-w-md p-6 sm:p-8">
           <h1 className="text-2xl font-semibold">Welcome back</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Sign in to manage your account.
