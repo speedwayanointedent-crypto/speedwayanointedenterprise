@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { MailCheck } from "lucide-react";
 import api from "../../lib/api";
@@ -36,8 +36,8 @@ export const VerifyEmailPage: React.FC = () => {
   return (
     <div className="page-shell">
       <PublicNavbar />
-      <div className="mx-auto flex min-h-screen max-w-2xl items-center px-4 pb-16 pt-20 md:px-6">
-        <div className="w-full card p-8">
+      <div className="mx-auto flex min-h-screen max-w-2xl items-center px-4 pb-16 pt-16 sm:pt-20 md:px-6">
+        <div className="w-full card p-6 sm:p-8">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <MailCheck className="h-5 w-5" />
