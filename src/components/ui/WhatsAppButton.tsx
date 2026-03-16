@@ -1,19 +1,21 @@
 import React from "react";
 import { MessageCircle } from "lucide-react";
-import { WHATSAPP_LINK } from "../../lib/whatsapp";
+import { buildWhatsAppLink } from "../../lib/whatsapp";
 
 type WhatsAppButtonProps = {
   label?: string;
   className?: string;
+  message?: string;
 };
 
 export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
   label = "Chat on WhatsApp",
-  className = ""
+  className = "",
+  message
 }) => {
   return (
     <a
-      href={WHATSAPP_LINK}
+      href={buildWhatsAppLink(message)}
       target="_blank"
       rel="noreferrer"
       className={`btn-whatsapp ${className}`}
