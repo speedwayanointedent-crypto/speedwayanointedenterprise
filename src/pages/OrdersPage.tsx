@@ -1,6 +1,7 @@
 import React from "react";
 import api from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
+import { Link } from "react-router-dom";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -11,6 +12,8 @@ type Order = {
   total: number;
   status: string;
   created_at: string;
+  estimated_delivery_date?: string | null;
+  order_status_events?: { id: number; status: string; note?: string | null; created_at: string }[];
 };
 
 const statusStyles: Record<string, string> = {
@@ -76,9 +79,37 @@ export const OrdersPage: React.FC = () => {
                     <div className="mt-2 text-xs text-muted-foreground">
                       {new Date(o.created_at).toLocaleDateString()}
                     </div>
+                    {o.estimated_delivery_date ? (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        ETA: {new Date(o.estimated_delivery_date).toLocaleDateString()}
+                      </div>
+                    ) : null}
                     <div className="mt-2 text-sm font-semibold text-foreground">
                       GHS {o.total.toLocaleString()}
                     </div>
+                    <Link
+                      to={`/invoice/${o.id}`}
+                      className="mt-3 inline-flex text-xs text-primary hover:underline"
+                    >
+                      Download receipt
+                    </Link>
+                    {o.order_status_events?.length ? (
+                      <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+                        {o.order_status_events
+                          .slice()
+                          .sort(
+                            (a, b) =>
+                              new Date(b.created_at).getTime() -
+                              new Date(a.created_at).getTime()
+                          )
+                          .slice(0, 3)
+                          .map((ev) => (
+                            <div key={ev.id}>
+                              {ev.status} • {new Date(ev.created_at).toLocaleString()}
+                            </div>
+                          ))}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -90,6 +121,8 @@ export const OrdersPage: React.FC = () => {
                       <th>Date</th>
                       <th className="text-right">Total</th>
                       <th className="text-right">Status</th>
+                      <th className="text-right">ETA</th>
+                      <th className="text-right">Receipt</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -112,6 +145,19 @@ export const OrdersPage: React.FC = () => {
                           >
                             {o.status}
                           </span>
+                        </td>
+                        <td className="text-right text-xs text-muted-foreground">
+                          {o.estimated_delivery_date
+                            ? new Date(o.estimated_delivery_date).toLocaleDateString()
+                            : "—"}
+                        </td>
+                        <td className="text-right">
+                          <Link
+                            to={`/invoice/${o.id}`}
+                            className="text-xs text-primary hover:underline"
+                          >
+                            Receipt
+                          </Link>
                         </td>
                       </tr>
                     ))}
