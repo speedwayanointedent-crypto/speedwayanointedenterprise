@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "../../lib/theme";
 import {
@@ -17,7 +17,9 @@ import {
   Users,
   Settings,
   LogOut,
-  Search
+  Search,
+  FileSearch,
+  ShieldCheck
 } from "lucide-react";
 
 const sidebarItems = [
@@ -31,6 +33,8 @@ const sidebarItems = [
   { label: "Inventory", to: "/admin/inventory", icon: Warehouse },
   { label: "Reports", to: "/admin/reports", icon: BarChart3 },
   { label: "Users", to: "/admin/users", icon: Users },
+  { label: "Audit Logs", to: "/admin/audit-logs", icon: FileSearch },
+  { label: "System Health", to: "/admin/system-health", icon: ShieldCheck },
   { label: "Settings", to: "/admin/settings", icon: Settings }
 ];
 
@@ -43,7 +47,7 @@ export const DashboardShell: React.FC = () => {
   React.useEffect(() => {
     const token = window.localStorage.getItem("auth_token");
     const role = window.localStorage.getItem("user_role");
-    if (!token || role !== "admin") {
+    if (!token || !["admin", "manager", "staff"].includes(role || "")) {
       navigate("/login");
     }
   }, [navigate]);
@@ -164,7 +168,9 @@ export const DashboardShell: React.FC = () => {
                   inventory: "Inventory",
                   reports: "Reports",
                   users: "Users",
-                  settings: "Settings"
+                  settings: "Settings",
+                  "audit-logs": "Audit Logs",
+                  "system-health": "System Health"
                 };
                 const label = labels[segment] || segment;
                 const path = "/" + arr.slice(0, idx + 1).join("/");
