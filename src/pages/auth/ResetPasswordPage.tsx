@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Lock } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
@@ -49,8 +49,8 @@ export const ResetPasswordPage: React.FC = () => {
   return (
     <div className="page-shell">
       <PublicNavbar />
-      <div className="mx-auto flex min-h-screen max-w-2xl items-center px-4 pb-16 pt-20 md:px-6">
-        <div className="w-full card p-8">
+      <div className="mx-auto flex min-h-screen max-w-2xl items-center px-4 pb-16 pt-16 sm:pt-20 md:px-6">
+        <div className="w-full card p-6 sm:p-8">
           <h1 className="text-2xl font-semibold">Create a new password</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Enter a new password to secure your account.
