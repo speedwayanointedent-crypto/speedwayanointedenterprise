@@ -192,7 +192,7 @@ export const LandingPage: React.FC = () => {
                 <img
                   src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
                   alt="Auto parts"
-                  className="h-80 w-full rounded-xl object-cover"
+                  className="w-full rounded-xl object-cover aspect-[4/3] sm:aspect-[16/10]"
                 />
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   {stats.map((stat) => (
@@ -243,7 +243,7 @@ export const LandingPage: React.FC = () => {
                 Browse all
               </Link>
             </div>
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3">
               {featured.length === 0 ? (
                 <div className="col-span-full rounded-xl border border-dashed border-border bg-background p-6 text-sm text-muted-foreground">
                   Products will appear here once they are added.
@@ -258,7 +258,7 @@ export const LandingPage: React.FC = () => {
                     <img
                       src={item.image_url || fallbackImage}
                       alt={item.name}
-                      className="h-40 w-full object-cover"
+                      className="h-32 w-full object-cover sm:h-40"
                     />
                     <div className="p-4">
                       <div className="text-xs text-muted-foreground">
@@ -365,12 +365,6 @@ export const LandingPage: React.FC = () => {
 
       <PublicFooterCTA />
 
-      <div className="fixed inset-x-0 bottom-4 z-40 mx-auto flex max-w-md items-center gap-2 px-4 sm:hidden">
-        <Link to="/shop" className="btn-primary h-11 flex-1 text-center">
-          Shop Parts
-        </Link>
-        <WhatsAppButton className="h-11 flex-1" />
-      </div>
     </div>
   );
 };
