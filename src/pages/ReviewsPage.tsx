@@ -72,14 +72,14 @@ export const ReviewsPage: React.FC = () => {
   return (
     <div className="page-shell">
       <PublicNavbar />
-      <main className="mx-auto max-w-6xl px-4 pb-16 pt-20 md:px-6">
+      <main className="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:pt-20 md:px-6">
         <PageHeader
           title="Customer reviews"
           subtitle="See what other customers are saying about Speedway."
           size="lg"
           actions={
             <button
-              className="btn-primary h-10 text-sm"
+              className="btn-primary h-10 w-full text-sm sm:w-auto"
               onClick={() => {
                 if (!isAuthed) {
                   push("Please sign in to add a review.", "error");
@@ -95,7 +95,7 @@ export const ReviewsPage: React.FC = () => {
           }
         />
 
-        <div className={`section-band mt-8 rounded-2xl p-6`}>
+        <div className={`section-band mt-8 rounded-2xl p-4 sm:p-6`}>
           <div className={`grid gap-6 ${showForm ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,0.45fr)]" : "grid-cols-1"}`}>
             <div className="card p-6">
               {loading ? (
