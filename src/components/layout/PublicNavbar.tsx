@@ -166,7 +166,7 @@ export const PublicNavbar: React.FC = () => {
         <div
           id="mobile-nav"
           ref={mobileMenuRef}
-          className="md:hidden fixed inset-0 z-[60] bg-white/98 text-foreground shadow-2xl backdrop-blur dark:bg-slate-900/98"
+          className="md:hidden fixed inset-0 z-[60] overflow-y-auto bg-white/98 text-foreground shadow-2xl backdrop-blur dark:bg-slate-900/98"
           role="dialog"
           aria-modal="true"
           aria-label="Mobile navigation"
@@ -181,17 +181,17 @@ export const PublicNavbar: React.FC = () => {
               <Menu className="h-6 w-6 rotate-180" />
             </button>
           </div>
-          <nav className="flex flex-col gap-2 px-4 py-4">
+          <nav className="flex flex-col gap-3 px-4 py-4">
             {navLinks.map((link) => (
               <NavLink
                 key={link.path}
                 to={link.path}
                 onClick={() => setMobileMenuOpen(false)}
                 className={({ isActive }) =>
-                  `rounded-xl px-3 py-2 text-sm font-semibold ${
+                  `rounded-xl px-4 py-3 text-base font-semibold shadow-sm ${
                     isActive
                       ? "bg-secondary text-foreground"
-                      : "text-foreground/90 hover:bg-secondary"
+                      : "bg-white/80 text-foreground hover:bg-secondary dark:bg-slate-900/70"
                   }`
                 }
               >
