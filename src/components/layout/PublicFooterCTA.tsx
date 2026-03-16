@@ -47,7 +47,7 @@ export const PublicFooterCTA: React.FC = () => {
 
   return (
     <section className="border-t border-border bg-gray-100 text-gray-700 dark:bg-slate-900 dark:text-gray-200">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-8 md:flex-row md:items-center md:justify-between">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Need help sourcing parts?
@@ -59,9 +59,9 @@ export const PublicFooterCTA: React.FC = () => {
             Call, WhatsApp, or email us for fitment checks and bulk orders.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           {supportPhone ? (
-            <a href={`tel:${supportPhone}`} className="btn-outline h-10 px-4 text-sm">
+            <a href={`tel:${supportPhone}`} className="btn-outline h-10 w-full px-4 text-sm sm:w-auto">
               <Phone className="mr-2 h-4 w-4" />
               Call us
             </a>
@@ -70,12 +70,12 @@ export const PublicFooterCTA: React.FC = () => {
             href={whatsappUrl}
             target="_blank"
             rel="noreferrer"
-            className="btn-whatsapp h-10 px-4 text-sm"
+            className="btn-whatsapp h-10 w-full px-4 text-sm sm:w-auto"
           >
             WhatsApp
           </a>
           {supportEmail ? (
-            <a href={`mailto:${supportEmail}`} className="btn-outline h-10 px-4 text-sm">
+            <a href={`mailto:${supportEmail}`} className="btn-outline h-10 w-full px-4 text-sm sm:w-auto">
               <Mail className="mr-2 h-4 w-4" />
               Email
             </a>
@@ -83,7 +83,7 @@ export const PublicFooterCTA: React.FC = () => {
         </div>
       </div>
       <div className="border-t border-border">
-        <div className="mx-auto flex flex-col items-start justify-between gap-4 px-6 py-4 text-xs text-gray-600 sm:flex-row sm:items-center">
+        <div className="mx-auto flex flex-col items-start justify-between gap-4 px-4 py-4 text-xs text-gray-600 sm:flex-row sm:items-center sm:px-6">
           <div>
             <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
               {businessName}
