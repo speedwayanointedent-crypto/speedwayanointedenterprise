@@ -1,0 +1,210 @@
+﻿@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 35%;
+    --accent: 210 20% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 32% 84%;
+    --input: 214 32% 84%;
+    --ring: 221 83% 53%;
+    --radius: 0.75rem;
+    --surface: 210 33% 97%;
+    --surface-strong: 210 26% 94%;
+    --shadow-color: 220 40% 12%;
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 40% 15%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 213 94% 68%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 222 32% 20%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 222 32% 20%;
+    --muted-foreground: 215 20% 70%;
+    --accent: 222 32% 20%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 42%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 24% 28%;
+    --input: 217 24% 28%;
+    --ring: 213 94% 68%;
+    --surface: 222 38% 13%;
+    --surface-strong: 222 32% 18%;
+    --shadow-color: 220 40% 2%;
+  }
+}
+
+@layer base {
+  html {
+    @apply font-sans;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  body {
+    background-image:
+      linear-gradient(to right, hsla(214, 32%, 88%, 0.35) 1px, transparent 1px),
+      linear-gradient(to bottom, hsla(214, 32%, 88%, 0.35) 1px, transparent 1px);
+    background-size: 64px 64px;
+    background-attachment: fixed;
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  .dark body {
+    background-image: none;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: "Space Grotesk", "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-bold text-foreground;
+  }
+}
+
+@layer components {
+  .page-shell {
+    @apply min-h-screen bg-background text-foreground;
+  }
+
+  .section-header {
+    @apply flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between;
+  }
+
+  .section-title {
+    @apply text-2xl font-semibold text-foreground;
+  }
+
+  .section-subtitle {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .btn {
+    @apply inline-flex min-h-[2.75rem] items-center justify-center whitespace-nowrap rounded-xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-primary-foreground hover:bg-primary/90 px-4 shadow-md;
+  }
+
+  .btn-secondary {
+    @apply btn bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 border;
+  }
+
+  .btn-destructive {
+    @apply btn bg-destructive text-destructive-foreground hover:bg-destructive/90 px-4;
+  }
+
+  .btn-outline {
+    @apply btn border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground px-4;
+  }
+
+  .btn-whatsapp {
+    @apply btn px-4 bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm;
+  }
+
+  .icon-btn {
+    @apply inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-muted-foreground transition-colors hover:bg-gray-200 hover:text-foreground dark:bg-slate-800 dark:hover:bg-slate-700;
+  }
+
+  .card {
+    @apply rounded-2xl border bg-card text-card-foreground shadow-[0_12px_30px_-24px_hsl(var(--shadow-color)/0.5)] transition-shadow;
+  }
+
+  .card-hover {
+    @apply hover:shadow-[0_18px_40px_-26px_hsl(var(--shadow-color)/0.65)];
+  }
+
+  .card-soft {
+    @apply rounded-2xl border border-border/70 bg-secondary/60 text-card-foreground;
+  }
+
+  .table {
+    @apply w-full caption-bottom rounded-lg;
+  }
+
+  .table thead {
+    @apply bg-muted;
+  }
+
+  .table thead th {
+    @apply h-12 px-4 text-left align-middle font-semibold text-muted-foreground;
+  }
+
+  .table tbody tr {
+    @apply border-b transition-colors hover:bg-muted/50;
+  }
+
+  .table tbody td {
+    @apply p-4 align-middle;
+  }
+
+  .form-label {
+    @apply text-sm font-medium leading-none text-foreground;
+  }
+
+  .form-input {
+    @apply flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors;
+  }
+
+  .glass-card {
+    @apply rounded-2xl border border-border/60 bg-white/80 text-foreground shadow-lg backdrop-blur dark:bg-slate-900/70;
+  }
+
+  .pill {
+    @apply inline-flex items-center rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-muted-foreground;
+  }
+
+  .shadow-card {
+    @apply shadow-md;
+  }
+
+  .section-band {
+    @apply border-y border-border bg-secondary;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-muted {
+    @apply text-muted-foreground;
+  }
+}
