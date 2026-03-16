@@ -181,9 +181,15 @@ export const ShopPage: React.FC = () => {
                 <input
                   className="w-full bg-transparent outline-none"
                   placeholder="Search products..."
+                  list="product-suggestions"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
+                <datalist id="product-suggestions">
+                  {products.slice(0, 50).map((p) => (
+                    <option key={p.id} value={p.name} />
+                  ))}
+                </datalist>
               </div>
               <select
                 className="form-input h-11"
