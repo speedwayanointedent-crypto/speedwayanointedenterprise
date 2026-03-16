@@ -31,12 +31,34 @@ export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
   const [items, setItems] = React.useState<CartItem[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
+  const [addresses, setAddresses] = React.useState<
+    { id: string; label?: string | null; address_line1: string }[]
+  >([]);
+  const [addressId, setAddressId] = React.useState("");
+  const [couponCode, setCouponCode] = React.useState("");
+  const [discount, setDiscount] = React.useState(0);
+  const [applyingCoupon, setApplyingCoupon] = React.useState(false);
 
   React.useEffect(() => {
     setItems(getCart());
+    async function loadAddresses() {
+      try {
+        const res = await api.get("/addresses");
+        const list = Array.isArray(res.data) ? res.data : [];
+        setAddresses(list);
+        const defaultAddress = list.find((a: any) => a.is_default);
+        if (defaultAddress) {
+          setAddressId(defaultAddress.id);
+        }
+      } catch {
+        setAddresses([]);
+      }
+    }
+    loadAddresses();
   }, []);
 
   const total = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const grandTotal = Math.max(0, total - discount);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +79,13 @@ export const CheckoutPage: React.FC = () => {
         quantity: item.qty,
         price: item.price
       }));
-      await api.post("/orders", { items: orderItems, total });
+      await api.post("/orders", {
+        items: orderItems,
+        total: grandTotal,
+        coupon_code: couponCode || null,
+        delivery_address_id: addressId || null,
+        shipping_fee: 0
+      });
       clearCart();
       push("Order placed successfully.", "success");
       navigate("/orders");
@@ -67,6 +95,26 @@ export const CheckoutPage: React.FC = () => {
       push(message, "error");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const applyCoupon = async () => {
+    if (!couponCode) return;
+    try {
+      setApplyingCoupon(true);
+      const res = await api.post<{ discount: number }>("/coupons/validate", {
+        code: couponCode,
+        total
+      });
+      setDiscount(res.data.discount || 0);
+      push("Coupon applied", "success");
+    } catch (err) {
+      setDiscount(0);
+      const message =
+        (err as any)?.response?.data?.error || "Failed to apply coupon.";
+      push(message, "error");
+    } finally {
+      setApplyingCoupon(false);
     }
   };
 
@@ -98,12 +146,24 @@ export const CheckoutPage: React.FC = () => {
                 <h2 className="text-sm font-semibold text-foreground">
                   Delivery address
                 </h2>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <InputField label="City" icon={MapPin} />
-                  <InputField label="State" icon={MapPin} />
-                  <InputField label="Street address" icon={MapPin} />
-                  <InputField label="Postal code" icon={MapPin} />
-                </div>
+                {addresses.length === 0 ? (
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Add a saved address in your account before checkout.
+                  </p>
+                ) : (
+                  <select
+                    className="form-input mt-3"
+                    value={addressId}
+                    onChange={(e) => setAddressId(e.target.value)}
+                  >
+                    <option value="">Select an address</option>
+                    {addresses.map((addr) => (
+                      <option key={addr.id} value={addr.id}>
+                        {addr.label || addr.address_line1}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div>
@@ -149,9 +209,33 @@ export const CheckoutPage: React.FC = () => {
                   </div>
                 ))
               )}
+              <div className="mt-4 rounded-xl border border-border bg-background p-3 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <input
+                    className="form-input h-9"
+                    placeholder="Coupon code"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn-outline h-9 px-3 text-xs"
+                    onClick={applyCoupon}
+                    disabled={applyingCoupon}
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+              {discount > 0 ? (
+                <div className="flex items-center justify-between pt-3 text-sm text-muted-foreground">
+                  <span>Discount</span>
+                  <span>- GHS {discount.toLocaleString()}</span>
+                </div>
+              ) : null}
               <div className="flex items-center justify-between pt-3 text-base font-semibold text-foreground">
                 <span>Total</span>
-                <span>GHS {total.toLocaleString()}</span>
+                <span>GHS {grandTotal.toLocaleString()}</span>
               </div>
             </div>
             <div className="mt-6 rounded-xl border border-border bg-background p-4 text-xs text-muted-foreground">
