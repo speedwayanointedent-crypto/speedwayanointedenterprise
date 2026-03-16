@@ -122,7 +122,7 @@ export const LandingPage: React.FC = () => {
       <main>
         <section className="relative border-b border-border bg-gradient-to-r from-gray-50 to-white dark:from-slate-900 dark:to-slate-900">
           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1502877338535-766e3a6052db?ixlib=rb-4.0.3&auto=format&fit=crop&w=1974&q=80')] bg-cover bg-center opacity-10" />
-          <div className="relative mx-auto max-w-7xl px-6 py-12 sm:py-16 lg:py-24">
+          <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16 lg:py-24">
             <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
               <div className="order-1">
                 <p className="text-3xl sm:text-4xl font-semibold uppercase tracking-wide text-muted-foreground">
@@ -131,6 +131,30 @@ export const LandingPage: React.FC = () => {
                 <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl text-balance">
                   Premium auto parts for every make and model
                 </h1>
+                <div className="mt-4 lg:hidden">
+                  <div className="rounded-2xl border border-border bg-card p-3 shadow-md">
+                    <img
+                      src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+                      alt="Auto parts"
+                      className="w-full rounded-xl object-cover aspect-[4/3]"
+                    />
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {stats.map((stat) => (
+                        <div
+                          key={stat.label}
+                          className="rounded-lg border border-border bg-background p-2 text-center"
+                        >
+                          <div className="text-sm font-semibold text-foreground">
+                            {stat.value}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {stat.label}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
                 <p className="mt-4 text-base text-muted-foreground sm:text-lg">
                   Genuine parts, expert fitment advice, and fast delivery across Ghana.
                 </p>
@@ -158,14 +182,14 @@ export const LandingPage: React.FC = () => {
                     Find my part
                   </button>
                 </form>
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <Link to="/shop" className="btn-primary h-11 px-6">
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <Link to="/shop" className="btn-primary h-11 w-full px-6 sm:w-auto">
                     Shop Parts
                   </Link>
-                  <Link to="/about" className="btn-outline h-11 px-6">
+                  <Link to="/about" className="btn-outline h-11 w-full px-6 sm:w-auto">
                     Learn More
                   </Link>
-                  <WhatsAppButton className="h-11 px-6" />
+                  <WhatsAppButton className="h-11 w-full px-6 sm:w-auto" />
                 </div>
                 <div className="mt-6 flex flex-wrap gap-3 text-xs text-muted-foreground">
                   <span className="rounded-full border border-border bg-background px-3 py-1">
@@ -188,7 +212,7 @@ export const LandingPage: React.FC = () => {
                   </span>
                 </div>
               </div>
-              <div className="order-2 rounded-2xl border border-border bg-card p-4 shadow-md">
+              <div className="order-2 hidden rounded-2xl border border-border bg-card p-4 shadow-md lg:block">
                 <img
                   src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
                   alt="Auto parts"
