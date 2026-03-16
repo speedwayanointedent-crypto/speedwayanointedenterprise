@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { Link, NavLink } from "react-router-dom";
 import { Menu, Sun, Moon, ShoppingCart, User } from "lucide-react";
 import { useTheme } from "../../lib/theme";
@@ -162,84 +163,87 @@ export const PublicNavbar: React.FC = () => {
         </button>
       </div>
 
-      {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-[60]">
-          <button
-            className="absolute inset-0 bg-black/45"
-            onClick={() => setMobileMenuOpen(false)}
-            aria-label="Close menu overlay"
-          />
-          <div
-            id="mobile-nav"
-            ref={mobileMenuRef}
-            className="relative ml-auto h-full w-full max-w-xs overflow-y-auto bg-white text-foreground shadow-2xl dark:bg-slate-900"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Mobile navigation"
-          >
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <span className="text-base font-semibold">Menu</span>
+      {mobileMenuOpen && typeof document !== "undefined"
+        ? createPortal(
+            <div className="md:hidden fixed inset-0 z-[80]">
               <button
-                className="icon-btn"
+                className="absolute inset-0 bg-black/45"
                 onClick={() => setMobileMenuOpen(false)}
-                aria-label="Close menu"
+                aria-label="Close menu overlay"
+              />
+              <div
+                id="mobile-nav"
+                ref={mobileMenuRef}
+                className="relative ml-auto h-full w-full max-w-xs overflow-y-auto bg-white text-foreground shadow-2xl dark:bg-slate-900"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Mobile navigation"
               >
-                <Menu className="h-6 w-6 rotate-180" />
-              </button>
-            </div>
-            <nav className="flex flex-col gap-3 px-4 py-4">
-              {navLinks.map((link) => (
-                <NavLink
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `rounded-xl px-4 py-3 text-base font-semibold shadow-sm ${
-                      isActive
-                        ? "bg-secondary text-foreground"
-                        : "bg-white text-foreground hover:bg-secondary dark:bg-slate-800"
-                    }`
-                  }
-                >
-                  {link.label}
-                </NavLink>
-              ))}
-              <div className="mt-2 flex items-center gap-2">
-                <button
-                  onClick={toggleTheme}
-                  className="btn-outline h-9 px-3 text-sm"
-                >
-                  {theme === "dark" ? "Light" : "Dark"} Mode
-                </button>
-                <Link to="/cart" className="btn-secondary h-9 text-sm">
-                  Cart ({cartCount})
-                </Link>
+                <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                  <span className="text-base font-semibold">Menu</span>
+                  <button
+                    className="icon-btn"
+                    onClick={() => setMobileMenuOpen(false)}
+                    aria-label="Close menu"
+                  >
+                    <Menu className="h-6 w-6 rotate-180" />
+                  </button>
+                </div>
+                <nav className="flex flex-col gap-3 px-4 py-4">
+                  {navLinks.map((link) => (
+                    <NavLink
+                      key={link.path}
+                      to={link.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={({ isActive }) =>
+                        `rounded-xl px-4 py-3 text-base font-semibold shadow-sm ${
+                          isActive
+                            ? "bg-secondary text-foreground"
+                            : "bg-white text-foreground hover:bg-secondary dark:bg-slate-800"
+                        }`
+                      }
+                    >
+                      {link.label}
+                    </NavLink>
+                  ))}
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      onClick={toggleTheme}
+                      className="btn-outline h-9 px-3 text-sm"
+                    >
+                      {theme === "dark" ? "Light" : "Dark"} Mode
+                    </button>
+                    <Link to="/cart" className="btn-secondary h-9 text-sm">
+                      Cart ({cartCount})
+                    </Link>
+                  </div>
+                  {isAuthed ? (
+                    <button
+                      className="btn-destructive h-9 text-sm"
+                      onClick={() => {
+                        localStorage.removeItem("auth_token");
+                        localStorage.removeItem("user_role");
+                        setIsAuthed(false);
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      Sign Out
+                    </button>
+                  ) : (
+                    <Link
+                      to="/login"
+                      className="btn-primary h-9 text-sm"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Sign In
+                    </Link>
+                  )}
+                </nav>
               </div>
-              {isAuthed ? (
-                <button
-                  className="btn-destructive h-9 text-sm"
-                  onClick={() => {
-                    localStorage.removeItem("auth_token");
-                    localStorage.removeItem("user_role");
-                    setIsAuthed(false);
-                    setMobileMenuOpen(false);
-                  }}
-                >
-                  Sign Out
-                </button>
-              ) : (
-                <Link
-                  to="/login"
-                  className="btn-primary h-9 text-sm"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Sign In
-                </Link>
-              )}
-            </nav>
-          </div>
-        </div>
-      )}
+            </div>,
+            document.body
+          )
+        : null}
     </header>
   );
 };
