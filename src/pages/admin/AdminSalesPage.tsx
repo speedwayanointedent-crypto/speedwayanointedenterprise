@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Plus, Search, Filter } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
@@ -27,6 +27,21 @@ export const AdminSalesPage: React.FC = () => {
   const [price, setPrice] = React.useState("");
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
+  const getLocalDateKey = (value: string | Date) => {
+    const date = typeof value === "string" ? new Date(value) : value;
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  const [selectedDay, setSelectedDay] = React.useState(
+    getLocalDateKey(new Date())
+  );
+  const [rangeStart, setRangeStart] = React.useState("");
+  const [rangeEnd, setRangeEnd] = React.useState("");
   const { push } = useToast();
 
   const load = React.useCallback(async () => {
@@ -75,6 +90,40 @@ export const AdminSalesPage: React.FC = () => {
       .toLowerCase()
       .includes(query.toLowerCase())
   );
+  const dailyTotals = React.useMemo(() => {
+    const totals = new Map<string, { total: number; quantity: number }>();
+    sales.forEach((s) => {
+      const key = getLocalDateKey(s.created_at);
+      if (!key) {
+        return;
+      }
+      const current = totals.get(key) || { total: 0, quantity: 0 };
+      totals.set(key, {
+        total: current.total + s.total,
+        quantity: current.quantity + s.quantity
+      });
+    });
+    return Array.from(totals.entries())
+      .map(([date, value]) => ({ date, ...value }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [sales]);
+  const daySales = React.useMemo(
+    () => sales.filter((s) => getLocalDateKey(s.created_at) === selectedDay),
+    [sales, selectedDay]
+  );
+  const dayTotal = daySales.reduce((sum, s) => sum + s.total, 0);
+  const rangeValid =
+    Boolean(rangeStart && rangeEnd) && rangeStart <= rangeEnd;
+  const rangeSales = React.useMemo(() => {
+    if (!rangeValid) {
+      return [];
+    }
+    return sales.filter((s) => {
+      const key = getLocalDateKey(s.created_at);
+      return key && key >= rangeStart && key <= rangeEnd;
+    });
+  }, [sales, rangeStart, rangeEnd, rangeValid]);
+  const rangeTotal = rangeSales.reduce((sum, s) => sum + s.total, 0);
 
   return (
     <div className="space-y-6 text-foreground">
@@ -94,6 +143,159 @@ export const AdminSalesPage: React.FC = () => {
           </button>
         }
       />
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="card p-4 lg:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-foreground">
+                Total Sales Per Day
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Daily revenue totals across all recorded sales.
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {dailyTotals.length} days
+            </div>
+          </div>
+          {loading ? (
+            <Skeleton className="mt-4 h-28" />
+          ) : dailyTotals.length === 0 ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              No sales yet. Record a sale to start tracking daily totals.
+            </p>
+          ) : (
+            <div className="mt-4 overflow-x-auto">
+              <table className="table text-sm">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th className="text-right">Qty</th>
+                    <th className="text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dailyTotals.map((day) => (
+                    <tr key={day.date}>
+                      <td className="font-medium">{day.date}</td>
+                      <td className="text-right">{day.quantity}</td>
+                      <td className="text-right font-semibold">
+                        GHS {day.total.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="card p-4">
+          <div className="text-sm font-semibold text-foreground">
+            Daily Total Lookup
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Choose a day to see its total sales.
+          </div>
+          <input
+            type="date"
+            className="form-input mt-4"
+            value={selectedDay}
+            onChange={(e) => setSelectedDay(e.target.value)}
+          />
+          <div className="mt-4 rounded-xl border border-border bg-background px-4 py-3">
+            <div className="text-xs text-muted-foreground">Total for day</div>
+            <div className="mt-1 text-lg font-semibold">
+              GHS {dayTotal.toLocaleString()}
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {daySales.length} sale{daySales.length === 1 ? "" : "s"} recorded
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-foreground">
+              Extended Period Analysis
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Select a start and end date to see everything sold in that range.
+            </div>
+          </div>
+          {rangeValid ? (
+            <div className="text-xs text-muted-foreground">
+              {rangeSales.length} sale{rangeSales.length === 1 ? "" : "s"} · GHS{" "}
+              {rangeTotal.toLocaleString()}
+            </div>
+          ) : (
+            <div className="text-xs text-muted-foreground">
+              Choose both dates to calculate totals.
+            </div>
+          )}
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <input
+            type="date"
+            className="form-input"
+            value={rangeStart}
+            onChange={(e) => setRangeStart(e.target.value)}
+          />
+          <input
+            type="date"
+            className="form-input"
+            value={rangeEnd}
+            onChange={(e) => setRangeEnd(e.target.value)}
+          />
+          <button
+            type="button"
+            className="btn-outline h-11"
+            onClick={() => {
+              setRangeStart("");
+              setRangeEnd("");
+            }}
+          >
+            Clear range
+          </button>
+        </div>
+        {rangeValid ? (
+          rangeSales.length === 0 ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              No sales found in this period.
+            </p>
+          ) : (
+            <div className="mt-4 overflow-x-auto">
+              <table className="table text-sm">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th className="text-right">Qty</th>
+                    <th className="text-right">Total</th>
+                    <th className="text-right">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rangeSales.map((s) => (
+                    <tr key={`range-${s.id}`}>
+                      <td>{s.products?.name || "—"}</td>
+                      <td className="text-right">{s.quantity}</td>
+                      <td className="text-right font-semibold">
+                        GHS {s.total.toLocaleString()}
+                      </td>
+                      <td className="text-right text-xs text-muted-foreground">
+                        {new Date(s.created_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : null}
+      </div>
 
       <div className="card p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
