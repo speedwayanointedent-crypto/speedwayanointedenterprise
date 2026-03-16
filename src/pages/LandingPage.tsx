@@ -124,7 +124,7 @@ export const LandingPage: React.FC = () => {
           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1502877338535-766e3a6052db?ixlib=rb-4.0.3&auto=format&fit=crop&w=1974&q=80')] bg-cover bg-center opacity-10" />
           <div className="relative mx-auto max-w-7xl px-6 py-12 sm:py-16 lg:py-24">
             <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-              <div className="order-2 lg:order-1">
+              <div className="order-1">
                 <p className="text-3xl sm:text-4xl font-semibold uppercase tracking-wide text-muted-foreground">
                   Speedway Anointed Ent
                 </p>
@@ -188,7 +188,7 @@ export const LandingPage: React.FC = () => {
                   </span>
                 </div>
               </div>
-              <div className="order-1 rounded-2xl border border-border bg-card p-4 shadow-md lg:order-2">
+              <div className="order-2 rounded-2xl border border-border bg-card p-4 shadow-md">
                 <img
                   src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
                   alt="Auto parts"
