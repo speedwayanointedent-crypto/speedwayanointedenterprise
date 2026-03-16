@@ -156,21 +156,21 @@ export const ShopPage: React.FC = () => {
     <div className="page-shell">
       <PublicNavbar />
 
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-20 md:px-6">
+      <main className="mx-auto max-w-7xl px-4 pb-16 pt-16 sm:pt-20 md:px-6">
         <section className="section-band rounded-2xl p-4 sm:p-6">
-          <div className="card p-6">
+          <div className="card p-4 sm:p-6">
             <PageHeader
               title="Products"
               subtitle="Browse our catalogue of genuine spare parts."
               actions={<WhatsAppButton label="WhatsApp support" className="h-10 px-5 text-sm" />}
             />
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
+            <div className="mt-4 flex flex-col gap-3 rounded-xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
               <span>Filters & search</span>
               <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={resetSearch} className="btn-outline h-9 px-3 text-xs">
+                <button type="button" onClick={resetSearch} className="btn-outline h-9 px-3 text-sm">
                   Reset search
                 </button>
-                <button type="button" onClick={clearFilters} className="btn-outline h-9 px-3 text-xs">
+                <button type="button" onClick={clearFilters} className="btn-outline h-9 px-3 text-sm">
                   Clear filters
                 </button>
               </div>
@@ -237,12 +237,12 @@ export const ShopPage: React.FC = () => {
                 ))}
               </select>
             </div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+            <div className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
               <span>
                 Showing <span className="font-semibold text-foreground">{filtered.length}</span>{" "}
                 {filtered.length === 1 ? "item" : "items"}
               </span>
-              <button type="button" onClick={clearFilters} className="btn-outline h-9 px-3 text-xs">
+              <button type="button" onClick={clearFilters} className="btn-outline h-9 px-3 text-sm">
                 Clear filters
               </button>
             </div>
@@ -280,7 +280,7 @@ export const ShopPage: React.FC = () => {
                     <img
                       src={p.image_url || fallbackImage}
                       alt={p.name}
-                      className="h-40 w-full rounded-lg object-cover"
+                      className="h-36 w-full rounded-lg object-cover sm:h-40"
                     />
                     <div className="mt-3">
                       <div className="text-xs text-muted-foreground">
@@ -314,7 +314,7 @@ export const ShopPage: React.FC = () => {
                           {p.status === "active" ? "In stock" : "Unavailable"}
                         </span>
                       </div>
-                      <div className="mt-3 flex gap-2">
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                         <button
                           type="button"
                           className="btn-outline flex-1 text-center"
