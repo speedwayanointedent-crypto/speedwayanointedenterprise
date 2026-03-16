@@ -11,24 +11,24 @@ export const ContactPage: React.FC = () => {
     <div className="page-shell">
       <PublicNavbar />
 
-      <main className="mx-auto max-w-6xl px-4 pb-16 pt-20 md:px-6">
+      <main className="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:pt-20 md:px-6">
         <PageHeader
           kicker="Contact"
           title="We're here to help with parts, fitment, and orders."
           size="lg"
           actions={
             <>
-              <Link to="/shop" className="btn-primary h-10 px-5 text-sm">
+              <Link to="/shop" className="btn-primary h-10 w-full px-5 text-sm sm:w-auto">
                 Shop now
               </Link>
-              <WhatsAppButton label="WhatsApp us" className="h-10 px-5 text-sm" />
+              <WhatsAppButton label="WhatsApp us" className="h-10 w-full px-5 text-sm sm:w-auto" />
             </>
           }
         />
 
-        <section className="section-band mt-8 rounded-2xl p-6">
+        <section className="section-band mt-8 rounded-2xl p-4 sm:p-6">
           <div className="grid gap-8 lg:grid-cols-[minmax(0,0.55fr)_minmax(0,0.45fr)]">
-            <div className="rounded-xl border border-border bg-card p-6 shadow-md">
+            <div className="rounded-xl border border-border bg-card p-5 shadow-md sm:p-6">
               <h2 className="text-xl font-semibold text-foreground">
                 Send a message
               </h2>
