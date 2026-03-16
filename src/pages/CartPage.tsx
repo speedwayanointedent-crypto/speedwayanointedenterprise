@@ -6,6 +6,7 @@ import { CartItem, getCart, removeFromCart, saveCart, updateQty } from "../lib/c
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
+import { WhatsAppButton } from "../components/ui/WhatsAppButton";
 
 export const CartPage: React.FC = () => {
   const [items, setItems] = React.useState<CartItem[]>([]);
@@ -19,6 +20,11 @@ export const CartPage: React.FC = () => {
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
   const total = subtotal;
+  const whatsappMessage = items.length
+    ? `Hello! I'd like to order:\n${items
+        .map((item) => `- ${item.name} x${item.qty} (GHS ${item.price})`)
+        .join("\n")}\nTotal: GHS ${total}`
+    : "Hello! I need help with my cart.";
 
   const onDecrease = (id: string) => {
     const current = items.find((i) => i.id === id);
@@ -150,6 +156,11 @@ export const CartPage: React.FC = () => {
             <Link to="/checkout" className="btn-primary mt-6 h-11 w-full">
               Proceed to checkout
             </Link>
+            <WhatsAppButton
+              label="Checkout via WhatsApp"
+              className="mt-3 h-11 w-full justify-center text-sm"
+              message={whatsappMessage}
+            />
             <p className="mt-4 text-xs text-muted-foreground">
               Secure checkout with encrypted payments.
             </p>
