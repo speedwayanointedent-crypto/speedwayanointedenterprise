@@ -73,9 +73,9 @@ export const CheckoutPage: React.FC = () => {
   return (
     <div className="page-shell">
       <PublicNavbar />
-      <div className="mx-auto max-w-6xl px-4 pb-16 pt-20 md:px-6">
+      <div className="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:pt-20 md:px-6">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.45fr)]">
-          <form onSubmit={onSubmit} className="card p-6">
+          <form onSubmit={onSubmit} className="card p-5 sm:p-6">
             <h1 className="text-2xl font-semibold text-foreground">Checkout</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Provide your contact and delivery details to complete the order.
@@ -124,7 +124,7 @@ export const CheckoutPage: React.FC = () => {
             </button>
           </form>
 
-          <aside className="card p-6">
+          <aside className="card p-5 sm:p-6">
             <h2 className="text-lg font-semibold text-foreground">
               Order summary
             </h2>
