@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PublicNavbar } from "../../components/layout/PublicNavbar";
 import api from "../../lib/api";
@@ -37,8 +37,8 @@ export const SignupPage: React.FC = () => {
   return (
     <div className="page-shell">
       <PublicNavbar />
-      <main className="mx-auto flex max-w-7xl items-center justify-center px-4 pb-16 pt-20 md:px-6">
-        <div className="w-full max-w-md card p-8">
+      <main className="mx-auto flex max-w-7xl items-center justify-center px-4 pb-16 pt-16 sm:pt-20 md:px-6">
+        <div className="w-full max-w-md card p-6 sm:p-8">
           <h1 className="text-2xl font-semibold">Create your account</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Join Speedway Anointed Ent and start ordering premium parts.
