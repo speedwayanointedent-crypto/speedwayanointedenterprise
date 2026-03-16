@@ -12,11 +12,16 @@ export const PublicNavbar: React.FC = () => {
   const [isAuthed, setIsAuthed] = React.useState(
     Boolean(localStorage.getItem("auth_token"))
   );
+  const [role, setRole] = React.useState<string | null>(
+    localStorage.getItem("user_role")
+  );
   const [cartCount, setCartCount] = React.useState(0);
 
   React.useEffect(() => {
-    const handleStorage = () =>
+    const handleStorage = () => {
       setIsAuthed(Boolean(localStorage.getItem("auth_token")));
+      setRole(localStorage.getItem("user_role"));
+    };
     const handleCart = () => setCartCount(getCartCount());
     handleCart();
     window.addEventListener("storage", handleStorage);
@@ -141,10 +146,13 @@ export const PublicNavbar: React.FC = () => {
             {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
           {isAuthed ? (
-            <div className="flex items-center gap-2 rounded-xl px-2 py-1 text-sm text-muted-foreground">
+            <Link
+              to="/account"
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary"
+            >
               <User className="h-4 w-4" />
-              Admin
-            </div>
+              {role ? role[0].toUpperCase() + role.slice(1) : "Account"}
+            </Link>
           ) : (
             <Link to="/login" className="btn-primary">
               Sign In
@@ -206,28 +214,38 @@ export const PublicNavbar: React.FC = () => {
                       {link.label}
                     </NavLink>
                   ))}
-                  <div className="mt-2 flex items-center gap-2">
-                    <button
-                      onClick={toggleTheme}
-                      className="btn-outline h-9 px-3 text-sm"
-                    >
-                      {theme === "dark" ? "Light" : "Dark"} Mode
-                    </button>
-                    <Link to="/cart" className="btn-secondary h-9 text-sm">
-                      Cart ({cartCount})
-                    </Link>
-                  </div>
-                  {isAuthed ? (
-                    <button
-                      className="btn-destructive h-9 text-sm"
-                      onClick={() => {
-                        localStorage.removeItem("auth_token");
-                        localStorage.removeItem("user_role");
-                        setIsAuthed(false);
-                        setMobileMenuOpen(false);
-                      }}
-                    >
-                      Sign Out
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  onClick={toggleTheme}
+                  className="btn-outline h-9 px-3 text-sm"
+                >
+                  {theme === "dark" ? "Light" : "Dark"} Mode
+                </button>
+                <Link to="/cart" className="btn-secondary h-9 text-sm">
+                  Cart ({cartCount})
+                </Link>
+              </div>
+              {isAuthed ? (
+                <Link
+                  to="/account"
+                  className="btn-outline h-9 text-sm"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Account
+                </Link>
+              ) : null}
+              {isAuthed ? (
+                <button
+                  className="btn-destructive h-9 text-sm"
+                  onClick={() => {
+                    localStorage.removeItem("auth_token");
+                    localStorage.removeItem("user_role");
+                    setIsAuthed(false);
+                    setRole(null);
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  Sign Out
                     </button>
                   ) : (
                     <Link
