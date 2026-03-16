@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./lib/theme";
 import { ToastProvider } from "./components/ui/Toast";
@@ -28,13 +28,11 @@ import { AdminInventoryPage } from "./pages/admin/AdminInventoryPage";
 import { AdminReportsPage } from "./pages/admin/AdminReportsPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
-import { WhatsAppFloating } from "./components/ui/WhatsAppFloating";
 
 const App: React.FC = () => {
   return (
     <ThemeProvider>
       <ToastProvider>
-        <WhatsAppFloating />
         <Routes>
           {/* Public shop */}
           <Route path="/" element={<LandingPage />} />
