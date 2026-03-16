@@ -7,6 +7,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { Skeleton } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/EmptyState";
 import { useToast } from "../components/ui/Toast";
+import { useNavigate } from "react-router-dom";
 
 type Profile = {
   id: string;
@@ -43,6 +44,7 @@ type Notification = {
 };
 
 export const AccountPage: React.FC = () => {
+  const navigate = useNavigate();
   const [profile, setProfile] = React.useState<Profile | null>(null);
   const [addresses, setAddresses] = React.useState<Address[]>([]);
   const [wishlist, setWishlist] = React.useState<WishlistItem[]>([]);
@@ -150,6 +152,13 @@ export const AccountPage: React.FC = () => {
     }
   };
 
+  const signOut = () => {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_role");
+    push("Signed out", "success");
+    navigate("/");
+  };
+
   return (
     <div className="page-shell">
       <PublicNavbar />
@@ -192,6 +201,13 @@ export const AccountPage: React.FC = () => {
                   />
                   <button className="btn-primary h-10 text-sm">Save profile</button>
                 </form>
+                <button
+                  type="button"
+                  className="btn-destructive mt-4 h-10 text-sm"
+                  onClick={signOut}
+                >
+                  Sign out
+                </button>
               </div>
 
               <div className="card p-5">
