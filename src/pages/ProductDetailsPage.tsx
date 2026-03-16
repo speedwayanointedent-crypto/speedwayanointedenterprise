@@ -97,7 +97,7 @@ export const ProductDetailsPage: React.FC = () => {
   return (
     <div className="page-shell">
       <PublicNavbar />
-      <div className="mx-auto max-w-6xl px-4 pb-16 pt-20 md:px-6">
+      <div className="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:pt-20 md:px-6">
         <Link to="/shop" className="text-xs text-muted-foreground hover:text-foreground">
           &larr; Back to shop
         </Link>
@@ -120,10 +120,10 @@ export const ProductDetailsPage: React.FC = () => {
                     <img
                       src={product.car_image_url}
                       alt={`${product.name} vehicle`}
-                      className="h-80 w-full object-cover"
+                      className="h-56 w-full object-cover sm:h-72 lg:h-80"
                     />
                   ) : (
-                    <div className="flex h-80 items-center justify-center bg-secondary text-sm text-muted-foreground">
+                    <div className="flex h-56 items-center justify-center bg-secondary text-sm text-muted-foreground sm:h-72 lg:h-80">
                       No vehicle image yet
                     </div>
                   )}
@@ -135,7 +135,7 @@ export const ProductDetailsPage: React.FC = () => {
                   <img
                     src={product.image_url || fallbackImage}
                     alt={`${product.name} part`}
-                    className="h-80 w-full object-cover"
+                    className="h-56 w-full object-cover sm:h-72 lg:h-80"
                   />
                   <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
                     Part photo
@@ -152,7 +152,7 @@ export const ProductDetailsPage: React.FC = () => {
                       <img
                         src={image as string}
                         alt={`${product.name} view ${idx + 1}`}
-                        className="h-24 w-full object-cover"
+                        className="h-20 w-full object-cover sm:h-24"
                       />
                     </div>
                   ))}
@@ -160,7 +160,7 @@ export const ProductDetailsPage: React.FC = () => {
               ) : null}
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-6 shadow-md">
+            <div className="rounded-xl border border-border bg-card p-5 shadow-md sm:p-6">
               <div className="flex items-start justify-between">
                 <div>
                   <h1 className="text-2xl font-semibold text-foreground">
@@ -274,7 +274,7 @@ export const ProductDetailsPage: React.FC = () => {
                   <img
                     src={item.image_url || fallbackImage}
                     alt={item.name}
-                    className="h-36 w-full rounded-lg object-cover"
+                    className="h-32 w-full rounded-lg object-cover sm:h-36"
                   />
                   <div className="mt-3">
                     <div className="text-xs text-muted-foreground">
@@ -291,7 +291,7 @@ export const ProductDetailsPage: React.FC = () => {
                         {item.quantity > 0 ? "In stock" : "Unavailable"}
                       </span>
                     </div>
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <button
                         type="button"
                         className="btn-outline flex-1 text-center"
