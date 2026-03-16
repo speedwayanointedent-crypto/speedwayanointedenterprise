@@ -37,22 +37,22 @@ export const AboutPage: React.FC = () => {
     <div className="page-shell">
       <PublicNavbar />
 
-      <main className="mx-auto max-w-6xl px-4 pb-16 pt-20 md:px-6">
+      <main className="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:pt-20 md:px-6">
         <PageHeader
           kicker="About"
           title="Built for professional spare parts teams."
           size="lg"
           actions={
             <>
-              <Link to="/shop" className="btn-primary h-10 px-5 text-sm">
+              <Link to="/shop" className="btn-primary h-10 w-full px-5 text-sm sm:w-auto">
                 Shop now
               </Link>
-              <WhatsAppButton label="WhatsApp sales" className="h-10 px-5 text-sm" />
+              <WhatsAppButton label="WhatsApp sales" className="h-10 w-full px-5 text-sm sm:w-auto" />
             </>
           }
         />
 
-        <section className="section-band mt-8 rounded-2xl p-6">
+        <section className="section-band mt-8 rounded-2xl p-4 sm:p-6">
           <div className="grid gap-8 lg:grid-cols-[minmax(0,0.55fr)_minmax(0,0.45fr)]">
             <div>
               <p className="text-lg text-muted-foreground">
@@ -75,7 +75,7 @@ export const AboutPage: React.FC = () => {
               <img
                 src="https://images.unsplash.com/photo-1489515217757-5fd1be406fef?q=80&w=1200&auto=format&fit=crop"
                 alt="Auto parts delivery"
-                className="h-56 w-full rounded-lg object-cover"
+                className="h-52 w-full rounded-lg object-cover sm:h-56"
               />
               <div className="mt-4 rounded-lg border border-border bg-background p-3 text-sm text-muted-foreground">
                 Warehouses and showrooms stocked with verified OEM and aftermarket
@@ -85,8 +85,8 @@ export const AboutPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="section-band mt-10 rounded-2xl p-6">
-          <div className="grid gap-4 md:grid-cols-2">
+        <section className="section-band mt-10 rounded-2xl p-4 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-2">
             {values.map((item) => (
               <div key={item.title} className="card card-hover p-5">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -103,7 +103,7 @@ export const AboutPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="mt-10 rounded-xl border border-border bg-card p-6 shadow-md">
+        <section className="mt-10 rounded-xl border border-border bg-card p-5 shadow-md sm:p-6">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.4fr)]">
             <div>
               <h3 className="text-2xl font-semibold text-foreground">
@@ -113,18 +113,18 @@ export const AboutPage: React.FC = () => {
                 Our specialists can confirm fitment by VIN, model, and year.
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Link to="/contact" className="btn-primary h-11 px-5 text-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Link to="/contact" className="btn-primary h-11 w-full px-5 text-sm sm:w-auto">
                 Contact support
               </Link>
-              <Link to="/shop" className="btn-outline h-11 px-5 text-sm">
+              <Link to="/shop" className="btn-outline h-11 w-full px-5 text-sm sm:w-auto">
                 Browse shop
               </Link>
             </div>
           </div>
         </section>
 
-        <section className="mt-10 rounded-xl border border-border bg-card p-6 shadow-md">
+        <section className="mt-10 rounded-xl border border-border bg-card p-5 shadow-md sm:p-6">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,0.5fr)_minmax(0,0.5fr)]">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -147,7 +147,7 @@ export const AboutPage: React.FC = () => {
               <iframe
                 title="Speedway Anointed Ent - Abossey-Okai, Accra"
                 src="https://www.google.com/maps?q=Abossey-Okai,Accra&output=embed"
-                className="h-72 w-full"
+                className="h-60 w-full sm:h-72"
                 loading="lazy"
               />
             </a>
