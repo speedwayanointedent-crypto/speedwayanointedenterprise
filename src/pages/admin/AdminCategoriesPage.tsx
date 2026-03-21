@@ -1,5 +1,5 @@
-﻿import React from "react";
-import { Plus, Search, Tag } from "lucide-react";
+import React from "react";
+import { Plus, Search, Tag, Pencil, Trash2 } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
@@ -13,6 +13,8 @@ export const AdminCategoriesPage: React.FC = () => {
   const [items, setItems] = React.useState<Category[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [open, setOpen] = React.useState(false);
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<Category | null>(null);
   const [name, setName] = React.useState("");
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
@@ -45,6 +47,39 @@ export const AdminCategoriesPage: React.FC = () => {
       load();
     } catch {
       push("Failed to create category", "error");
+    }
+  };
+
+  const onOpenEdit = (category: Category) => {
+    setEditing(category);
+    setName(category.name);
+    setEditOpen(true);
+  };
+
+  const onUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editing) return;
+    try {
+      await api.put(`/categories/${editing.id}`, { name });
+      push("Category updated", "success");
+      setEditOpen(false);
+      setEditing(null);
+      setName("");
+      load();
+    } catch {
+      push("Failed to update category", "error");
+    }
+  };
+
+  const onDelete = async (id: string) => {
+    const confirmed = window.confirm("Are you sure you want to delete this category? This may affect products using this category.");
+    if (!confirmed) return;
+    try {
+      await api.delete(`/categories/${id}`);
+      push("Category deleted", "success");
+      load();
+    } catch {
+      push("Failed to delete category", "error");
     }
   };
 
@@ -107,13 +142,31 @@ export const AdminCategoriesPage: React.FC = () => {
           <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {filtered.map((c) => (
               <div key={c.id} className="card p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Tag className="h-5 w-5" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Tag className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">{c.name}</p>
+                      <p className="text-xs text-muted-foreground">Product category</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-foreground">{c.name}</p>
-                    <p className="text-xs text-muted-foreground">12 products</p>
+                  <div className="flex gap-1">
+                    <button
+                      className="btn-outline h-9 w-9 p-0"
+                      onClick={() => onOpenEdit(c)}
+                      title="Edit"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      className="btn-destructive h-9 w-9 p-0"
+                      onClick={() => onDelete(c.id)}
+                      title="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -122,7 +175,7 @@ export const AdminCategoriesPage: React.FC = () => {
         )}
       </div>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Add category">
+      <Modal open={open} onClose={() => { setOpen(false); setName(""); }} title="Add category">
         <form onSubmit={onCreate} className="space-y-4">
           <input
             required
@@ -132,6 +185,19 @@ export const AdminCategoriesPage: React.FC = () => {
             onChange={(e) => setName(e.target.value)}
           />
           <button className="btn-primary h-11 w-full">Create</button>
+        </form>
+      </Modal>
+
+      <Modal open={editOpen} onClose={() => { setEditOpen(false); setEditing(null); setName(""); }} title="Edit category">
+        <form onSubmit={onUpdate} className="space-y-4">
+          <input
+            required
+            className="form-input"
+            placeholder="Category name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <button className="btn-primary h-11 w-full">Save changes</button>
         </form>
       </Modal>
     </div>
