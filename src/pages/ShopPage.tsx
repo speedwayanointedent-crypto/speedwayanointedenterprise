@@ -26,7 +26,7 @@ type Product = {
   years?: { label: string };
 };
 
-type Option = { id: string; name?: string; label?: string; brand_id?: string };
+type Option = { id: string; name?: string; label?: string; brand_id?: string; years?: string[] };
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?q=80&w=1200&auto=format&fit=crop";
@@ -103,6 +103,10 @@ export const ShopPage: React.FC = () => {
   const visibleModels = brandId
     ? models.filter((m) => m.brand_id === brandId)
     : models;
+  const selectedModel = models.find(m => m.id === modelId);
+  const availableYears = selectedModel?.years?.length
+    ? selectedModel.years.map(y => ({ id: y, label: y }))
+    : years;
 
   React.useEffect(() => {
     const nextParams = new URLSearchParams();
@@ -133,10 +137,16 @@ export const ShopPage: React.FC = () => {
       ? p.model_id === modelId ||
         p.models?.name === models.find((m) => m.id === modelId)?.name
       : true;
-    const matchesYear = yearId
-      ? p.year_id === yearId ||
-        p.years?.label === years.find((y) => y.id === yearId)?.label
-      : true;
+    
+    let matchesYear = true;
+    if (yearId) {
+      const productYearLabel = p.years?.label;
+      const selectedYearLabel = selectedModel?.years?.includes(yearId)
+        ? yearId
+        : years.find((y) => y.id === yearId)?.label;
+      matchesYear = productYearLabel === selectedYearLabel;
+    }
+    
     return matchesQuery && matchesCategory && matchesBrand && matchesModel && matchesYear;
   });
 
@@ -236,7 +246,7 @@ export const ShopPage: React.FC = () => {
                 onChange={(e) => setYearId(e.target.value)}
               >
                 <option value="">All years</option>
-                {years.map((year) => (
+                {availableYears.map((year) => (
                   <option key={year.id} value={year.id}>
                     {year.label || "Year"}
                   </option>
