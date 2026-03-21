@@ -408,12 +408,13 @@ export const AdminProductsPage: React.FC = () => {
     : years;
 
   React.useEffect(() => {
-    if (!editing && selectedModel?.years?.length) {
-      setYearId(selectedModel.years[0]);
+    const model = models.find(m => m.id === modelId);
+    if (!editing && model?.years?.length) {
+      setYearId(model.years[0]);
     } else if (!editing && !modelId) {
       setYearId("");
     }
-  }, [modelId, editing]);
+  }, [modelId, editing, models]);
 
   return (
     <div className="space-y-6 text-foreground">
