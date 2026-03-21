@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Plus, Search, Image, Trash2, Pencil } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
@@ -27,7 +27,9 @@ type Product = {
   years?: { label: string };
 };
 
-type Option = { id: string; name?: string; label?: string; brand_id?: string };
+type Option = { id: string; name?: string; label?: string; brand_id?: string; years?: string[] };
+
+type BrandWithYears = { id: string; name?: string; years?: string[] };
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?q=80&w=600&auto=format&fit=crop";
@@ -57,7 +59,7 @@ export const AdminProductsPage: React.FC = () => {
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const [categories, setCategories] = React.useState<Option[]>([]);
-  const [brands, setBrands] = React.useState<Option[]>([]);
+  const [brands, setBrands] = React.useState<BrandWithYears[]>([]);
   const [models, setModels] = React.useState<Option[]>([]);
   const [years, setYears] = React.useState<Option[]>([]);
   const { push } = useToast();
@@ -70,6 +72,9 @@ export const AdminProductsPage: React.FC = () => {
   const [newModel, setNewModel] = React.useState("");
   const [newModelBrandId, setNewModelBrandId] = React.useState("");
   const [newYear, setNewYear] = React.useState("");
+  const [exporting, setExporting] = React.useState(false);
+  const [importing, setImporting] = React.useState(false);
+  const importInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -93,6 +98,42 @@ export const AdminProductsPage: React.FC = () => {
       setLoading(false);
     }
   }, []);
+
+  const exportCsv = async () => {
+    try {
+      setExporting(true);
+      const res = await api.get("/products/export", { responseType: "blob" });
+      const blob = new Blob([res.data], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "products.csv";
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      push("Failed to export products", "error");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const importCsv = async (file: File | null) => {
+    if (!file) return;
+    try {
+      setImporting(true);
+      const text = await file.text();
+      await api.post("/products/import", { csv: text });
+      push("Products imported", "success");
+      load();
+    } catch {
+      push("Failed to import products", "error");
+    } finally {
+      setImporting(false);
+      if (importInputRef.current) {
+        importInputRef.current.value = "";
+      }
+    }
+  };
 
   React.useEffect(() => {
     load();
@@ -141,6 +182,18 @@ export const AdminProductsPage: React.FC = () => {
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      let finalYearId = yearId;
+      
+      if (yearId && selectedBrand?.years?.includes(yearId)) {
+        const existingYear = years.find(y => y.label === yearId);
+        if (existingYear) {
+          finalYearId = existingYear.id;
+        } else {
+          const res = await api.post("/years", { label: yearId });
+          finalYearId = res.data.id;
+        }
+      }
+
       const payload = {
         name,
         price: Number(price),
@@ -148,7 +201,7 @@ export const AdminProductsPage: React.FC = () => {
         category_id: categoryId,
         brand_id: brandId,
         model_id: modelId || null,
-        year_id: yearId || null,
+        year_id: finalYearId || null,
         description,
         image_url: imageUrl || null,
         car_image_url: carImageUrl || null,
@@ -215,6 +268,18 @@ export const AdminProductsPage: React.FC = () => {
     e.preventDefault();
     if (!editing) return;
     try {
+      let finalYearId = yearId;
+      
+      if (yearId && selectedBrand?.years?.includes(yearId)) {
+        const existingYear = years.find(y => y.label === yearId);
+        if (existingYear) {
+          finalYearId = existingYear.id;
+        } else {
+          const res = await api.post("/years", { label: yearId });
+          finalYearId = res.data.id;
+        }
+      }
+
       const payload = {
         name,
         price: Number(price),
@@ -222,7 +287,7 @@ export const AdminProductsPage: React.FC = () => {
         category_id: categoryId,
         brand_id: brandId,
         model_id: modelId || null,
-        year_id: yearId || null,
+        year_id: finalYearId || null,
         description,
         image_url: imageUrl || null,
         car_image_url: carImageUrl || null,
@@ -311,6 +376,10 @@ export const AdminProductsPage: React.FC = () => {
   };
 
   const createModel = async () => {
+    if (!newModelBrandId) {
+      push("Please select a brand", "error");
+      return;
+    }
     try {
       await api.post("/models", { name: newModel, brand_id: newModelBrandId });
       setNewModel("");
@@ -335,6 +404,11 @@ export const AdminProductsPage: React.FC = () => {
     }
   };
 
+  const selectedBrand = brands.find(b => b.id === brandId);
+  const availableYears = selectedBrand?.years?.length 
+    ? selectedBrand.years.map(y => ({ id: y, label: y }))
+    : years;
+
   return (
     <div className="space-y-6 text-foreground">
       <PageHeader
@@ -347,10 +421,29 @@ export const AdminProductsPage: React.FC = () => {
           </>
         }
         actions={
-          <button className="btn-primary h-10 text-sm" onClick={() => setOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add product
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={(e) => importCsv(e.target.files?.[0] || null)}
+            />
+            <button
+              className="btn-outline h-10 text-sm"
+              onClick={() => importInputRef.current?.click()}
+              disabled={importing}
+            >
+              Import CSV
+            </button>
+            <button className="btn-outline h-10 text-sm" onClick={exportCsv} disabled={exporting}>
+              Export CSV
+            </button>
+            <button className="btn-primary h-10 text-sm" onClick={() => setOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add product
+            </button>
+          </div>
         }
       />
 
@@ -516,19 +609,21 @@ export const AdminProductsPage: React.FC = () => {
               onChange={(e) => setYearId(e.target.value)}
             >
               <option value="">Select year (optional)</option>
-              {years.map((y) => (
+              {availableYears.map((y) => (
                 <option key={y.id} value={y.id}>
                   {y.label}
                 </option>
               ))}
             </select>
-            <button
-              type="button"
-              className="btn-outline h-12 text-xs"
-              onClick={() => setAddYearOpen(true)}
-            >
-              Add new year
-            </button>
+            {selectedBrand?.years?.length === 0 && (
+              <button
+                type="button"
+                className="btn-outline h-12 text-xs"
+                onClick={() => setAddYearOpen(true)}
+              >
+                Add new year
+              </button>
+            )}
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <input
@@ -669,7 +764,7 @@ export const AdminProductsPage: React.FC = () => {
               onChange={(e) => setYearId(e.target.value)}
             >
               <option value="">Select year (optional)</option>
-              {years.map((y) => (
+              {availableYears.map((y) => (
                 <option key={y.id} value={y.id}>
                   {y.label}
                 </option>
