@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Search, Truck, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Truck, Pencil, Trash2, X } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
@@ -7,7 +7,7 @@ import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 
-type Model = { id: string; name: string; brand_id?: string; brands?: { name: string } };
+type Model = { id: string; name: string; brand_id?: string; brands?: { name: string }; years?: string[] };
 type Brand = { id: string; name: string };
 
 export const AdminModelsPage: React.FC = () => {
@@ -18,6 +18,8 @@ export const AdminModelsPage: React.FC = () => {
   const [editing, setEditing] = React.useState<Model | null>(null);
   const [name, setName] = React.useState("");
   const [brandId, setBrandId] = React.useState("");
+  const [years, setYears] = React.useState<string[]>([]);
+  const [newYear, setNewYear] = React.useState("");
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const [brands, setBrands] = React.useState<Brand[]>([]);
@@ -44,6 +46,17 @@ export const AdminModelsPage: React.FC = () => {
     load();
   }, [load]);
 
+  const addYear = () => {
+    if (newYear && !years.includes(newYear)) {
+      setYears([...years, newYear].sort());
+      setNewYear("");
+    }
+  };
+
+  const removeYear = (year: string) => {
+    setYears(years.filter(y => y !== year));
+  };
+
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!brandId) {
@@ -51,10 +64,11 @@ export const AdminModelsPage: React.FC = () => {
       return;
     }
     try {
-      await api.post("/models", { name, brand_id: brandId });
+      await api.post("/models", { name, brand_id: brandId, years });
       push("Model created", "success");
       setName("");
       setBrandId("");
+      setYears([]);
       setOpen(false);
       load();
     } catch {
@@ -66,6 +80,7 @@ export const AdminModelsPage: React.FC = () => {
     setEditing(model);
     setName(model.name);
     setBrandId(model.brand_id || "");
+    setYears(model.years || []);
     setEditOpen(true);
   };
 
@@ -77,12 +92,13 @@ export const AdminModelsPage: React.FC = () => {
       return;
     }
     try {
-      await api.put(`/models/${editing.id}`, { name, brand_id: brandId });
+      await api.put(`/models/${editing.id}`, { name, brand_id: brandId, years });
       push("Model updated", "success");
       setEditOpen(false);
       setEditing(null);
       setName("");
       setBrandId("");
+      setYears([]);
       load();
     } catch {
       push("Failed to update model", "error");
@@ -109,7 +125,7 @@ export const AdminModelsPage: React.FC = () => {
     <div className="space-y-6 text-foreground">
       <PageHeader
         title="Vehicle models"
-        subtitle="Maintain fitment models and trim variations."
+        subtitle="Maintain fitment models and their compatible years."
         meta={
           <>
             {items.length} total
@@ -187,13 +203,27 @@ export const AdminModelsPage: React.FC = () => {
                     </button>
                   </div>
                 </div>
+                {c.years?.length ? (
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {c.years.slice(0, 6).map((y) => (
+                      <span key={y} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                        {y}
+                      </span>
+                    ))}
+                    {c.years.length > 6 && (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                        +{c.years.length - 6}
+                      </span>
+                    )}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
         )}
       </div>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Add model">
+      <Modal open={open} onClose={() => { setOpen(false); setName(""); setBrandId(""); setYears([]); setNewYear(""); }} title="Add model">
         <form onSubmit={onCreate} className="space-y-4">
           <select
             required
@@ -211,15 +241,56 @@ export const AdminModelsPage: React.FC = () => {
           <input
             required
             className="form-input"
-            placeholder="Model name"
+            placeholder="Model name (e.g., Corolla)"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Compatible Years</label>
+            <div className="flex gap-2">
+              <input
+                className="form-input flex-1"
+                placeholder="Enter year (e.g., 2024)"
+                value={newYear}
+                onChange={(e) => setNewYear(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addYear())}
+              />
+              <button
+                type="button"
+                className="btn-outline h-10"
+                onClick={addYear}
+              >
+                Add
+              </button>
+            </div>
+            {years.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {years.map((y) => (
+                  <span
+                    key={y}
+                    className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-sm text-primary"
+                  >
+                    {y}
+                    <button
+                      type="button"
+                      onClick={() => removeYear(y)}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Add years this model is compatible with. Products will auto-filter by model years.
+            </p>
+          </div>
           <button className="btn-primary h-11 w-full">Create</button>
         </form>
       </Modal>
 
-      <Modal open={editOpen} onClose={() => { setEditOpen(false); setEditing(null); setName(""); setBrandId(""); }} title="Edit model">
+      <Modal open={editOpen} onClose={() => { setEditOpen(false); setEditing(null); setName(""); setBrandId(""); setYears([]); setNewYear(""); }} title="Edit model">
         <form onSubmit={onUpdate} className="space-y-4">
           <select
             required
@@ -241,6 +312,47 @@ export const AdminModelsPage: React.FC = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Compatible Years</label>
+            <div className="flex gap-2">
+              <input
+                className="form-input flex-1"
+                placeholder="Enter year (e.g., 2024)"
+                value={newYear}
+                onChange={(e) => setNewYear(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addYear())}
+              />
+              <button
+                type="button"
+                className="btn-outline h-10"
+                onClick={addYear}
+              >
+                Add
+              </button>
+            </div>
+            {years.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {years.map((y) => (
+                  <span
+                    key={y}
+                    className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-sm text-primary"
+                  >
+                    {y}
+                    <button
+                      type="button"
+                      onClick={() => removeYear(y)}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Add years this model is compatible with.
+            </p>
+          </div>
           <button className="btn-primary h-11 w-full">Save changes</button>
         </form>
       </Modal>
