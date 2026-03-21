@@ -29,8 +29,6 @@ type Product = {
 
 type Option = { id: string; name?: string; label?: string; brand_id?: string; years?: string[] };
 
-type BrandWithYears = { id: string; name?: string; years?: string[] };
-
 const fallbackImage =
   "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?q=80&w=600&auto=format&fit=crop";
 
@@ -59,7 +57,7 @@ export const AdminProductsPage: React.FC = () => {
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const [categories, setCategories] = React.useState<Option[]>([]);
-  const [brands, setBrands] = React.useState<BrandWithYears[]>([]);
+  const [brands, setBrands] = React.useState<Option[]>([]);
   const [models, setModels] = React.useState<Option[]>([]);
   const [years, setYears] = React.useState<Option[]>([]);
   const { push } = useToast();
@@ -184,7 +182,7 @@ export const AdminProductsPage: React.FC = () => {
     try {
       let finalYearId = yearId;
       
-      if (yearId && selectedBrand?.years?.includes(yearId)) {
+      if (yearId && selectedModel?.years?.includes(yearId)) {
         const existingYear = years.find(y => y.label === yearId);
         if (existingYear) {
           finalYearId = existingYear.id;
@@ -270,7 +268,7 @@ export const AdminProductsPage: React.FC = () => {
     try {
       let finalYearId = yearId;
       
-      if (yearId && selectedBrand?.years?.includes(yearId)) {
+      if (yearId && selectedModel?.years?.includes(yearId)) {
         const existingYear = years.find(y => y.label === yearId);
         if (existingYear) {
           finalYearId = existingYear.id;
@@ -404,9 +402,9 @@ export const AdminProductsPage: React.FC = () => {
     }
   };
 
-  const selectedBrand = brands.find(b => b.id === brandId);
-  const availableYears = selectedBrand?.years?.length 
-    ? selectedBrand.years.map(y => ({ id: y, label: y }))
+  const selectedModel = models.find(m => m.id === modelId);
+  const availableYears = selectedModel?.years?.length
+    ? selectedModel.years.map(y => ({ id: y, label: y }))
     : years;
 
   return (
@@ -615,7 +613,7 @@ export const AdminProductsPage: React.FC = () => {
                 </option>
               ))}
             </select>
-            {selectedBrand?.years?.length === 0 && (
+            {!selectedModel?.years?.length && (
               <button
                 type="button"
                 className="btn-outline h-12 text-xs"
