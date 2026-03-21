@@ -379,7 +379,7 @@ export const AdminProductsPage: React.FC = () => {
       return;
     }
     try {
-      await api.post("/models", { name: newModel, brand_id: newModelBrandId });
+      await api.post("/models", { name: newModel, brand_id: newModelBrandId, years: [] });
       setNewModel("");
       setNewModelBrandId("");
       setAddModelOpen(false);
@@ -406,6 +406,14 @@ export const AdminProductsPage: React.FC = () => {
   const availableYears = selectedModel?.years?.length
     ? selectedModel.years.map(y => ({ id: y, label: y }))
     : years;
+
+  React.useEffect(() => {
+    if (!editing && selectedModel?.years?.length) {
+      setYearId(selectedModel.years[0]);
+    } else if (!editing && !modelId) {
+      setYearId("");
+    }
+  }, [modelId, editing]);
 
   return (
     <div className="space-y-6 text-foreground">
@@ -583,7 +591,7 @@ export const AdminProductsPage: React.FC = () => {
             <select
               className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
               value={modelId}
-              onChange={(e) => setModelId(e.target.value)}
+              onChange={(e) => { setModelId(e.target.value); setYearId(""); }}
             >
               <option value="">Select model (optional)</option>
               {models
@@ -745,7 +753,7 @@ export const AdminProductsPage: React.FC = () => {
             <select
               className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
               value={modelId}
-              onChange={(e) => setModelId(e.target.value)}
+              onChange={(e) => { setModelId(e.target.value); setYearId(""); }}
             >
               <option value="">Select model (optional)</option>
               {models
