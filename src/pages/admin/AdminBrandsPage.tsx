@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Search, Layers, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Search, Layers, Pencil, Trash2 } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
@@ -7,7 +7,7 @@ import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 
-type Brand = { id: string; name: string; years: string[] };
+type Brand = { id: string; name: string };
 
 export const AdminBrandsPage: React.FC = () => {
   const [items, setItems] = React.useState<Brand[]>([]);
@@ -16,8 +16,6 @@ export const AdminBrandsPage: React.FC = () => {
   const [editOpen, setEditOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Brand | null>(null);
   const [name, setName] = React.useState("");
-  const [years, setYears] = React.useState<string[]>([]);
-  const [newYear, setNewYear] = React.useState("");
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const { push } = useToast();
@@ -39,24 +37,12 @@ export const AdminBrandsPage: React.FC = () => {
     load();
   }, [load]);
 
-  const addYear = () => {
-    if (newYear && !years.includes(newYear)) {
-      setYears([...years, newYear].sort());
-      setNewYear("");
-    }
-  };
-
-  const removeYear = (year: string) => {
-    setYears(years.filter(y => y !== year));
-  };
-
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post("/brands", { name, years });
+      await api.post("/brands", { name });
       push("Brand created", "success");
       setName("");
-      setYears([]);
       setOpen(false);
       load();
     } catch {
@@ -67,7 +53,6 @@ export const AdminBrandsPage: React.FC = () => {
   const onOpenEdit = (brand: Brand) => {
     setEditing(brand);
     setName(brand.name);
-    setYears(brand.years || []);
     setEditOpen(true);
   };
 
@@ -75,12 +60,11 @@ export const AdminBrandsPage: React.FC = () => {
     e.preventDefault();
     if (!editing) return;
     try {
-      await api.put(`/brands/${editing.id}`, { name, years });
+      await api.put(`/brands/${editing.id}`, { name });
       push("Brand updated", "success");
       setEditOpen(false);
       setEditing(null);
       setName("");
-      setYears([]);
       load();
     } catch {
       push("Failed to update brand", "error");
@@ -107,7 +91,7 @@ export const AdminBrandsPage: React.FC = () => {
     <div className="space-y-6 text-foreground">
       <PageHeader
         title="Brands"
-        subtitle="Maintain supplier and manufacturer brand lists with their vehicle years."
+        subtitle="Maintain supplier and manufacturer brand lists."
         meta={
           <>
             {items.length} total
@@ -165,9 +149,7 @@ export const AdminBrandsPage: React.FC = () => {
                     </div>
                     <div>
                       <p className="font-semibold text-foreground">{c.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {c.years?.length ? `${c.years.length} years` : 'No years set'}
-                      </p>
+                      <p className="text-xs text-muted-foreground">OEM partner</p>
                     </div>
                   </div>
                   <div className="flex gap-1">
@@ -187,27 +169,13 @@ export const AdminBrandsPage: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                {c.years?.length ? (
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {c.years.slice(0, 6).map((y) => (
-                      <span key={y} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                        {y}
-                      </span>
-                    ))}
-                    {c.years.length > 6 && (
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                        +{c.years.length - 6}
-                      </span>
-                    )}
-                  </div>
-                ) : null}
               </div>
             ))}
           </div>
         )}
       </div>
 
-      <Modal open={open} onClose={() => { setOpen(false); setName(""); setYears([]); }} title="Add brand">
+      <Modal open={open} onClose={() => { setOpen(false); setName(""); }} title="Add brand">
         <form onSubmit={onCreate} className="space-y-4">
           <input
             required
@@ -216,52 +184,11 @@ export const AdminBrandsPage: React.FC = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Vehicle Years</label>
-            <div className="flex gap-2">
-              <input
-                className="form-input flex-1"
-                placeholder="Enter year (e.g., 2024)"
-                value={newYear}
-                onChange={(e) => setNewYear(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addYear())}
-              />
-              <button
-                type="button"
-                className="btn-outline h-10"
-                onClick={addYear}
-              >
-                Add
-              </button>
-            </div>
-            {years.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {years.map((y) => (
-                  <span
-                    key={y}
-                    className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-sm text-primary"
-                  >
-                    {y}
-                    <button
-                      type="button"
-                      onClick={() => removeYear(y)}
-                      className="ml-1 hover:text-destructive"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Add years for vehicles this brand supports. Products will auto-filter by brand years.
-            </p>
-          </div>
           <button className="btn-primary h-11 w-full">Create</button>
         </form>
       </Modal>
 
-      <Modal open={editOpen} onClose={() => { setEditOpen(false); setEditing(null); setName(""); setYears([]); }} title="Edit brand">
+      <Modal open={editOpen} onClose={() => { setEditOpen(false); setEditing(null); setName(""); }} title="Edit brand">
         <form onSubmit={onUpdate} className="space-y-4">
           <input
             required
@@ -270,47 +197,6 @@ export const AdminBrandsPage: React.FC = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Vehicle Years</label>
-            <div className="flex gap-2">
-              <input
-                className="form-input flex-1"
-                placeholder="Enter year (e.g., 2024)"
-                value={newYear}
-                onChange={(e) => setNewYear(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addYear())}
-              />
-              <button
-                type="button"
-                className="btn-outline h-10"
-                onClick={addYear}
-              >
-                Add
-              </button>
-            </div>
-            {years.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {years.map((y) => (
-                  <span
-                    key={y}
-                    className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-sm text-primary"
-                  >
-                    {y}
-                    <button
-                      type="button"
-                      onClick={() => removeYear(y)}
-                      className="ml-1 hover:text-destructive"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Add years for vehicles this brand supports.
-            </p>
-          </div>
           <button className="btn-primary h-11 w-full">Save changes</button>
         </form>
       </Modal>
