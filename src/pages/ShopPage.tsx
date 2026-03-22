@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Search, ShoppingCart } from "lucide-react";
+import { Search, ShoppingCart, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import api from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
@@ -15,6 +15,7 @@ type Product = {
   name: string;
   price: number;
   image_url?: string | null;
+  car_image_url?: string | null;
   status: string;
   category_id?: string | null;
   brand_id?: string | null;
@@ -26,344 +27,374 @@ type Product = {
   years?: { label: string };
 };
 
+type CategoryWithCount = {
+  id: string;
+  name: string;
+  product_count: number;
+};
+
 type Option = { id: string; name?: string; label?: string; brand_id?: string; years?: string[] };
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?q=80&w=1200&auto=format&fit=crop";
 
+const PRODUCTS_PER_PAGE = 24;
+
+const CATEGORY_ICONS: Record<string, string> = {
+  'BONNET': 'https://cdn.pixabay.com/photo/2016/03/12/23/23/automobile-1252872_1280.jpg',
+  'Bonnet': 'https://cdn.pixabay.com/photo/2016/03/12/23/23/automobile-1252872_1280.jpg',
+  'Doors': 'https://cdn.pixabay.com/photo/2016/03/12/23/23/car-1252872_1280.jpg',
+  'Bumpers': 'https://cdn.pixabay.com/photo/2015/09/12/19/39/car-937061_1280.jpg',
+  'Side Mirrors': 'https://cdn.pixabay.com/photo/2016/04/13/19/20/side-mirror-1328401_1280.jpg',
+  'Head Lights': 'https://cdn.pixabay.com/photo/2014/11/13/23/54/headlight-534069_1280.jpg',
+  'Tail Lights': 'https://cdn.pixabay.com/photo/2015/05/22/05/57/taillight-779740_1280.jpg',
+  'Gear Levels': 'https://cdn.pixabay.com/photo/2016/08/01/21/41/gear-stick-1569409_1280.jpg',
+  'Fenders': 'https://cdn.pixabay.com/photo/2016/11/23/18/36/auto-1853826_1280.jpg',
+  'Grilles': 'https://cdn.pixabay.com/photo/2016/11/22/20/09/automobile-1851053_1280.jpg',
+};
+
 export const ShopPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [categories, setCategories] = React.useState<CategoryWithCount[]>([]);
   const [products, setProducts] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [query, setQuery] = React.useState(() => searchParams.get("q") ?? "");
-  const [categories, setCategories] = React.useState<Option[]>([]);
+  const [loadingProducts, setLoadingProducts] = React.useState(false);
+  const [query, setQuery] = React.useState("");
   const [brands, setBrands] = React.useState<Option[]>([]);
   const [models, setModels] = React.useState<Option[]>([]);
-  const [years, setYears] = React.useState<Option[]>([]);
-  const [categoryId, setCategoryId] = React.useState("");
   const [brandId, setBrandId] = React.useState("");
   const [modelId, setModelId] = React.useState("");
-  const [yearId, setYearId] = React.useState("");
-  const [pendingCategoryParam, setPendingCategoryParam] = React.useState(
-    () => searchParams.get("category") ?? ""
-  );
+  const [page, setPage] = React.useState(1);
+  const [totalPages, setTotalPages] = React.useState(1);
+  const [totalProducts, setTotalProducts] = React.useState(0);
+  const [selectedCategory, setSelectedCategory] = React.useState<CategoryWithCount | null>(null);
   const { push } = useToast();
 
-  React.useEffect(() => {
-    const urlQuery = searchParams.get("q") ?? "";
-    const urlCategory = searchParams.get("category") ?? "";
-    if (urlQuery !== query) {
-      setQuery(urlQuery);
-    }
-    if (urlCategory !== pendingCategoryParam) {
-      setPendingCategoryParam(urlCategory);
-    }
-  }, [searchParams, query, pendingCategoryParam]);
+  const categoryIdFromUrl = searchParams.get("category");
+  const pageFromUrl = parseInt(searchParams.get("page") || "1");
 
   React.useEffect(() => {
-    async function load() {
+    async function loadCategories() {
       try {
-        const [prodRes, catRes, brandRes, modelRes, yearRes] =
-          await Promise.all([
-            api.get<Product[]>("/products"),
-            api.get<Option[]>("/categories"),
-            api.get<Option[]>("/brands"),
-            api.get<Option[]>("/models"),
-            api.get<Option[]>("/years")
-          ]);
-        setProducts(prodRes.data);
-        setCategories(catRes.data || []);
-        setBrands(brandRes.data || []);
-        setModels(modelRes.data || []);
-        setYears(yearRes.data || []);
+        const res = await api.get<CategoryWithCount[]>("/products/by-category");
+        setCategories(res.data || []);
       } catch {
-        setProducts([]);
-      } finally {
-        setLoading(false);
+        setCategories([]);
       }
     }
-    load();
+    loadCategories();
   }, []);
 
   React.useEffect(() => {
-    if (!pendingCategoryParam || categoryId || categories.length === 0) {
-      return;
+    async function loadFilters() {
+      try {
+        const [brandRes, modelRes] = await Promise.all([
+          api.get<Option[]>("/brands"),
+          api.get<Option[]>("/models")
+        ]);
+        setBrands(brandRes.data || []);
+        setModels(modelRes.data || []);
+      } catch {
+        setBrands([]);
+        setModels([]);
+      }
     }
-    const normalized = pendingCategoryParam.trim().toLowerCase();
-    const match =
-      categories.find((cat) => cat.id === pendingCategoryParam) ||
-      categories.find((cat) => (cat.name || "").toLowerCase() === normalized);
-    if (match) {
-      setCategoryId(match.id);
-    }
-  }, [pendingCategoryParam, categories, categoryId]);
+    loadFilters();
+  }, []);
 
-  const normalizedQuery = query.trim().toLowerCase();
-  const selectedCategory = categories.find((cat) => cat.id === categoryId);
-  const visibleModels = brandId
-    ? models.filter((m) => m.brand_id === brandId)
-    : models;
-  const selectedModel = models.find(m => m.id === modelId);
-  const availableYears = selectedModel?.years?.length
-    ? selectedModel.years.map(y => ({ id: y, label: y }))
-    : years;
+  const loadProducts = React.useCallback(async (catId: string, brand?: string, model?: string, pageNum: number = 1) => {
+    setLoadingProducts(true);
+    try {
+      const params: Record<string, string> = {
+        category_id: catId,
+        page: String(pageNum),
+        limit: String(PRODUCTS_PER_PAGE)
+      };
+      if (brand) params.brand_id = brand;
+      if (model) params.model_id = model;
+      if (query) params.q = query;
+
+      const res = await api.get<{ data: Product[]; pagination: { page: number; totalPages: number; total: number } }>("/products", { params });
+      setProducts(res.data.data || []);
+      setTotalPages(res.data.pagination.totalPages || 1);
+      setTotalProducts(res.data.pagination.total || 0);
+      setPage(pageNum);
+    } catch {
+      setProducts([]);
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, [query]);
 
   React.useEffect(() => {
-    const nextParams = new URLSearchParams();
-    const trimmedQuery = query.trim();
-    if (trimmedQuery) {
-      nextParams.set("q", trimmedQuery);
+    if (categoryIdFromUrl) {
+      const cat = categories.find(c => c.id === categoryIdFromUrl);
+      setSelectedCategory(cat || null);
+      if (cat) {
+        loadProducts(cat.id, brandId || undefined, modelId || undefined, pageFromUrl);
+      }
     }
-    if (categoryId) {
-      nextParams.set("category", selectedCategory?.name || categoryId);
-    }
-    if (nextParams.toString() !== searchParams.toString()) {
-      setSearchParams(nextParams, { replace: true });
-    }
-  }, [query, categoryId, selectedCategory, searchParams, setSearchParams]);
+  }, [categoryIdFromUrl, categories, brandId, modelId, pageFromUrl, loadProducts]);
 
-  const filtered = products.filter((p) => {
-    const matchesQuery = p.name.toLowerCase().includes(normalizedQuery);
-    const matchesCategory = categoryId
-      ? p.category_id === categoryId ||
-        p.categories?.name ===
-          categories.find((c) => c.id === categoryId)?.name
-      : true;
-    const matchesBrand = brandId
-      ? p.brand_id === brandId ||
-        p.brands?.name === brands.find((b) => b.id === brandId)?.name
-      : true;
-    const matchesModel = modelId
-      ? p.model_id === modelId ||
-        p.models?.name === models.find((m) => m.id === modelId)?.name
-      : true;
-    
-    let matchesYear = true;
-    if (yearId) {
-      const productYearLabel = p.years?.label;
-      const selectedYearLabel = selectedModel?.years?.includes(yearId)
-        ? yearId
-        : years.find((y) => y.id === yearId)?.label;
-      matchesYear = productYearLabel === selectedYearLabel;
-    }
-    
-    return matchesQuery && matchesCategory && matchesBrand && matchesModel && matchesYear;
-  });
-
-  const clearFilters = () => {
-    setQuery("");
-    setCategoryId("");
+  const handleCategoryClick = (cat: CategoryWithCount) => {
+    setSelectedCategory(cat);
+    setSearchParams({ category: cat.id, page: "1" });
+    setPage(1);
     setBrandId("");
     setModelId("");
-    setYearId("");
+    loadProducts(cat.id, undefined, undefined, 1);
   };
 
-  const resetSearch = () => {
-    setQuery("");
+  const handleBackToCategories = () => {
+    setSelectedCategory(null);
+    setProducts([]);
+    setSearchParams({});
   };
+
+  const handleFilterChange = () => {
+    if (selectedCategory) {
+      loadProducts(selectedCategory.id, brandId || undefined, modelId || undefined, 1);
+      setSearchParams({ category: selectedCategory.id, page: "1" });
+    }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (selectedCategory && newPage >= 1 && newPage <= totalPages) {
+      loadProducts(selectedCategory.id, brandId || undefined, modelId || undefined, newPage);
+      setSearchParams({ category: selectedCategory.id, page: String(newPage) });
+    }
+  };
+
+  const visibleModels = brandId ? models.filter(m => m.brand_id === brandId) : [];
 
   return (
     <div className="page-shell">
       <PublicNavbar />
 
       <main className="mx-auto max-w-7xl px-4 pb-16 pt-16 sm:pt-20 md:px-6">
-        <section className="section-band rounded-2xl p-4 sm:p-6">
-          <div className="card p-4 sm:p-6">
-            <PageHeader
-              title="Products"
-              subtitle="Browse our catalogue of genuine spare parts."
-              actions={<WhatsAppButton label="WhatsApp support" className="h-10 px-5 text-sm" />}
-            />
-            <div className="mt-4 flex flex-col gap-3 rounded-xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-              <span>Filters & search</span>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={resetSearch} className="btn-outline h-9 px-3 text-sm">
-                  Reset search
-                </button>
-                <button type="button" onClick={clearFilters} className="btn-outline h-9 px-3 text-sm">
-                  Clear filters
-                </button>
-              </div>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_repeat(4,minmax(0,0.5fr))]">
-              <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-                <Search className="h-4 w-4" />
-                <input
-                  className="w-full bg-transparent outline-none"
-                  placeholder="Search products..."
-                  list="product-suggestions"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-                <datalist id="product-suggestions">
-                  {products.slice(0, 50).map((p) => (
-                    <option key={p.id} value={p.name} />
-                  ))}
-                </datalist>
-              </div>
-              <select
-                className="form-input h-11"
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
+        {selectedCategory ? (
+          <>
+            <div className="mb-4 flex items-center gap-3">
+              <button
+                onClick={handleBackToCategories}
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
               >
-                <option value="">All categories</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name || "Category"}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="form-input h-11"
-                value={brandId}
-                onChange={(e) => {
-                  setBrandId(e.target.value);
-                  setModelId("");
-                }}
-              >
-                <option value="">All brands</option>
-                {brands.map((brand) => (
-                  <option key={brand.id} value={brand.id}>
-                    {brand.name || "Brand"}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="form-input h-11"
-                value={modelId}
-                onChange={(e) => setModelId(e.target.value)}
-              >
-                <option value="">All models</option>
-                {visibleModels.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name || "Model"}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="form-input h-11"
-                value={yearId}
-                onChange={(e) => setYearId(e.target.value)}
-              >
-                <option value="">All years</option>
-                {availableYears.map((year) => (
-                  <option key={year.id} value={year.id}>
-                    {year.label || "Year"}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-              <span>
-                Showing <span className="font-semibold text-foreground">{filtered.length}</span>{" "}
-                {filtered.length === 1 ? "item" : "items"}
-              </span>
-              <button type="button" onClick={clearFilters} className="btn-outline h-9 px-3 text-sm">
-                Clear filters
+                <ArrowLeft className="h-4 w-4" />
+                Back to Categories
               </button>
+              <span className="text-muted-foreground">/</span>
+              <span className="text-sm font-medium">{selectedCategory.name}</span>
             </div>
-          </div>
-        </section>
 
-        <section className="mt-6">
-          {loading ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, idx) => (
-                <Skeleton key={idx} className="h-60" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.length === 0 ? (
-                <div className="col-span-full rounded-xl border border-dashed border-border bg-background p-8 text-center">
-                  <div className="text-base font-semibold text-foreground">
-                    No products match your filters
+            <section className="section-band rounded-2xl p-4 sm:p-6">
+              <div className="card p-4 sm:p-6">
+                <PageHeader
+                  title={selectedCategory.name}
+                  subtitle={`${totalProducts} products available`}
+                  actions={<WhatsAppButton label="WhatsApp support" className="h-10 px-5 text-sm" />}
+                />
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_repeat(3,minmax(0,0.5fr))]">
+                  <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+                    <Search className="h-4 w-4" />
+                    <input
+                      className="w-full bg-transparent outline-none"
+                      placeholder="Search in this category..."
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleFilterChange()}
+                    />
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Try clearing filters or searching for a different part.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="btn-primary mt-4 h-10 px-5 text-sm"
+                  <select
+                    className="form-input h-11"
+                    value={brandId}
+                    onChange={(e) => { setBrandId(e.target.value); setModelId(""); }}
                   >
-                    Clear filters
-                  </button>
+                    <option value="">All brands</option>
+                    {brands.map((brand) => (
+                      <option key={brand.id} value={brand.id}>
+                        {brand.name || "Brand"}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="form-input h-11"
+                    value={modelId}
+                    onChange={(e) => setModelId(e.target.value)}
+                    disabled={!brandId}
+                  >
+                    <option value="">All models</option>
+                    {visibleModels.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.name || "Model"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <span>
+                    Showing <span className="font-semibold text-foreground">{products.length}</span> of{" "}
+                    <span className="font-semibold text-foreground">{totalProducts}</span> products
+                  </span>
+                  <div className="flex gap-2">
+                    {(brandId || modelId || query) && (
+                      <button
+                        onClick={() => { setBrandId(""); setModelId(""); setQuery(""); handleFilterChange(); }}
+                        className="btn-outline h-9 px-3 text-sm"
+                      >
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="mt-6">
+              {loadingProducts ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {Array.from({ length: 8 }).map((_, idx) => (
+                    <Skeleton key={idx} className="h-60" />
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border bg-background p-8 text-center">
+                  <div className="text-base font-semibold text-foreground">No products found</div>
+                  <p className="mt-2 text-sm text-muted-foreground">Try adjusting your filters.</p>
                 </div>
               ) : (
-                filtered.map((p) => (
-                  <div key={p.id} className="card card-hover p-4">
-                    <img
-                      src={p.image_url || fallbackImage}
-                      alt={p.name}
-                      className="h-36 w-full rounded-lg object-cover sm:h-40"
-                    />
-                    <div className="mt-3">
-                      <div className="text-xs text-muted-foreground">
-                        {p.categories?.name || "Auto parts"}
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {products.map((p) => (
+                      <div key={p.id} className="card card-hover p-4">
+                        <img
+                          src={p.image_url || fallbackImage}
+                          alt={p.name}
+                          className="h-36 w-full rounded-lg object-cover sm:h-40"
+                        />
+                        <div className="mt-3">
+                          <div className="text-xs text-muted-foreground">
+                            {p.brands?.name} {p.models?.name && `- ${p.models.name}`}
+                          </div>
+                          <div className="mt-1 text-sm font-semibold text-foreground line-clamp-2">
+                            {p.name}
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {p.years?.label && (
+                              <span className="badge border-border bg-background text-muted-foreground">
+                                {p.years.label}
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-3 flex items-center justify-between">
+                            <span className="text-sm font-semibold">GHS {p.price.toLocaleString()}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {p.status === "active" ? "In stock" : "Unavailable"}
+                            </span>
+                          </div>
+                          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                            <button
+                              className="btn-outline flex-1 text-center text-sm"
+                              onClick={() => {
+                                addToCart({
+                                  id: p.id,
+                                  name: p.name,
+                                  price: p.price,
+                                  image: p.image_url || fallbackImage
+                                });
+                                push("Added to cart", "success");
+                              }}
+                            >
+                              <ShoppingCart className="mr-1 h-4 w-4" />
+                              Add
+                            </button>
+                            <Link
+                              to={`/product/${p.id}`}
+                              className="btn-primary flex-1 text-center text-sm"
+                            >
+                              View
+                            </Link>
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-1 text-sm font-semibold text-foreground">
-                        {p.name}
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {p.brands?.name ? (
-                          <span className="badge border-border bg-background text-muted-foreground">
-                            {p.brands.name}
-                          </span>
-                        ) : null}
-                        {p.models?.name ? (
-                          <span className="badge border-border bg-background text-muted-foreground">
-                            {p.models.name}
-                          </span>
-                        ) : null}
-                        {p.years?.label ? (
-                          <span className="badge border-border bg-background text-muted-foreground">
-                            {p.years.label}
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="mt-3 flex items-center justify-between">
-                        <span className="text-sm font-semibold">
-                          GHS {p.price.toLocaleString()}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {p.status === "active" ? "In stock" : "Unavailable"}
-                        </span>
-                      </div>
-                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                        <button
-                          type="button"
-                          className="btn-outline flex-1 text-center"
-                          onClick={() => {
-                            addToCart({
-                              id: p.id,
-                              name: p.name,
-                              price: p.price,
-                              image: p.image_url || fallbackImage
-                            });
-                            push("Added to cart", "success");
-                          }}
-                        >
-                          <ShoppingCart className="mr-2 h-4 w-4" />
-                          Add
-                        </button>
-                        <Link
-                          to={`/product/${p.id}`}
-                          className="btn-primary flex-1 text-center"
-                        >
-                          View
-                        </Link>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))
+
+                  {totalPages > 1 && (
+                    <div className="mt-8 flex items-center justify-center gap-2">
+                      <button
+                        className="btn-outline h-10 w-10 p-0"
+                        disabled={page <= 1}
+                        onClick={() => handlePageChange(page - 1)}
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                      </button>
+                      <span className="text-sm">
+                        Page <span className="font-semibold">{page}</span> of{" "}
+                        <span className="font-semibold">{totalPages}</span>
+                      </span>
+                      <button
+                        className="btn-outline h-10 w-10 p-0"
+                        disabled={page >= totalPages}
+                        onClick={() => handlePageChange(page + 1)}
+                      >
+                        <ChevronRight className="h-5 w-5" />
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
-            </div>
-          )}
-        </section>
+            </section>
+          </>
+        ) : (
+          <>
+            <section className="section-band rounded-2xl p-4 sm:p-6">
+              <div className="card p-4 sm:p-6">
+                <PageHeader
+                  title="Shop"
+                  subtitle="Browse our catalogue of genuine spare parts by category."
+                  actions={<WhatsAppButton label="WhatsApp support" className="h-10 px-5 text-sm" />}
+                />
+              </div>
+            </section>
+
+            <section className="mt-6">
+              {loading ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {Array.from({ length: 8 }).map((_, idx) => (
+                    <Skeleton key={idx} className="h-48" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => handleCategoryClick(cat)}
+                      className="card card-hover overflow-hidden p-0 text-left"
+                    >
+                      <div className="relative h-32 w-full">
+                        <img
+                          src={CATEGORY_ICONS[cat.name] || CATEGORY_ICONS.default || fallbackImage}
+                          alt={cat.name}
+                          className="h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                          <h3 className="text-lg font-semibold text-white">{cat.name}</h3>
+                          <p className="text-sm text-white/80">{cat.product_count} products</p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
+        )}
       </main>
       <PublicFooterCTA />
     </div>
   );
 };
-
