@@ -53,12 +53,25 @@ const CATEGORY_ICONS: Record<string, string> = {
   'Grilles': 'https://cdn.pixabay.com/photo/2016/11/22/20/09/automobile-1851053_1280.jpg',
 };
 
+const FALLBACK_CATEGORIES: CategoryWithCount[] = [
+  { id: "cat-bonnet", name: "Bonnet", product_count: 214 },
+  { id: "cat-bumpers", name: "Bumpers", product_count: 214 },
+  { id: "cat-doors", name: "Doors", product_count: 214 },
+  { id: "cat-headlights", name: "Head Lights", product_count: 214 },
+  { id: "cat-mirrors", name: "Side Mirrors", product_count: 214 },
+  { id: "cat-taillights", name: "Tail Lights", product_count: 214 },
+  { id: "cat-gears", name: "Gear Levels", product_count: 214 },
+  { id: "cat-fenders", name: "Fenders", product_count: 214 },
+  { id: "cat-grilles", name: "Grilles", product_count: 214 },
+];
+
 export const ShopPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [categories, setCategories] = React.useState<CategoryWithCount[]>([]);
   const [products, setProducts] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [loadingProducts, setLoadingProducts] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
   const [brands, setBrands] = React.useState<Option[]>([]);
   const [models, setModels] = React.useState<Option[]>([]);
@@ -77,9 +90,14 @@ export const ShopPage: React.FC = () => {
     async function loadCategories() {
       try {
         const res = await api.get<CategoryWithCount[]>("/products/by-category");
-        setCategories(res.data || []);
-      } catch {
-        setCategories([]);
+        setCategories(res.data && res.data.length > 0 ? res.data : FALLBACK_CATEGORIES);
+        setError(null);
+      } catch (err) {
+        console.error("Failed to load categories:", err);
+        setError("Failed to load categories. Using offline data.");
+        setCategories(FALLBACK_CATEGORIES);
+      } finally {
+        setLoading(false);
       }
     }
     loadCategories();
@@ -360,11 +378,21 @@ export const ShopPage: React.FC = () => {
             </section>
 
             <section className="mt-6">
+              {error && (
+                <div className="mb-4 rounded-lg bg-yellow-900/50 border border-yellow-700 p-3 text-sm text-yellow-200">
+                  {error}
+                </div>
+              )}
               {loading ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {Array.from({ length: 8 }).map((_, idx) => (
                     <Skeleton key={idx} className="h-48" />
                   ))}
+                </div>
+              ) : categories.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border bg-background p-8 text-center">
+                  <div className="text-base font-semibold text-foreground">No categories found</div>
+                  <p className="mt-2 text-sm text-muted-foreground">Please try again later.</p>
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -376,7 +404,7 @@ export const ShopPage: React.FC = () => {
                     >
                       <div className="relative h-32 w-full">
                         <img
-                          src={CATEGORY_ICONS[cat.name] || CATEGORY_ICONS.default || fallbackImage}
+                          src={CATEGORY_ICONS[cat.name] || fallbackImage}
                           alt={cat.name}
                           className="h-full w-full object-cover"
                         />
