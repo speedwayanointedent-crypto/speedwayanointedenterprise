@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Search, Image, Trash2, Pencil } from "lucide-react";
+import { Plus, Search, Image, Trash2, Pencil, ChevronLeft, ChevronRight, Filter, X } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
@@ -31,6 +31,8 @@ type Option = { id: string; name?: string; label?: string; brand_id?: string; ye
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?q=80&w=600&auto=format&fit=crop";
+
+const PRODUCTS_PER_PAGE = 24;
 
 export const AdminProductsPage: React.FC = () => {
   const [products, setProducts] = React.useState<Product[]>([]);
@@ -73,29 +75,67 @@ export const AdminProductsPage: React.FC = () => {
   const [exporting, setExporting] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
   const importInputRef = React.useRef<HTMLInputElement | null>(null);
+  
+  // Filters
+  const [filterCategory, setFilterCategory] = React.useState("");
+  const [filterBrand, setFilterBrand] = React.useState("");
+  const [filterModel, setFilterModel] = React.useState("");
+  const [showFilters, setShowFilters] = React.useState(false);
+  
+  // Pagination
+  const [page, setPage] = React.useState(1);
+  const [totalPages, setTotalPages] = React.useState(1);
+  const [totalProducts, setTotalProducts] = React.useState(0);
 
-  const load = React.useCallback(async () => {
+  const loadProducts = React.useCallback(async (pageNum: number = 1) => {
     setLoading(true);
     try {
-      const [prodRes, catRes, brandRes, modelRes, yearRes] = await Promise.all([
-        api.get<Product[]>("/products"),
-        api.get<Option[]>("/categories"),
-        api.get<Option[]>("/brands"),
-        api.get<Option[]>("/models"),
-        api.get<Option[]>("/years")
-      ]);
-      setProducts(prodRes.data);
-      setCategories(catRes.data);
-      setBrands(brandRes.data);
-      setModels(modelRes.data);
-      setYears(yearRes.data);
-      setLastUpdated(new Date());
+      const params: Record<string, string> = {
+        page: String(pageNum),
+        limit: String(PRODUCTS_PER_PAGE)
+      };
+      if (filterCategory) params.category_id = filterCategory;
+      if (filterBrand) params.brand_id = filterBrand;
+      if (filterModel) params.model_id = filterModel;
+      if (query) params.q = query;
+
+      const res = await api.get<{ data: Product[]; pagination: { page: number; totalPages: number; total: number } }>("/products", { params });
+      setProducts(res.data.data || []);
+      setTotalPages(res.data.pagination.totalPages || 1);
+      setTotalProducts(res.data.pagination.total || 0);
+      setPage(pageNum);
     } catch {
       setProducts([]);
     } finally {
       setLoading(false);
     }
+  }, [filterCategory, filterBrand, filterModel, query]);
+
+  const load = React.useCallback(async () => {
+    try {
+      const [catRes, brandRes, modelRes, yearRes] = await Promise.all([
+        api.get<Option[]>("/categories"),
+        api.get<Option[]>("/brands"),
+        api.get<Option[]>("/models"),
+        api.get<Option[]>("/years")
+      ]);
+      setCategories(catRes.data || []);
+      setBrands(brandRes.data || []);
+      setModels(modelRes.data || []);
+      setYears(yearRes.data || []);
+      setLastUpdated(new Date());
+    } catch {
+      console.error("Failed to load filters");
+    }
   }, []);
+
+  React.useEffect(() => {
+    load();
+  }, [load]);
+
+  React.useEffect(() => {
+    loadProducts(1);
+  }, [filterCategory, filterBrand, filterModel, loadProducts]);
 
   const exportCsv = async () => {
     try {
@@ -122,7 +162,7 @@ export const AdminProductsPage: React.FC = () => {
       const text = await file.text();
       await api.post("/products/import", { csv: text });
       push("Products imported", "success");
-      load();
+      loadProducts(page);
     } catch {
       push("Failed to import products", "error");
     } finally {
@@ -132,10 +172,6 @@ export const AdminProductsPage: React.FC = () => {
       }
     }
   };
-
-  React.useEffect(() => {
-    load();
-  }, [load]);
 
   React.useEffect(() => {
     if (!imageFile) {
@@ -227,22 +263,26 @@ export const AdminProductsPage: React.FC = () => {
       }
       push("Product created", "success");
       setOpen(false);
-      setName("");
-      setPrice("");
-      setQuantity("");
-      setCategoryId("");
-      setBrandId("");
-      setModelId("");
-      setYearId("");
-      setDescription("");
-      setImageUrl("");
-      setImageFile(null);
-      setCarImageUrl("");
-      setCarImageFile(null);
-      load();
+      resetForm();
+      loadProducts(page);
     } catch {
       push("Failed to create product", "error");
     }
+  };
+
+  const resetForm = () => {
+    setName("");
+    setPrice("");
+    setQuantity("");
+    setCategoryId("");
+    setBrandId("");
+    setModelId("");
+    setYearId("");
+    setDescription("");
+    setImageUrl("");
+    setImageFile(null);
+    setCarImageUrl("");
+    setCarImageFile(null);
   };
 
   const onOpenEdit = (product: Product) => {
@@ -315,19 +355,8 @@ export const AdminProductsPage: React.FC = () => {
       push("Product updated", "success");
       setEditOpen(false);
       setEditing(null);
-      setName("");
-      setPrice("");
-      setQuantity("");
-      setCategoryId("");
-      setBrandId("");
-      setModelId("");
-      setYearId("");
-      setDescription("");
-      setImageUrl("");
-      setImageFile(null);
-      setCarImageUrl("");
-      setCarImageFile(null);
-      load();
+      resetForm();
+      loadProducts(page);
     } catch {
       push("Failed to update product", "error");
     }
@@ -339,15 +368,19 @@ export const AdminProductsPage: React.FC = () => {
     try {
       await api.delete(`/products/${id}`);
       push("Product deleted", "success");
-      load();
+      loadProducts(page);
     } catch {
       push("Failed to delete product", "error");
     }
   };
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(query.toLowerCase())
-  );
+  const clearFilters = () => {
+    setFilterCategory("");
+    setFilterBrand("");
+    setFilterModel("");
+    setQuery("");
+    setPage(1);
+  };
 
   const createCategory = async () => {
     try {
@@ -407,24 +440,18 @@ export const AdminProductsPage: React.FC = () => {
     ? selectedModel.years.map(y => ({ id: y, label: y }))
     : years;
 
-  React.useEffect(() => {
-    const model = models.find(m => m.id === modelId);
-    if (!editing && model?.years?.length) {
-      setYearId(model.years[0]);
-    } else if (!editing && !modelId) {
-      setYearId("");
-    }
-  }, [modelId, editing, models]);
+  const visibleFilterModels = filterBrand ? models.filter(m => m.brand_id === filterBrand) : [];
+
+  const hasActiveFilters = filterCategory || filterBrand || filterModel || query;
 
   return (
     <div className="space-y-6 text-foreground">
       <PageHeader
         title="Products"
-        subtitle="Manage catalogue pricing and stock."
+        subtitle={`${totalProducts} total products`}
         meta={
           <>
-            {products.length} total
-            {lastUpdated ? ` · Updated ${lastUpdated.toLocaleTimeString()}` : ""}
+            {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : ""}
           </>
         }
         actions={
@@ -455,40 +482,115 @@ export const AdminProductsPage: React.FC = () => {
       />
 
       <div className="card p-4">
-        <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-          <Search className="h-4 w-4" />
-          <input
-            className="w-full bg-transparent outline-none"
-            placeholder="Search products..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`btn-outline h-10 px-3 text-sm ${showFilters ? 'bg-primary text-primary-foreground' : ''}`}
+            >
+              <Filter className="mr-1 h-4 w-4" />
+              Filters
+              {hasActiveFilters && (
+                <span className="ml-1 rounded-full bg-primary-foreground px-1.5 py-0.5 text-xs text-primary">
+                  {[filterCategory, filterBrand, filterModel, query].filter(Boolean).length}
+                </span>
+              )}
+            </button>
+            <div className="relative flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+              <Search className="h-4 w-4" />
+              <input
+                className="w-full bg-transparent outline-none"
+                placeholder="Search products..."
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+                onKeyDown={(e) => e.key === "Enter" && loadProducts(1)}
+              />
+              {query && (
+                <button onClick={() => { setQuery(""); loadProducts(1); }} className="hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Showing <span className="font-semibold text-foreground">{products.length}</span> of{" "}
+            <span className="font-semibold text-foreground">{totalProducts}</span> products
+          </div>
+        </div>
+
+        {showFilters && (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <select
+              className="form-input h-10"
+              value={filterCategory}
+              onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
+            >
+              <option value="">All categories</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <select
+              className="form-input h-10"
+              value={filterBrand}
+              onChange={(e) => { setFilterBrand(e.target.value); setFilterModel(""); setPage(1); }}
+            >
+              <option value="">All brands</option>
+              {brands.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+            <select
+              className="form-input h-10"
+              value={filterModel}
+              onChange={(e) => { setFilterModel(e.target.value); setPage(1); }}
+              disabled={!filterBrand}
+            >
+              <option value="">All models</option>
+              {visibleFilterModels.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+            {hasActiveFilters && (
+              <button
+                className="btn-outline h-10 text-sm"
+                onClick={clearFilters}
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, idx) => (
+            <Skeleton key={idx} className="h-64" />
+          ))}
+        </div>
+      ) : products.length === 0 ? (
+        <div className="card p-8">
+          <EmptyState
+            title="No products found"
+            description={hasActiveFilters ? "Try adjusting your filters." : "Add your first product to get started."}
+            action={
+              <button className="btn-primary h-10 text-sm" onClick={() => setOpen(true)}>
+                Add product
+              </button>
+            }
           />
         </div>
-        {query ? (
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span className="rounded-full border border-border bg-background px-2.5 py-1">
-              Search: {query}
-            </span>
-          </div>
-        ) : null}
-
-        {loading ? (
-          <Skeleton className="mt-6 h-40" />
-        ) : filtered.length === 0 ? (
-          <div className="mt-6">
-            <EmptyState
-              title="No products found"
-              description="Try adjusting your search or add a new product."
-              action={
-                <button className="btn-primary h-10 text-sm" onClick={() => setOpen(true)}>
-                  Add product
-                </button>
-              }
-            />
-          </div>
-        ) : (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((p) => (
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {products.map((p) => (
               <div key={p.id} className="card p-4">
                 <img
                   src={p.image_url || fallbackImage}
@@ -496,11 +598,13 @@ export const AdminProductsPage: React.FC = () => {
                   className="h-40 w-full rounded-lg object-cover"
                 />
                 <div className="mt-3">
-                  <div className="text-sm font-semibold text-foreground">
-                    {p.name}
-                  </div>
                   <div className="text-xs text-muted-foreground">
                     {p.categories?.name || "Uncategorized"}
+                    {p.brands?.name && ` • ${p.brands.name}`}
+                    {p.models?.name && ` • ${p.models.name}`}
+                  </div>
+                  <div className="mt-1 line-clamp-2 text-sm font-semibold text-foreground">
+                    {p.name}
                   </div>
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-sm font-semibold">
@@ -509,6 +613,9 @@ export const AdminProductsPage: React.FC = () => {
                     <span className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
                       {p.status}
                     </span>
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Qty: {p.quantity}
                   </div>
                   <div className="mt-3 flex gap-2">
                     <button
@@ -530,10 +637,33 @@ export const AdminProductsPage: React.FC = () => {
               </div>
             ))}
           </div>
-        )}
-      </div>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Add product">
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <button
+                className="btn-outline h-10 w-10 p-0"
+                disabled={page <= 1}
+                onClick={() => loadProducts(page - 1)}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <span className="text-sm">
+                Page <span className="font-semibold">{page}</span> of{" "}
+                <span className="font-semibold">{totalPages}</span>
+              </span>
+              <button
+                className="btn-outline h-10 w-10 p-0"
+                disabled={page >= totalPages}
+                onClick={() => loadProducts(page + 1)}
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      <Modal open={open} onClose={() => { setOpen(false); resetForm(); }} title="Add product">
         <form onSubmit={onCreate} className="space-y-4">
           <div className="relative">
             <Image className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -709,7 +839,7 @@ export const AdminProductsPage: React.FC = () => {
         </form>
       </Modal>
 
-      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit product">
+      <Modal open={editOpen} onClose={() => { setEditOpen(false); setEditing(null); resetForm(); }} title="Edit product">
         <form onSubmit={onUpdate} className="space-y-4">
           <div className="relative">
             <Image className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
