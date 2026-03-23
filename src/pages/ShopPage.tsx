@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search } from "lucide-react";
 import api from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
@@ -23,10 +23,11 @@ function getCategoryImage(category: CategoryWithCount): string {
 
 export const ShopPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [categories, setCategories] = React.useState<CategoryWithCount[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchQuery, setSearchQuery] = React.useState(searchParams.get("q") || "");
 
   React.useEffect(() => {
     async function loadCategories() {
@@ -48,6 +49,10 @@ export const ShopPage: React.FC = () => {
     loadCategories();
   }, []);
 
+  React.useEffect(() => {
+    setSearchQuery(searchParams.get("q") || "");
+  }, [searchParams]);
+
   const filteredCategories = React.useMemo(() => {
     if (!searchQuery.trim()) return categories;
     const query = searchQuery.toLowerCase();
@@ -56,6 +61,11 @@ export const ShopPage: React.FC = () => {
 
   const handleCategoryClick = (cat: CategoryWithCount) => {
     navigate(`/shop/category/${cat.id}`);
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    navigate(`/shop?q=${encodeURIComponent(searchQuery)}`);
   };
 
   return (
@@ -69,7 +79,7 @@ export const ShopPage: React.FC = () => {
               subtitle="Browse our catalogue of genuine spare parts by category."
               actions={<WhatsAppButton label="WhatsApp support" className="h-10 px-5 text-sm" />}
             />
-            <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+            <form onSubmit={handleSearch} className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
               <Search className="h-4 w-4" />
               <input
                 className="w-full bg-transparent outline-none"
@@ -77,7 +87,7 @@ export const ShopPage: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
+            </form>
           </div>
         </section>
 
@@ -96,7 +106,7 @@ export const ShopPage: React.FC = () => {
           ) : filteredCategories.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-background p-8 text-center">
               <div className="text-base font-semibold text-foreground">No categories found</div>
-              <p className="mt-2 text-sm text-muted-foreground">Please try again later.</p>
+              <p className="mt-2 text-sm text-muted-foreground">Try adjusting your search.</p>
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
