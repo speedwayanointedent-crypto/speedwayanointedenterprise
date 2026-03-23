@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, ShoppingCart, ChevronLeft, ChevronRight, ArrowLeft, X, ChevronUp, ChevronDown } from "lucide-react";
+import { Search, ShoppingCart, ChevronLeft, ChevronRight, ArrowLeft, X, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
 import api from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
@@ -9,6 +9,7 @@ import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
 import { PageHeader } from "../components/ui/PageHeader";
 import { addToCart } from "../lib/cart";
 import { useToast } from "../components/ui/Toast";
+import { PageLoading } from "../components/ui/LoadingSpinner";
 
 type Product = {
   id: string;
@@ -270,11 +271,7 @@ export const ShopProductsPage: React.FC = () => {
 
         <section className="mt-6">
           {loading ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, idx) => (
-                <Skeleton key={idx} className="h-60" />
-              ))}
-            </div>
+            <PageLoading text="Loading products..." />
           ) : products.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-background p-8 text-center">
               <div className="text-base font-semibold text-foreground">No products found</div>
