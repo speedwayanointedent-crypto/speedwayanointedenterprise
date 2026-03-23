@@ -207,4 +207,33 @@
   .text-muted {
     @apply text-muted-foreground;
   }
+
+  .btn-spinner {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .loading-overlay {
+    position: relative;
+    pointer-events: none;
+  }
+
+  .loading-overlay::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
