@@ -1,12 +1,13 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, ChevronRight, Search } from "lucide-react";
+import { ArrowLeft, ChevronRight, Search, Loader2 } from "lucide-react";
 import api from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { WhatsAppButton } from "../components/ui/WhatsAppButton";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
 import { PageHeader } from "../components/ui/PageHeader";
+import { PageLoading } from "../components/ui/LoadingSpinner";
 
 type Brand = {
   id: string;
@@ -72,11 +73,7 @@ export const ShopCategoryPage: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, idx) => (
-              <Skeleton key={idx} className="h-48" />
-            ))}
-          </div>
+          <PageLoading text="Loading category..." />
         ) : error ? (
           <div className="rounded-xl border border-dashed border-border bg-background p-8 text-center">
             <div className="text-base font-semibold text-foreground">{error}</div>
