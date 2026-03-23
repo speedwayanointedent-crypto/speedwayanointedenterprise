@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Search, Layers, Pencil, Trash2, ImageIcon } from "lucide-react";
+import { Plus, Search, Layers, Pencil, Trash2, ImageIcon, Loader2 } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
@@ -12,6 +12,7 @@ type Brand = { id: string; name: string; logo_url?: string | null };
 export const AdminBrandsPage: React.FC = () => {
   const [items, setItems] = React.useState<Brand[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [submitting, setSubmitting] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Brand | null>(null);
@@ -47,6 +48,7 @@ export const AdminBrandsPage: React.FC = () => {
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await api.post("/brands", { name, logo_url: logoUrl || null });
       push("Brand created", "success");
@@ -55,6 +57,8 @@ export const AdminBrandsPage: React.FC = () => {
       load();
     } catch {
       push("Failed to create brand", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -69,6 +73,7 @@ export const AdminBrandsPage: React.FC = () => {
   const onUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editing) return;
+    setSubmitting(true);
     try {
       await api.put(`/brands/${editing.id}`, { name, logo_url: logoUrl || null });
       push("Brand updated", "success");
@@ -78,18 +83,23 @@ export const AdminBrandsPage: React.FC = () => {
       load();
     } catch {
       push("Failed to update brand", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const onDelete = async (id: string) => {
     const confirmed = window.confirm("Are you sure you want to delete this brand? This may affect products using this brand.");
     if (!confirmed) return;
+    setSubmitting(true);
     try {
       await api.delete(`/brands/${id}`);
       push("Brand deleted", "success");
       load();
     } catch {
       push("Failed to delete brand", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -243,7 +253,14 @@ export const AdminBrandsPage: React.FC = () => {
               </p>
             </div>
           </div>
-          <button className="btn-primary h-11 w-full">Create</button>
+          <button className="btn-primary h-11 w-full" disabled={submitting}>
+            {submitting ? (
+              <span className="flex items-center justify-center">
+                <Loader2 className="btn-spinner mr-2 h-4 w-4" />
+                Creating...
+              </span>
+            ) : "Create"}
+          </button>
         </form>
       </Modal>
 
@@ -282,7 +299,14 @@ export const AdminBrandsPage: React.FC = () => {
               )}
             </div>
           </div>
-          <button className="btn-primary h-11 w-full">Save changes</button>
+          <button className="btn-primary h-11 w-full" disabled={submitting}>
+            {submitting ? (
+              <span className="flex items-center justify-center">
+                <Loader2 className="btn-spinner mr-2 h-4 w-4" />
+                Saving...
+              </span>
+            ) : "Save changes"}
+          </button>
         </form>
       </Modal>
     </div>
