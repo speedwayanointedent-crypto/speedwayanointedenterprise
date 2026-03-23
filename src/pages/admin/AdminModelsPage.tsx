@@ -7,7 +7,7 @@ import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 
-type Model = { id: string; name: string; brand_id?: string; brands?: { name: string }; years?: string[]; image_url?: string | null };
+type Model = { id: string; name: string; brand_id?: string; brands?: { name: string }; years?: string[]; image_url?: string | null; gallery?: string[] };
 type Brand = { id: string; name: string };
 
 export const AdminModelsPage: React.FC = () => {
@@ -22,6 +22,8 @@ export const AdminModelsPage: React.FC = () => {
   const [newYear, setNewYear] = React.useState("");
   const [imageUrl, setImageUrl] = React.useState("");
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
+  const [gallery, setGallery] = React.useState<string[]>([]);
+  const [newGalleryUrl, setNewGalleryUrl] = React.useState("");
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const [brands, setBrands] = React.useState<Brand[]>([]);
@@ -55,6 +57,19 @@ export const AdminModelsPage: React.FC = () => {
     setNewYear("");
     setImageUrl("");
     setImagePreview(null);
+    setGallery([]);
+    setNewGalleryUrl("");
+  };
+
+  const addGalleryImage = () => {
+    if (newGalleryUrl && !gallery.includes(newGalleryUrl)) {
+      setGallery([...gallery, newGalleryUrl]);
+      setNewGalleryUrl("");
+    }
+  };
+
+  const removeGalleryImage = (url: string) => {
+    setGallery(gallery.filter(g => g !== url));
   };
 
   const addYear = () => {
@@ -75,7 +90,13 @@ export const AdminModelsPage: React.FC = () => {
       return;
     }
     try {
-      await api.post("/models", { name, brand_id: brandId, years, image_url: imageUrl || null });
+      await api.post("/models", { 
+        name, 
+        brand_id: brandId, 
+        years, 
+        image_url: imageUrl || null,
+        gallery: gallery.length > 0 ? gallery : []
+      });
       push("Model created", "success");
       resetForm();
       setOpen(false);
@@ -92,6 +113,7 @@ export const AdminModelsPage: React.FC = () => {
     setYears(model.years || []);
     setImageUrl(model.image_url || "");
     setImagePreview(model.image_url || null);
+    setGallery(model.gallery || []);
     setEditOpen(true);
   };
 
@@ -103,7 +125,13 @@ export const AdminModelsPage: React.FC = () => {
       return;
     }
     try {
-      await api.put(`/models/${editing.id}`, { name, brand_id: brandId, years, image_url: imageUrl || null });
+      await api.put(`/models/${editing.id}`, { 
+        name, 
+        brand_id: brandId, 
+        years, 
+        image_url: imageUrl || null,
+        gallery: gallery.length > 0 ? gallery : []
+      });
       push("Model updated", "success");
       setEditOpen(false);
       setEditing(null);
@@ -355,6 +383,41 @@ export const AdminModelsPage: React.FC = () => {
               Add years this model is compatible with. Products will auto-filter by model years.
             </p>
           </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Gallery Images (optional)</label>
+            <div className="flex gap-2">
+              <input
+                className="form-input flex-1"
+                placeholder="Add image URL for gallery"
+                value={newGalleryUrl}
+                onChange={(e) => setNewGalleryUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addGalleryImage())}
+              />
+              <button
+                type="button"
+                className="btn-outline h-10"
+                onClick={addGalleryImage}
+              >
+                Add
+              </button>
+            </div>
+            {gallery.length > 0 && (
+              <div className="grid grid-cols-3 gap-2">
+                {gallery.map((url, idx) => (
+                  <div key={idx} className="relative aspect-video overflow-hidden rounded-lg border border-border">
+                    <img src={url} alt={`Gallery ${idx + 1}`} className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeGalleryImage(url)}
+                      className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <button className="btn-primary h-11 w-full">Create</button>
         </form>
       </Modal>
@@ -444,6 +507,41 @@ export const AdminModelsPage: React.FC = () => {
             <p className="text-xs text-muted-foreground">
               Add years this model is compatible with.
             </p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Gallery Images (optional)</label>
+            <div className="flex gap-2">
+              <input
+                className="form-input flex-1"
+                placeholder="Add image URL for gallery"
+                value={newGalleryUrl}
+                onChange={(e) => setNewGalleryUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addGalleryImage())}
+              />
+              <button
+                type="button"
+                className="btn-outline h-10"
+                onClick={addGalleryImage}
+              >
+                Add
+              </button>
+            </div>
+            {gallery.length > 0 && (
+              <div className="grid grid-cols-3 gap-2">
+                {gallery.map((url, idx) => (
+                  <div key={idx} className="relative aspect-video overflow-hidden rounded-lg border border-border">
+                    <img src={url} alt={`Gallery ${idx + 1}`} className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeGalleryImage(url)}
+                      className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <button className="btn-primary h-11 w-full">Save changes</button>
         </form>
