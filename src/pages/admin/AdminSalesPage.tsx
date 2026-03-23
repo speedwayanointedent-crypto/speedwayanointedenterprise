@@ -1,11 +1,12 @@
 import React from "react";
-import { Plus, Search, Filter } from "lucide-react";
+import { Plus, Search, Filter, Loader2 } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { PageLoading } from "../../components/ui/LoadingSpinner";
 
 type Sale = {
   id: number;
@@ -160,7 +161,7 @@ export const AdminSalesPage: React.FC = () => {
             </div>
           </div>
           {loading ? (
-            <Skeleton className="mt-4 h-28" />
+            <PageLoading text="Loading sales data..." />
           ) : dailyTotals.length === 0 ? (
             <p className="mt-4 text-sm text-muted-foreground">
               No sales yet. Record a sale to start tracking daily totals.
@@ -322,7 +323,7 @@ export const AdminSalesPage: React.FC = () => {
         ) : null}
 
         {loading ? (
-          <Skeleton className="mt-6 h-40" />
+          <PageLoading text="Loading sales..." />
         ) : filtered.length === 0 ? (
           <div className="mt-6">
             <EmptyState
