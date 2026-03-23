@@ -110,7 +110,7 @@ export const ShopCategoryPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {brands.map((brand) => (
+                  {filteredBrands.map((brand) => (
                     <button
                       key={brand.id}
                       onClick={() => handleBrandClick(brand)}
