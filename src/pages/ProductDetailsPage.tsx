@@ -201,11 +201,12 @@ export const ProductDetailsPage: React.FC = () => {
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="overflow-hidden rounded-xl border border-border bg-card shadow-md">
-                  {product.car_image_url ? (
+                    {product.car_image_url ? (
                     <img
                       src={product.car_image_url}
                       alt={`${product.name} vehicle`}
                       className="h-56 w-full object-cover sm:h-72 lg:h-80"
+                      loading="lazy"
                     />
                   ) : (
                     <div className="flex h-56 items-center justify-center bg-secondary text-sm text-muted-foreground sm:h-72 lg:h-80">
@@ -221,6 +222,7 @@ export const ProductDetailsPage: React.FC = () => {
                     src={product.image_url || fallbackImage}
                     alt={`${product.name} part`}
                     className="h-56 w-full object-cover sm:h-72 lg:h-80"
+                    loading="lazy"
                   />
                   <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
                     Part photo
@@ -238,6 +240,7 @@ export const ProductDetailsPage: React.FC = () => {
                         src={image as string}
                         alt={`${product.name} view ${idx + 1}`}
                         className="h-20 w-full object-cover sm:h-24"
+                        loading="lazy"
                       />
                     </div>
                   ))}
@@ -370,6 +373,7 @@ export const ProductDetailsPage: React.FC = () => {
                     src={item.image_url || fallbackImage}
                     alt={item.name}
                     className="h-32 w-full rounded-lg object-cover sm:h-36"
+                    loading="lazy"
                   />
                   <div className="mt-3">
                     <div className="text-xs text-muted-foreground">
