@@ -112,7 +112,7 @@ export const ShopBrandPage: React.FC = () => {
                   <div>
                     <PageHeader
                       title={brand?.name || "Brand"}
-                      subtitle="Select a model to continue"
+                      subtitle={`${models.length} model${models.length !== 1 ? 's' : ''} available`}
                       actions={<WhatsAppButton label="WhatsApp support" className="h-10 px-5 text-sm" />}
                     />
                     <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
