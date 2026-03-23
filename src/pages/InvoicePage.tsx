@@ -4,6 +4,7 @@ import api from "../lib/api";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
 import { Skeleton } from "../components/ui/Skeleton";
+import { PageLoading } from "../components/ui/LoadingSpinner";
 
 type Receipt = {
   id: number;
@@ -40,7 +41,7 @@ export const InvoicePage: React.FC = () => {
       <PublicNavbar />
       <div className="mx-auto max-w-4xl px-4 pb-16 pt-16 sm:pt-20 md:px-6">
         {loading ? (
-          <Skeleton className="h-64" />
+          <PageLoading text="Loading receipt..." />
         ) : !receipt ? (
           <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
             Receipt not found.
