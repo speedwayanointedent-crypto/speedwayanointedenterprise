@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Search, Image, Trash2, Pencil, ChevronLeft, ChevronRight, Filter, X } from "lucide-react";
+import { Plus, Search, Image, Trash2, Pencil, ChevronLeft, ChevronRight, Filter, X, Loader2 } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
@@ -37,6 +37,7 @@ const PRODUCTS_PER_PAGE = 24;
 export const AdminProductsPage: React.FC = () => {
   const [products, setProducts] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [submitting, setSubmitting] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Product | null>(null);
@@ -215,6 +216,7 @@ export const AdminProductsPage: React.FC = () => {
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       let finalYearId = yearId;
       
@@ -267,6 +269,8 @@ export const AdminProductsPage: React.FC = () => {
       loadProducts(page);
     } catch {
       push("Failed to create product", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -305,6 +309,7 @@ export const AdminProductsPage: React.FC = () => {
   const onUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editing) return;
+    setSubmitting(true);
     try {
       let finalYearId = yearId;
       
@@ -359,18 +364,23 @@ export const AdminProductsPage: React.FC = () => {
       loadProducts(page);
     } catch {
       push("Failed to update product", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const onDelete = async (id: string) => {
     const confirmed = window.confirm("Are you sure you want to delete this product?");
     if (!confirmed) return;
+    setSubmitting(true);
     try {
       await api.delete(`/products/${id}`);
       push("Product deleted", "success");
       loadProducts(page);
     } catch {
       push("Failed to delete product", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -834,7 +844,14 @@ export const AdminProductsPage: React.FC = () => {
             />
           </div>
           <StickyActionBar>
-            <button className="btn-primary h-11 w-full">Create</button>
+            <button className="btn-primary h-11 w-full" disabled={submitting}>
+              {submitting ? (
+                <span className="flex items-center justify-center">
+                  <Loader2 className="btn-spinner mr-2 h-4 w-4" />
+                  Creating...
+                </span>
+              ) : "Create"}
+            </button>
           </StickyActionBar>
         </form>
       </Modal>
@@ -980,7 +997,14 @@ export const AdminProductsPage: React.FC = () => {
             />
           </div>
           <StickyActionBar>
-            <button className="btn-primary h-11 w-full">Save changes</button>
+            <button className="btn-primary h-11 w-full" disabled={submitting}>
+              {submitting ? (
+                <span className="flex items-center justify-center">
+                  <Loader2 className="btn-spinner mr-2 h-4 w-4" />
+                  Saving...
+                </span>
+              ) : "Save changes"}
+            </button>
           </StickyActionBar>
         </form>
       </Modal>
