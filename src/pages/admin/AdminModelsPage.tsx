@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Search, Truck, Pencil, Trash2, X, ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Truck, Pencil, Trash2, X, ImageIcon, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
@@ -16,6 +16,9 @@ export const AdminModelsPage: React.FC = () => {
   const [open, setOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Model | null>(null);
+  const [detailOpen, setDetailOpen] = React.useState(false);
+  const [selectedDetail, setSelectedDetail] = React.useState<Model | null>(null);
+  const [detailImageErrors, setDetailImageErrors] = React.useState<Set<string>>(new Set());
   const [name, setName] = React.useState("");
   const [brandId, setBrandId] = React.useState("");
   const [years, setYears] = React.useState<string[]>([]);
@@ -104,6 +107,92 @@ export const AdminModelsPage: React.FC = () => {
     const newIndex = galleryLightbox.index + direction;
     if (newIndex >= 0 && newIndex < galleryLightbox.images.length) {
       setGalleryLightbox({ ...galleryLightbox, index: newIndex });
+    }
+  };
+
+  const openDetail = (model: Model) => {
+    setSelectedDetail({ ...model });
+    setDetailOpen(true);
+  };
+
+  const closeDetail = () => {
+    setDetailOpen(false);
+    setSelectedDetail(null);
+    setDetailImageErrors(new Set());
+  };
+
+  const handleDetailImageError = (url: string) => {
+    setDetailImageErrors(prev => new Set(prev).add(url));
+  };
+
+  const handleDetailImageSuccess = (url: string) => {
+    setDetailImageErrors(prev => {
+      const next = new Set(prev);
+      next.delete(url);
+      return next;
+    });
+  };
+
+  const handleDetailAddYear = (year: string) => {
+    if (!selectedDetail) return;
+    if (!selectedDetail.years) selectedDetail.years = [];
+    if (!selectedDetail.years.includes(year)) {
+      setSelectedDetail({
+        ...selectedDetail,
+        years: [...selectedDetail.years, year].sort()
+      });
+    }
+  };
+
+  const handleDetailRemoveYear = (year: string) => {
+    if (!selectedDetail) return;
+    setSelectedDetail({
+      ...selectedDetail,
+      years: (selectedDetail.years || []).filter(y => y !== year)
+    });
+  };
+
+  const handleDetailAddGallery = (url: string) => {
+    if (!selectedDetail) return;
+    if (!selectedDetail.gallery) selectedDetail.gallery = [];
+    if (!selectedDetail.gallery.includes(url)) {
+      setSelectedDetail({
+        ...selectedDetail,
+        gallery: [...selectedDetail.gallery, url]
+      });
+    }
+  };
+
+  const handleDetailRemoveGallery = (url: string) => {
+    if (!selectedDetail) return;
+    setSelectedDetail({
+      ...selectedDetail,
+      gallery: (selectedDetail.gallery || []).filter(g => g !== url)
+    });
+  };
+
+  const handleDetailUpdate = (updates: Partial<Model>) => {
+    if (!selectedDetail) return;
+    setSelectedDetail({
+      ...selectedDetail,
+      ...updates
+    });
+  };
+
+  const handleDetailSave = async () => {
+    if (!selectedDetail) return;
+    try {
+      await api.put(`/models/${selectedDetail.id}`, {
+        name: selectedDetail.name,
+        brand_id: selectedDetail.brand_id,
+        years: selectedDetail.years || [],
+        image_url: selectedDetail.image_url || null,
+        gallery: selectedDetail.gallery || []
+      });
+      push("Model updated", "success");
+      load();
+    } catch {
+      push("Failed to update model", "error");
     }
   };
 
@@ -292,6 +381,13 @@ export const AdminModelsPage: React.FC = () => {
                             </div>
                           </div>
                           <div className="flex gap-1">
+                            <button
+                              className="btn-outline h-9 w-9 p-0"
+                              onClick={() => openDetail(c)}
+                              title="View Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
                             <button
                               className="btn-outline h-9 w-9 p-0"
                               onClick={() => onOpenEdit(c)}
@@ -695,6 +791,216 @@ export const AdminModelsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <Modal open={detailOpen} onClose={closeDetail} title="Model Details">
+        {selectedDetail && (
+          <div className="space-y-6 max-h-[70vh] overflow-y-auto">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Truck className="h-7 w-7" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">{selectedDetail.name}</h3>
+                <p className="text-sm text-muted-foreground">{selectedDetail.brands?.name || "No brand"}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="text-sm font-medium text-foreground">Main Image</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newUrl = window.prompt("Enter new image URL:", selectedDetail.image_url || "");
+                      if (newUrl !== null) {
+                        handleDetailUpdate({ image_url: newUrl || null });
+                      }
+                    }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Change
+                  </button>
+                </div>
+                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border">
+                  {selectedDetail.image_url ? (
+                    <img src={selectedDetail.image_url} alt={selectedDetail.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-muted">
+                      <ImageIcon className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">Brand</label>
+                <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-foreground">
+                  {selectedDetail.brands?.name || "Not set"}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">Compatible Years</label>
+              <div className="flex flex-wrap gap-2">
+                {selectedDetail.years && selectedDetail.years.length > 0 ? (
+                  selectedDetail.years.map((year) => (
+                    <span key={year} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
+                      {year}
+                      <button
+                        type="button"
+                        onClick={() => handleDetailRemoveYear(year)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No years added</p>
+                )}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <input
+                  id="detail-year-input"
+                  className="form-input flex-1"
+                  placeholder="Add year (e.g., 2024)"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const input = e.target as HTMLInputElement;
+                      if (input.value) handleDetailAddYear(input.value);
+                      input.value = "";
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value) handleDetailAddYear(e.target.value);
+                    e.target.value = "";
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn-outline h-10"
+                  onClick={() => {
+                    const input = document.getElementById("detail-year-input") as HTMLInputElement;
+                    if (input?.value) {
+                      handleDetailAddYear(input.value);
+                      input.value = "";
+                    }
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <label className="text-sm font-medium text-foreground">Gallery Images</label>
+                <span className="text-xs text-muted-foreground">
+                  {selectedDetail.gallery?.length || 0} photos
+                </span>
+              </div>
+              <div className="mb-3 flex gap-2">
+                <input
+                  id="detail-gallery-input"
+                  className="form-input flex-1"
+                  placeholder="Add image URL to gallery"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const input = e.target as HTMLInputElement;
+                      if (input.value) handleDetailAddGallery(input.value);
+                      input.value = "";
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value) handleDetailAddGallery(e.target.value);
+                    e.target.value = "";
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn-outline h-10"
+                  onClick={() => {
+                    const input = document.getElementById("detail-gallery-input") as HTMLInputElement;
+                    if (input?.value) {
+                      handleDetailAddGallery(input.value);
+                      input.value = "";
+                    }
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                {selectedDetail.gallery && selectedDetail.gallery.length > 0 ? (
+                  selectedDetail.gallery.map((url, idx) => (
+                    <div key={idx} className="group relative aspect-square overflow-hidden rounded-lg border border-border">
+                      {detailImageErrors.has(url) ? (
+                        <div className="flex h-full w-full items-center justify-center bg-muted">
+                          <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      ) : (
+                        <img 
+                          src={url} 
+                          alt={`Gallery ${idx + 1}`} 
+                          className="h-full w-full object-cover"
+                          onError={() => handleDetailImageError(url)}
+                          onLoad={() => handleDetailImageSuccess(url)}
+                        />
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => openLightbox(selectedDetail.gallery!, idx)}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black hover:bg-gray-100"
+                          title="Preview"
+                        >
+                          <ImageIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDetailRemoveGallery(url)}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                          title="Remove"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full flex items-center justify-center rounded-lg border border-dashed border-border py-8 text-sm text-muted-foreground">
+                    No gallery images added yet
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                className="btn-outline flex-1"
+                onClick={() => {
+                  closeDetail();
+                  onOpenEdit(selectedDetail);
+                }}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit All Fields
+              </button>
+              <button
+                className="btn-primary flex-1"
+                onClick={() => {
+                  handleDetailSave();
+                  closeDetail();
+                }}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
