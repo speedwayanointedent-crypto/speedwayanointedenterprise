@@ -5,6 +5,9 @@ import { ToastProvider } from "./components/ui/Toast";
 import { DashboardShell } from "./components/layout/Shell";
 import { LandingPage } from "./pages/LandingPage";
 import { ShopPage } from "./pages/ShopPage";
+import { ShopCategoryPage } from "./pages/ShopCategoryPage";
+import { ShopBrandPage } from "./pages/ShopBrandPage";
+import { ShopProductsPage } from "./pages/ShopProductsPage";
 import { ProductDetailsPage } from "./pages/ProductDetailsPage";
 import { CartPage } from "./pages/CartPage";
 import { CheckoutPage } from "./pages/CheckoutPage";
@@ -41,6 +44,9 @@ const App: React.FC = () => {
           {/* Public shop */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/shop" element={<ShopPage />} />
+          <Route path="/shop/category/:categoryId" element={<ShopCategoryPage />} />
+          <Route path="/shop/brand/:brandId" element={<ShopBrandPage />} />
+          <Route path="/shop/products" element={<ShopProductsPage />} />
           <Route path="/product/:id" element={<ProductDetailsPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
