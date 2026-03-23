@@ -6,6 +6,7 @@ import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { PageLoading } from "../../components/ui/LoadingSpinner";
 
 type Category = { id: string; name: string; image_url?: string | null };
 
@@ -156,7 +157,7 @@ export const AdminCategoriesPage: React.FC = () => {
         ) : null}
 
         {loading ? (
-          <Skeleton className="mt-6 h-32" />
+          <PageLoading text="Loading categories..." />
         ) : filtered.length === 0 ? (
           <div className="mt-6">
             <EmptyState
