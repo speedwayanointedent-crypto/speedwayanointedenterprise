@@ -383,13 +383,6 @@ export const AdminModelsPage: React.FC = () => {
                           <div className="flex gap-1">
                             <button
                               className="btn-outline h-9 w-9 p-0"
-                              onClick={() => openDetail(c)}
-                              title="View Details"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                            <button
-                              className="btn-outline h-9 w-9 p-0"
                               onClick={() => onOpenEdit(c)}
                               title="Edit"
                             >
@@ -822,12 +815,12 @@ export const AdminModelsPage: React.FC = () => {
                     Change
                   </button>
                 </div>
-                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border">
+                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-border">
                   {selectedDetail.image_url ? (
                     <img src={selectedDetail.image_url} alt={selectedDetail.name} className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-muted">
-                      <ImageIcon className="h-10 w-10 text-muted-foreground" />
+                      <ImageIcon className="h-12 w-12 text-muted-foreground" />
                     </div>
                   )}
                 </div>
@@ -932,13 +925,13 @@ export const AdminModelsPage: React.FC = () => {
                   <Plus className="h-4 w-4" />
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                 {selectedDetail.gallery && selectedDetail.gallery.length > 0 ? (
                   selectedDetail.gallery.map((url, idx) => (
                     <div key={idx} className="group relative aspect-square overflow-hidden rounded-lg border border-border">
                       {detailImageErrors.has(url) ? (
                         <div className="flex h-full w-full items-center justify-center bg-muted">
-                          <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                          <ImageIcon className="h-10 w-10 text-muted-foreground" />
                         </div>
                       ) : (
                         <img 
