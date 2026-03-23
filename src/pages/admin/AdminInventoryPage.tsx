@@ -39,7 +39,7 @@ export const AdminInventoryPage: React.FC = () => {
     async function load() {
       try {
         const res = await api.get<Product[]>("/products");
-        setItems(res.data);
+        setItems(Array.isArray(res.data) ? res.data : []);
         setLastUpdated(new Date());
       } catch {
         setItems([]);
