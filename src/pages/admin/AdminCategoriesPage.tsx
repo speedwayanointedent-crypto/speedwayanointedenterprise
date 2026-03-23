@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Search, Tag, Pencil, Trash2, ImageIcon, Upload } from "lucide-react";
+import { Plus, Search, Tag, Pencil, Trash2, ImageIcon, Upload, Loader2 } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
@@ -14,6 +14,7 @@ const fallbackImage = "https://images.unsplash.com/photo-1494976388531-d1058494c
 export const AdminCategoriesPage: React.FC = () => {
   const [items, setItems] = React.useState<Category[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [submitting, setSubmitting] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Category | null>(null);
@@ -49,6 +50,7 @@ export const AdminCategoriesPage: React.FC = () => {
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await api.post("/categories", { name, image_url: imageUrl || null });
       push("Category created", "success");
@@ -57,6 +59,8 @@ export const AdminCategoriesPage: React.FC = () => {
       load();
     } catch {
       push("Failed to create category", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -71,6 +75,7 @@ export const AdminCategoriesPage: React.FC = () => {
   const onUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editing) return;
+    setSubmitting(true);
     try {
       await api.put(`/categories/${editing.id}`, { name, image_url: imageUrl || null });
       push("Category updated", "success");
@@ -80,18 +85,23 @@ export const AdminCategoriesPage: React.FC = () => {
       load();
     } catch {
       push("Failed to update category", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const onDelete = async (id: string) => {
     const confirmed = window.confirm("Are you sure you want to delete this category? This may affect products using this category.");
     if (!confirmed) return;
+    setSubmitting(true);
     try {
       await api.delete(`/categories/${id}`);
       push("Category deleted", "success");
       load();
     } catch {
       push("Failed to delete category", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -245,7 +255,14 @@ export const AdminCategoriesPage: React.FC = () => {
               </p>
             </div>
           </div>
-          <button className="btn-primary h-11 w-full">Create</button>
+          <button className="btn-primary h-11 w-full" disabled={submitting}>
+            {submitting ? (
+              <span className="flex items-center justify-center">
+                <Loader2 className="btn-spinner mr-2 h-4 w-4" />
+                Creating...
+              </span>
+            ) : "Create"}
+          </button>
         </form>
       </Modal>
 
@@ -284,7 +301,14 @@ export const AdminCategoriesPage: React.FC = () => {
               )}
             </div>
           </div>
-          <button className="btn-primary h-11 w-full">Save changes</button>
+          <button className="btn-primary h-11 w-full" disabled={submitting}>
+            {submitting ? (
+              <span className="flex items-center justify-center">
+                <Loader2 className="btn-spinner mr-2 h-4 w-4" />
+                Saving...
+              </span>
+            ) : "Save changes"}
+          </button>
         </form>
       </Modal>
     </div>
