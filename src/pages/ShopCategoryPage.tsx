@@ -1,12 +1,12 @@
 import React from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronRight } from "lucide-react";
-import api from "../../lib/api";
-import { Skeleton } from "../../components/ui/Skeleton";
-import { PublicNavbar } from "../../components/layout/PublicNavbar";
-import { WhatsAppButton } from "../../components/ui/WhatsAppButton";
-import { PublicFooterCTA } from "../../components/layout/PublicFooterCTA";
-import { PageHeader } from "../../components/ui/PageHeader";
+import api from "../lib/api";
+import { Skeleton } from "../components/ui/Skeleton";
+import { PublicNavbar } from "../components/layout/PublicNavbar";
+import { WhatsAppButton } from "../components/ui/WhatsAppButton";
+import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
+import { PageHeader } from "../components/ui/PageHeader";
 
 type Brand = {
   id: string;
