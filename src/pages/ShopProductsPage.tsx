@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, ShoppingCart, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import { Search, ShoppingCart, ChevronLeft, ChevronRight, ArrowLeft, X } from "lucide-react";
 import api from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
@@ -26,7 +26,7 @@ type Product = {
 
 type Category = { id: string; name: string };
 type Brand = { id: string; name: string; logo_url?: string | null };
-type Model = { id: string; name: string; image_url?: string | null };
+type Model = { id: string; name: string; image_url?: string | null; gallery?: string[]; years?: string[] };
 
 const fallbackImage = "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop";
 
@@ -45,6 +45,7 @@ export const ShopProductsPage: React.FC = () => {
   const [category, setCategory] = React.useState<Category | null>(null);
   const [brand, setBrand] = React.useState<Brand | null>(null);
   const [model, setModel] = React.useState<Model | null>(null);
+  const [selectedImage, setSelectedImage] = React.useState<string | null>(null);
   const { push } = useToast();
 
   const categoryId = searchParams.get("category");
@@ -99,7 +100,7 @@ export const ShopProductsPage: React.FC = () => {
     if (categoryId) params.set("category", categoryId);
     if (brandId) params.set("brand", brandId);
     params.set("page", "1");
-    navigate(`/shop/model/${modelId}?${params.toString()}`);
+    navigate(`/shop/products?${params.toString()}`);
     loadProducts(1);
   };
 
@@ -107,16 +108,20 @@ export const ShopProductsPage: React.FC = () => {
     if (newPage >= 1 && newPage <= totalPages) {
       const params = new URLSearchParams(searchParams);
       params.set("page", String(newPage));
-      navigate(`/shop/model/${modelId}?${params.toString()}`);
+      navigate(`/shop/products?${params.toString()}`);
       loadProducts(newPage);
     }
   };
 
   const getBackUrl = () => {
-    const params = new URLSearchParams();
-    if (categoryId) params.set("category", categoryId);
-    return `/shop/brand/${brandId}?${params.toString()}`;
+    return `/shop/brand/${brandId}?category=${categoryId}`;
   };
+
+  const galleryImages = model?.gallery && model.gallery.length > 0 
+    ? model.gallery 
+    : model?.image_url 
+      ? [model.image_url] 
+      : [];
 
   return (
     <div className="page-shell">
@@ -132,6 +137,39 @@ export const ShopProductsPage: React.FC = () => {
           </button>
         </div>
 
+        {galleryImages.length > 0 && (
+          <section className="section-band rounded-2xl p-4 sm:p-6 mb-6">
+            <div className="card p-4 sm:p-6">
+              <h2 className="text-xl font-semibold mb-4">{model?.name} Gallery</h2>
+              {model?.years && model.years.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {model.years.map((year) => (
+                    <span key={year} className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
+                      {year}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                {galleryImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedImage(img)}
+                    className="card card-hover relative aspect-video overflow-hidden rounded-lg"
+                  >
+                    <img
+                      src={img}
+                      alt={`${model?.name} gallery ${idx + 1}`}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         <section className="section-band rounded-2xl p-4 sm:p-6">
           <div className="card p-4 sm:p-6">
             <div className="flex items-center gap-4">
@@ -140,7 +178,7 @@ export const ShopProductsPage: React.FC = () => {
               )}
               <div>
                 <PageHeader
-                  title={model?.name || "Model"}
+                  title={model?.name || "Products"}
                   subtitle={
                     [category?.name, brand?.name, model?.name]
                       .filter(Boolean)
@@ -263,6 +301,27 @@ export const ShopProductsPage: React.FC = () => {
           )}
         </section>
       </main>
+
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button
+            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+            onClick={() => setSelectedImage(null)}
+          >
+            <X className="h-6 w-6" />
+          </button>
+          <img
+            src={selectedImage}
+            alt="Full size"
+            className="max-h-[90vh] max-w-[90vw] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
       <PublicFooterCTA />
     </div>
   );
