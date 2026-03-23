@@ -1,10 +1,11 @@
 import React from "react";
-import { Search, Users } from "lucide-react";
+import { Search, Users, Loader2 } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { PageLoading } from "../../components/ui/LoadingSpinner";
 
 type User = {
   id: string;
@@ -84,7 +85,7 @@ export const AdminUsersPage: React.FC = () => {
         ) : null}
 
         {loading ? (
-          <Skeleton className="mt-6 h-40" />
+          <PageLoading text="Loading users..." />
         ) : filtered.length === 0 ? (
           <div className="mt-6">
             <EmptyState
