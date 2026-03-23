@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Search, Tag, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Tag, Pencil, Trash2, ImageIcon, Upload } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
@@ -7,7 +7,9 @@ import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 
-type Category = { id: string; name: string };
+type Category = { id: string; name: string; image_url?: string | null };
+
+const fallbackImage = "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop";
 
 export const AdminCategoriesPage: React.FC = () => {
   const [items, setItems] = React.useState<Category[]>([]);
@@ -16,6 +18,8 @@ export const AdminCategoriesPage: React.FC = () => {
   const [editOpen, setEditOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Category | null>(null);
   const [name, setName] = React.useState("");
+  const [imageUrl, setImageUrl] = React.useState("");
+  const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const { push } = useToast();
@@ -37,12 +41,18 @@ export const AdminCategoriesPage: React.FC = () => {
     load();
   }, [load]);
 
+  const resetForm = () => {
+    setName("");
+    setImageUrl("");
+    setImagePreview(null);
+  };
+
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post("/categories", { name });
+      await api.post("/categories", { name, image_url: imageUrl || null });
       push("Category created", "success");
-      setName("");
+      resetForm();
       setOpen(false);
       load();
     } catch {
@@ -53,6 +63,8 @@ export const AdminCategoriesPage: React.FC = () => {
   const onOpenEdit = (category: Category) => {
     setEditing(category);
     setName(category.name);
+    setImageUrl(category.image_url || "");
+    setImagePreview(category.image_url || null);
     setEditOpen(true);
   };
 
@@ -60,11 +72,11 @@ export const AdminCategoriesPage: React.FC = () => {
     e.preventDefault();
     if (!editing) return;
     try {
-      await api.put(`/categories/${editing.id}`, { name });
+      await api.put(`/categories/${editing.id}`, { name, image_url: imageUrl || null });
       push("Category updated", "success");
       setEditOpen(false);
       setEditing(null);
-      setName("");
+      resetForm();
       load();
     } catch {
       push("Failed to update category", "error");
@@ -80,6 +92,15 @@ export const AdminCategoriesPage: React.FC = () => {
       load();
     } catch {
       push("Failed to delete category", "error");
+    }
+  };
+
+  const handleImageUrlChange = (url: string) => {
+    setImageUrl(url);
+    if (url) {
+      setImagePreview(url);
+    } else {
+      setImagePreview(null);
     }
   };
 
@@ -141,32 +162,43 @@ export const AdminCategoriesPage: React.FC = () => {
         ) : (
           <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {filtered.map((c) => (
-              <div key={c.id} className="card p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Tag className="h-5 w-5" />
+              <div key={c.id} className="card card-hover overflow-hidden p-0">
+                <div className="relative h-32 w-full bg-muted">
+                  {c.image_url ? (
+                    <img src={c.image_url} alt={c.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
                     </div>
-                    <div>
-                      <p className="font-semibold text-foreground">{c.name}</p>
-                      <p className="text-xs text-muted-foreground">Product category</p>
+                  )}
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Tag className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">{c.name}</p>
+                        <p className="text-xs text-muted-foreground">Product category</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      className="btn-outline h-9 w-9 p-0"
-                      onClick={() => onOpenEdit(c)}
-                      title="Edit"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      className="btn-destructive h-9 w-9 p-0"
-                      onClick={() => onDelete(c.id)}
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex gap-1">
+                      <button
+                        className="btn-outline h-9 w-9 p-0"
+                        onClick={() => onOpenEdit(c)}
+                        title="Edit"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        className="btn-destructive h-9 w-9 p-0"
+                        onClick={() => onDelete(c.id)}
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -175,28 +207,83 @@ export const AdminCategoriesPage: React.FC = () => {
         )}
       </div>
 
-      <Modal open={open} onClose={() => { setOpen(false); setName(""); }} title="Add category">
+      <Modal open={open} onClose={() => { setOpen(false); resetForm(); }} title="Add category">
         <form onSubmit={onCreate} className="space-y-4">
-          <input
-            required
-            className="form-input"
-            placeholder="Category name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+          <div>
+            <label className="mb-2 block text-sm font-medium">Category name</label>
+            <input
+              required
+              className="form-input"
+              placeholder="e.g., Bonnet, Headlights"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium">Image URL (optional)</label>
+            <div className="space-y-3">
+              <input
+                className="form-input"
+                placeholder="https://example.com/image.jpg"
+                value={imageUrl}
+                onChange={(e) => handleImageUrlChange(e.target.value)}
+              />
+              {imagePreview && (
+                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border">
+                  <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => handleImageUrlChange("")}
+                    className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Paste an image URL or leave empty to use default placeholder.
+              </p>
+            </div>
+          </div>
           <button className="btn-primary h-11 w-full">Create</button>
         </form>
       </Modal>
 
-      <Modal open={editOpen} onClose={() => { setEditOpen(false); setEditing(null); setName(""); }} title="Edit category">
+      <Modal open={editOpen} onClose={() => { setEditOpen(false); setEditing(null); resetForm(); }} title="Edit category">
         <form onSubmit={onUpdate} className="space-y-4">
-          <input
-            required
-            className="form-input"
-            placeholder="Category name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+          <div>
+            <label className="mb-2 block text-sm font-medium">Category name</label>
+            <input
+              required
+              className="form-input"
+              placeholder="e.g., Bonnet, Headlights"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium">Image URL (optional)</label>
+            <div className="space-y-3">
+              <input
+                className="form-input"
+                placeholder="https://example.com/image.jpg"
+                value={imageUrl}
+                onChange={(e) => handleImageUrlChange(e.target.value)}
+              />
+              {imagePreview && (
+                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border">
+                  <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => handleImageUrlChange("")}
+                    className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
           <button className="btn-primary h-11 w-full">Save changes</button>
         </form>
       </Modal>
