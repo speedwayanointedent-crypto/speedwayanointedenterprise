@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import {
   Area,
   AreaChart,
@@ -104,17 +104,21 @@ export const AdminDashboardPage: React.FC = () => {
       ]);
 
       setSummary(summaryRes.data);
-      const low = (productsRes.data || []).filter((p) => p.quantity <= 5).slice(0, 4);
+      const products = Array.isArray(productsRes.data) ? productsRes.data : [];
+      const orders = Array.isArray(ordersRes.data) ? ordersRes.data : [];
+      const sales = Array.isArray(salesRes.data) ? salesRes.data : [];
+      
+      const low = products.filter((p) => p.quantity <= 5).slice(0, 4);
       setLowStock(low);
 
       const activity: ActivityItem[] = [];
-      (ordersRes.data || []).forEach((o) => {
+      orders.forEach((o) => {
         activity.push({
           label: `Order #${o.id.toString().padStart(4, "0")} • ${o.status} • GHS ${o.total}`,
           created_at: o.created_at
         });
       });
-      (salesRes.data || []).forEach((s) => {
+      sales.forEach((s) => {
         activity.push({
           label: `Sale • ${s.products?.name || "Product"} • GHS ${s.total}`,
           created_at: s.created_at
@@ -125,7 +129,7 @@ export const AdminDashboardPage: React.FC = () => {
       );
       setRecentActivity(activity.slice(0, 6));
 
-      setRevenueData(buildRevenueSeries(ordersRes.data || [], salesRes.data || []));
+      setRevenueData(buildRevenueSeries(orders, sales));
       setLastUpdated(new Date());
     } catch (error) {
       console.error("Failed to fetch dashboard data", error);
