@@ -1,5 +1,5 @@
 import React from "react";
-import { Edit3, Search } from "lucide-react";
+import { Edit3, Search, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
@@ -7,6 +7,7 @@ import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { PageLoading } from "../../components/ui/LoadingSpinner";
 
 type Product = {
   id: string;
@@ -153,7 +154,7 @@ export const AdminInventoryPage: React.FC = () => {
         ) : null}
 
         {loading ? (
-          <Skeleton className="mt-6 h-40" />
+          <PageLoading text="Loading inventory..." />
         ) : filtered.length === 0 ? (
           <div className="mt-6">
             <EmptyState
