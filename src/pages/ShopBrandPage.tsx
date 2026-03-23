@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronRight, Search } from "lucide-react";
 import api from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
@@ -32,6 +32,7 @@ export const ShopBrandPage: React.FC = () => {
   const [models, setModels] = React.useState<Model[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = React.useState("");
 
   const categoryId = searchParams.get("category");
 
@@ -63,6 +64,12 @@ export const ShopBrandPage: React.FC = () => {
     params.set("brand", brandId || "");
     navigate(`/shop/model/${model.id}?${params.toString()}`);
   };
+
+  const filteredModels = React.useMemo(() => {
+    if (!searchQuery.trim()) return models;
+    const query = searchQuery.toLowerCase();
+    return models.filter(model => model.name.toLowerCase().includes(query));
+  }, [models, searchQuery]);
 
   return (
     <div className="page-shell">
@@ -108,13 +115,22 @@ export const ShopBrandPage: React.FC = () => {
                       subtitle="Select a model to continue"
                       actions={<WhatsAppButton label="WhatsApp support" className="h-10 px-5 text-sm" />}
                     />
+                    <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+                      <Search className="h-4 w-4" />
+                      <input
+                        className="w-full bg-transparent outline-none"
+                        placeholder="Search models..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             </section>
 
             <section className="mt-6">
-              {models.length === 0 ? (
+              {filteredModels.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border bg-background p-8 text-center">
                   <div className="text-base font-semibold text-foreground">No models found</div>
                   <p className="mt-2 text-sm text-muted-foreground">Please try again later.</p>
