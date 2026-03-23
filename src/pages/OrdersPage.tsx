@@ -6,6 +6,7 @@ import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
+import { PageLoading } from "../components/ui/LoadingSpinner";
 
 type Order = {
   id: number;
@@ -53,7 +54,7 @@ export const OrdersPage: React.FC = () => {
 
         <div className="mt-6 card p-4">
           {loading ? (
-            <Skeleton className="h-40" />
+            <PageLoading text="Loading orders..." />
           ) : orders.length === 0 ? (
             <EmptyState
               title="No orders yet"
