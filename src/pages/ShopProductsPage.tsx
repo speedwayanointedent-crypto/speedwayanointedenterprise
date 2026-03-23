@@ -46,6 +46,7 @@ export const ShopProductsPage: React.FC = () => {
   const [brand, setBrand] = React.useState<Brand | null>(null);
   const [model, setModel] = React.useState<Model | null>(null);
   const [selectedImage, setSelectedImage] = React.useState<string | null>(null);
+  const [currentGalleryIndex, setCurrentGalleryIndex] = React.useState(0);
   const { push } = useToast();
 
   const categoryId = searchParams.get("category");
@@ -87,6 +88,7 @@ export const ShopProductsPage: React.FC = () => {
         setCategory(catRes.data);
         setBrand(brandRes.data);
         setModel(modelRes.data);
+        setCurrentGalleryIndex(0);
       } catch {
         // ignore
       }
@@ -153,7 +155,9 @@ export const ShopProductsPage: React.FC = () => {
                   ))}
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+              
+              {/* Desktop: Show all images */}
+              <div className="hidden lg:grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                 {galleryImages.map((img, idx) => (
                   <button
                     key={idx}
@@ -169,6 +173,55 @@ export const ShopProductsPage: React.FC = () => {
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
                   </button>
                 ))}
+              </div>
+
+              {/* Mobile/Tablet: Carousel with arrows */}
+              <div className="lg:hidden">
+                <div className="relative">
+                  <div className="overflow-hidden rounded-xl">
+                    <img
+                      src={galleryImages[currentGalleryIndex]}
+                      alt={`${model?.name} gallery ${currentGalleryIndex + 1}`}
+                      className="aspect-square w-full object-cover"
+                    />
+                  </div>
+                  {galleryImages.length > 1 && (
+                    <>
+                      <button
+                        className="absolute left-2 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md hover:bg-white"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentGalleryIndex(currentGalleryIndex === 0 ? galleryImages.length - 1 : currentGalleryIndex - 1);
+                        }}
+                      >
+                        <ChevronLeft className="h-6 w-6 text-gray-700" />
+                      </button>
+                      <button
+                        className="absolute right-2 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md hover:bg-white"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentGalleryIndex(currentGalleryIndex === galleryImages.length - 1 ? 0 : currentGalleryIndex + 1);
+                        }}
+                      >
+                        <ChevronRight className="h-6 w-6 text-gray-700" />
+                      </button>
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 text-sm text-white">
+                        {currentGalleryIndex + 1} / {galleryImages.length}
+                      </div>
+                      <div className="mt-3 flex justify-center gap-2">
+                        {galleryImages.map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setCurrentGalleryIndex(idx)}
+                            className={`h-2 rounded-full transition-all ${
+                              idx === currentGalleryIndex ? "w-6 bg-primary" : "w-2 bg-muted"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </section>
@@ -324,7 +377,7 @@ export const ShopProductsPage: React.FC = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                   const currentIdx = galleryImages.indexOf(selectedImage);
-                  if (currentIdx > 0) setSelectedImage(galleryImages[currentIdx - 1]);
+                  setSelectedImage(galleryImages[currentIdx === 0 ? galleryImages.length - 1 : currentIdx - 1]);
                 }}
               >
                 <ChevronLeft className="h-10 w-10" />
@@ -334,7 +387,7 @@ export const ShopProductsPage: React.FC = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                   const currentIdx = galleryImages.indexOf(selectedImage);
-                  if (currentIdx < galleryImages.length - 1) setSelectedImage(galleryImages[currentIdx + 1]);
+                  setSelectedImage(galleryImages[currentIdx === galleryImages.length - 1 ? 0 : currentIdx + 1]);
                 }}
               >
                 <ChevronRight className="h-10 w-10" />
@@ -352,10 +405,9 @@ export const ShopProductsPage: React.FC = () => {
               onClick={(e) => {
                 e.stopPropagation();
                 const currentIdx = galleryImages.indexOf(selectedImage);
-                if (currentIdx > 0) setSelectedImage(galleryImages[currentIdx - 1]);
+                setSelectedImage(galleryImages[currentIdx === 0 ? galleryImages.length - 1 : currentIdx - 1]);
               }}
-              disabled={galleryImages.indexOf(selectedImage) === 0}
-              className="hover:text-gray-300 disabled:opacity-30"
+              className="hover:text-gray-300"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -366,10 +418,9 @@ export const ShopProductsPage: React.FC = () => {
               onClick={(e) => {
                 e.stopPropagation();
                 const currentIdx = galleryImages.indexOf(selectedImage);
-                if (currentIdx < galleryImages.length - 1) setSelectedImage(galleryImages[currentIdx + 1]);
+                setSelectedImage(galleryImages[currentIdx === galleryImages.length - 1 ? 0 : currentIdx + 1]);
               }}
-              disabled={galleryImages.indexOf(selectedImage) === galleryImages.length - 1}
-              className="hover:text-gray-300 disabled:opacity-30"
+              className="hover:text-gray-300"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
