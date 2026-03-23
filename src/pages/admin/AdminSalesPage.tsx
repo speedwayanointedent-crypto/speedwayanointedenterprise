@@ -51,8 +51,8 @@ export const AdminSalesPage: React.FC = () => {
         api.get<Sale[]>("/sales"),
         api.get<Product[]>("/products")
       ]);
-      setSales(salesRes.data);
-      setProducts(productsRes.data);
+      setSales(Array.isArray(salesRes.data) ? salesRes.data : []);
+      setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
       setLastUpdated(new Date());
     } catch {
       setSales([]);
