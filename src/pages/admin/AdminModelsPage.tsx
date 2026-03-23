@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Search, Truck, Pencil, Trash2, X, ImageIcon, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { Plus, Search, Truck, Pencil, Trash2, X, ImageIcon, ChevronLeft, ChevronRight, Eye, Loader2 } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
@@ -32,6 +32,7 @@ export const AdminModelsPage: React.FC = () => {
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const [brands, setBrands] = React.useState<Brand[]>([]);
+  const [submitting, setSubmitting] = React.useState(false);
   const { push } = useToast();
 
   const load = React.useCallback(async () => {
@@ -181,6 +182,7 @@ export const AdminModelsPage: React.FC = () => {
 
   const handleDetailSave = async () => {
     if (!selectedDetail) return;
+    setSubmitting(true);
     try {
       await api.put(`/models/${selectedDetail.id}`, {
         name: selectedDetail.name,
@@ -193,6 +195,8 @@ export const AdminModelsPage: React.FC = () => {
       load();
     } catch {
       push("Failed to update model", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -213,6 +217,7 @@ export const AdminModelsPage: React.FC = () => {
       push("Please select a brand", "error");
       return;
     }
+    setSubmitting(true);
     try {
       await api.post("/models", { 
         name, 
@@ -227,6 +232,8 @@ export const AdminModelsPage: React.FC = () => {
       load();
     } catch {
       push("Failed to create model", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -248,6 +255,7 @@ export const AdminModelsPage: React.FC = () => {
       push("Please select a brand", "error");
       return;
     }
+    setSubmitting(true);
     try {
       await api.put(`/models/${editing.id}`, { 
         name, 
@@ -263,18 +271,23 @@ export const AdminModelsPage: React.FC = () => {
       load();
     } catch {
       push("Failed to update model", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const onDelete = async (id: string) => {
     const confirmed = window.confirm("Are you sure you want to delete this model? This may affect products using this model.");
     if (!confirmed) return;
+    setSubmitting(true);
     try {
       await api.delete(`/models/${id}`);
       push("Model deleted", "success");
       load();
     } catch {
       push("Failed to delete model", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -588,7 +601,14 @@ export const AdminModelsPage: React.FC = () => {
               <p className="text-xs text-muted-foreground">No gallery images added yet.</p>
             )}
           </div>
-          <button className="btn-primary h-11 w-full">Create</button>
+          <button className="btn-primary h-11 w-full" disabled={submitting}>
+            {submitting ? (
+              <span className="flex items-center justify-center">
+                <Loader2 className="btn-spinner mr-2 h-4 w-4" />
+                Creating...
+              </span>
+            ) : "Create"}
+          </button>
         </form>
       </Modal>
 
@@ -742,7 +762,14 @@ export const AdminModelsPage: React.FC = () => {
               <p className="text-xs text-muted-foreground">No gallery images added yet.</p>
             )}
           </div>
-          <button className="btn-primary h-11 w-full">Save changes</button>
+          <button className="btn-primary h-11 w-full" disabled={submitting}>
+            {submitting ? (
+              <span className="flex items-center justify-center">
+                <Loader2 className="btn-spinner mr-2 h-4 w-4" />
+                Saving...
+              </span>
+            ) : "Save changes"}
+          </button>
         </form>
       </Modal>
 
@@ -983,12 +1010,18 @@ export const AdminModelsPage: React.FC = () => {
               </button>
               <button
                 className="btn-primary flex-1"
+                disabled={submitting}
                 onClick={() => {
                   handleDetailSave();
                   closeDetail();
                 }}
               >
-                Save Changes
+                {submitting ? (
+                  <span className="flex items-center justify-center">
+                    <Loader2 className="btn-spinner mr-2 h-4 w-4" />
+                    Saving...
+                  </span>
+                ) : "Save Changes"}
               </button>
             </div>
           </div>
