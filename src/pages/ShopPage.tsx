@@ -1,6 +1,5 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
@@ -18,54 +17,9 @@ type CategoryWithCount = {
 const fallbackImage =
   "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop";
 
-function normalizeCategoryName(name: string): string {
-  return (name || "").trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-const CATEGORY_IMAGES: Record<string, string> = {
-  bonnet: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&h=400&fit=crop',
-  door: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=600&h=400&fit=crop',
-  doors: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=600&h=400&fit=crop',
-  bumper: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=600&h=400&fit=crop',
-  bumpers: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=600&h=400&fit=crop',
-  mirror: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop',
-  mirrors: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop',
-  'side mirror': 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop',
-  'side mirrors': 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop',
-  headlight: 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=600&h=400&fit=crop',
-  headlights: 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=600&h=400&fit=crop',
-  'head light': 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=600&h=400&fit=crop',
-  'head lights': 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=600&h=400&fit=crop',
-  taillight: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=400&fit=crop',
-  taillights: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=400&fit=crop',
-  'tail light': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=400&fit=crop',
-  'tail lights': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=400&fit=crop',
-  gear: 'https://images.unsplash.com/photo-1483581940-31b8fabb23dc?w=600&h=400&fit=crop',
-  'gear level': 'https://images.unsplash.com/photo-1483581940-31b8fabb23dc?w=600&h=400&fit=crop',
-  'gear levels': 'https://images.unsplash.com/photo-1483581940-31b8fabb23dc?w=600&h=400&fit=crop',
-  fender: 'https://images.unsplash.com/photo-1503736334956-4c8f8e92992d?w=600&h=400&fit=crop',
-  fenders: 'https://images.unsplash.com/photo-1503736334956-4c8f8e92992d?w=600&h=400&fit=crop',
-  grille: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=600&h=400&fit=crop',
-  grilles: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=600&h=400&fit=crop',
-};
-
 function getCategoryImage(category: CategoryWithCount): string {
-  if (category.image_url) return category.image_url;
-  const normalized = normalizeCategoryName(category.name);
-  return CATEGORY_IMAGES[normalized] || fallbackImage;
+  return category.image_url || fallbackImage;
 }
-
-const FALLBACK_CATEGORIES: CategoryWithCount[] = [
-  { id: "cat-bonnet", name: "Bonnet", product_count: 214 },
-  { id: "cat-bumpers", name: "Bumpers", product_count: 214 },
-  { id: "cat-doors", name: "Doors", product_count: 214 },
-  { id: "cat-headlights", name: "Head Lights", product_count: 214 },
-  { id: "cat-mirrors", name: "Side Mirrors", product_count: 214 },
-  { id: "cat-taillights", name: "Tail Lights", product_count: 214 },
-  { id: "cat-gears", name: "Gear Levels", product_count: 214 },
-  { id: "cat-fenders", name: "Fenders", product_count: 214 },
-  { id: "cat-grilles", name: "Grilles", product_count: 214 },
-];
 
 export const ShopPage: React.FC = () => {
   const navigate = useNavigate();
@@ -77,12 +31,11 @@ export const ShopPage: React.FC = () => {
     async function loadCategories() {
       try {
         const res = await api.get<CategoryWithCount[]>("/products/by-category");
-        setCategories(res.data && res.data.length > 0 ? res.data : FALLBACK_CATEGORIES);
+        setCategories(res.data && res.data.length > 0 ? res.data : []);
         setError(null);
       } catch (err) {
         console.error("Failed to load categories:", err);
-        setError("Failed to load categories. Using offline data.");
-        setCategories(FALLBACK_CATEGORIES);
+        setError("Failed to load categories");
       } finally {
         setLoading(false);
       }
