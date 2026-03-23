@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Search, Layers, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Layers, Pencil, Trash2, ImageIcon } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
@@ -7,7 +7,7 @@ import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 
-type Brand = { id: string; name: string };
+type Brand = { id: string; name: string; logo_url?: string | null };
 
 export const AdminBrandsPage: React.FC = () => {
   const [items, setItems] = React.useState<Brand[]>([]);
@@ -16,6 +16,8 @@ export const AdminBrandsPage: React.FC = () => {
   const [editOpen, setEditOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Brand | null>(null);
   const [name, setName] = React.useState("");
+  const [logoUrl, setLogoUrl] = React.useState("");
+  const [logoPreview, setLogoPreview] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const { push } = useToast();
@@ -37,12 +39,18 @@ export const AdminBrandsPage: React.FC = () => {
     load();
   }, [load]);
 
+  const resetForm = () => {
+    setName("");
+    setLogoUrl("");
+    setLogoPreview(null);
+  };
+
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post("/brands", { name });
+      await api.post("/brands", { name, logo_url: logoUrl || null });
       push("Brand created", "success");
-      setName("");
+      resetForm();
       setOpen(false);
       load();
     } catch {
@@ -53,6 +61,8 @@ export const AdminBrandsPage: React.FC = () => {
   const onOpenEdit = (brand: Brand) => {
     setEditing(brand);
     setName(brand.name);
+    setLogoUrl(brand.logo_url || "");
+    setLogoPreview(brand.logo_url || null);
     setEditOpen(true);
   };
 
@@ -60,11 +70,11 @@ export const AdminBrandsPage: React.FC = () => {
     e.preventDefault();
     if (!editing) return;
     try {
-      await api.put(`/brands/${editing.id}`, { name });
+      await api.put(`/brands/${editing.id}`, { name, logo_url: logoUrl || null });
       push("Brand updated", "success");
       setEditOpen(false);
       setEditing(null);
-      setName("");
+      resetForm();
       load();
     } catch {
       push("Failed to update brand", "error");
@@ -80,6 +90,15 @@ export const AdminBrandsPage: React.FC = () => {
       load();
     } catch {
       push("Failed to delete brand", "error");
+    }
+  };
+
+  const handleLogoUrlChange = (url: string) => {
+    setLogoUrl(url);
+    if (url) {
+      setLogoPreview(url);
+    } else {
+      setLogoPreview(null);
     }
   };
 
@@ -141,32 +160,43 @@ export const AdminBrandsPage: React.FC = () => {
         ) : (
           <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {filtered.map((c) => (
-              <div key={c.id} className="card p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Layers className="h-5 w-5" />
+              <div key={c.id} className="card card-hover overflow-hidden p-0">
+                <div className="relative h-32 w-full bg-muted/30">
+                  {c.logo_url ? (
+                    <img src={c.logo_url} alt={c.name} className="h-full w-full object-contain p-4" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
                     </div>
-                    <div>
-                      <p className="font-semibold text-foreground">{c.name}</p>
-                      <p className="text-xs text-muted-foreground">OEM partner</p>
+                  )}
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Layers className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">{c.name}</p>
+                        <p className="text-xs text-muted-foreground">OEM partner</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      className="btn-outline h-9 w-9 p-0"
-                      onClick={() => onOpenEdit(c)}
-                      title="Edit"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      className="btn-destructive h-9 w-9 p-0"
-                      onClick={() => onDelete(c.id)}
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex gap-1">
+                      <button
+                        className="btn-outline h-9 w-9 p-0"
+                        onClick={() => onOpenEdit(c)}
+                        title="Edit"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        className="btn-destructive h-9 w-9 p-0"
+                        onClick={() => onDelete(c.id)}
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -175,28 +205,83 @@ export const AdminBrandsPage: React.FC = () => {
         )}
       </div>
 
-      <Modal open={open} onClose={() => { setOpen(false); setName(""); }} title="Add brand">
+      <Modal open={open} onClose={() => { setOpen(false); resetForm(); }} title="Add brand">
         <form onSubmit={onCreate} className="space-y-4">
-          <input
-            required
-            className="form-input"
-            placeholder="Brand name (e.g., Toyota)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+          <div>
+            <label className="mb-2 block text-sm font-medium">Brand name</label>
+            <input
+              required
+              className="form-input"
+              placeholder="e.g., Toyota, Honda, BMW"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium">Logo URL (optional)</label>
+            <div className="space-y-3">
+              <input
+                className="form-input"
+                placeholder="https://example.com/logo.png"
+                value={logoUrl}
+                onChange={(e) => handleLogoUrlChange(e.target.value)}
+              />
+              {logoPreview && (
+                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted/30">
+                  <img src={logoPreview} alt="Preview" className="h-full w-full object-contain p-4" />
+                  <button
+                    type="button"
+                    onClick={() => handleLogoUrlChange("")}
+                    className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Paste a logo URL (transparent PNG works best).
+              </p>
+            </div>
+          </div>
           <button className="btn-primary h-11 w-full">Create</button>
         </form>
       </Modal>
 
-      <Modal open={editOpen} onClose={() => { setEditOpen(false); setEditing(null); setName(""); }} title="Edit brand">
+      <Modal open={editOpen} onClose={() => { setEditOpen(false); setEditing(null); resetForm(); }} title="Edit brand">
         <form onSubmit={onUpdate} className="space-y-4">
-          <input
-            required
-            className="form-input"
-            placeholder="Brand name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+          <div>
+            <label className="mb-2 block text-sm font-medium">Brand name</label>
+            <input
+              required
+              className="form-input"
+              placeholder="e.g., Toyota, Honda, BMW"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium">Logo URL (optional)</label>
+            <div className="space-y-3">
+              <input
+                className="form-input"
+                placeholder="https://example.com/logo.png"
+                value={logoUrl}
+                onChange={(e) => handleLogoUrlChange(e.target.value)}
+              />
+              {logoPreview && (
+                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted/30">
+                  <img src={logoPreview} alt="Preview" className="h-full w-full object-contain p-4" />
+                  <button
+                    type="button"
+                    onClick={() => handleLogoUrlChange("")}
+                    className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
           <button className="btn-primary h-11 w-full">Save changes</button>
         </form>
       </Modal>
