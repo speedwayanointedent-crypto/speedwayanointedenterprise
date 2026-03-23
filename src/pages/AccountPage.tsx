@@ -9,6 +9,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { useToast } from "../components/ui/Toast";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { PageLoading } from "../components/ui/LoadingSpinner";
 
 type Profile = {
   id: string;
@@ -174,7 +175,7 @@ export const AccountPage: React.FC = () => {
         <PageHeader title="My account" subtitle="Manage your profile, addresses, and wishlist." />
 
         {loading ? (
-          <Skeleton className="mt-6 h-64" />
+          <PageLoading text="Loading account..." />
         ) : !profile ? (
           <EmptyState
             title="Sign in required"
