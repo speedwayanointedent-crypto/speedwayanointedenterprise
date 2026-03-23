@@ -1,14 +1,14 @@
 import React from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Search, ShoppingCart, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
-import api from "../../lib/api";
-import { Skeleton } from "../../components/ui/Skeleton";
-import { PublicNavbar } from "../../components/layout/PublicNavbar";
-import { WhatsAppButton } from "../../components/ui/WhatsAppButton";
-import { PublicFooterCTA } from "../../components/layout/PublicFooterCTA";
-import { PageHeader } from "../../components/ui/PageHeader";
-import { addToCart } from "../../lib/cart";
-import { useToast } from "../../components/ui/Toast";
+import api from "../lib/api";
+import { Skeleton } from "../components/ui/Skeleton";
+import { PublicNavbar } from "../components/layout/PublicNavbar";
+import { WhatsAppButton } from "../components/ui/WhatsAppButton";
+import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
+import { PageHeader } from "../components/ui/PageHeader";
+import { addToCart } from "../lib/cart";
+import { useToast } from "../components/ui/Toast";
 
 type Product = {
   id: string;
