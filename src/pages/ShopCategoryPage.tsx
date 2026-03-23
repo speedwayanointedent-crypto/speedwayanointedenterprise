@@ -93,31 +93,31 @@ export const ShopCategoryPage: React.FC = () => {
                   <p className="mt-2 text-sm text-muted-foreground">Please try again later.</p>
                 </div>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {brands.map((brand) => (
                     <button
                       key={brand.id}
                       onClick={() => handleBrandClick(brand)}
                       className="card card-hover overflow-hidden p-0 text-left transition-all hover:shadow-lg hover:shadow-primary/10"
                     >
-                      <div className="relative h-32 w-full bg-gradient-to-br from-muted/30 to-muted/10">
+                      <div className="relative h-48 w-full bg-gradient-to-br from-muted/30 to-muted/10">
                         {brand.logo_url ? (
                           <img
                             src={brand.logo_url}
                             alt={brand.name}
-                            className="h-full w-full object-contain p-4"
+                            className="h-full w-full object-contain p-6"
                             loading="lazy"
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center">
-                            <span className="text-4xl font-bold text-muted-foreground">
+                            <span className="text-5xl font-bold text-muted-foreground">
                               {brand.name.charAt(0).toUpperCase()}
                             </span>
                           </div>
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                         <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <h3 className="text-lg font-semibold text-white">{brand.name}</h3>
+                          <h3 className="text-xl font-semibold text-white">{brand.name}</h3>
                           <ChevronRight className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-white/70" />
                         </div>
                       </div>
