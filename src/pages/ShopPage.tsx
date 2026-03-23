@@ -290,6 +290,7 @@ export const ShopPage: React.FC = () => {
                           src={p.image_url || fallbackImage}
                           alt={p.name}
                           className="h-36 w-full rounded-lg object-cover sm:h-40"
+                          loading="lazy"
                         />
                         <div className="mt-3">
                           <div className="text-xs text-muted-foreground">
@@ -407,6 +408,7 @@ export const ShopPage: React.FC = () => {
                           src={CATEGORY_ICONS[cat.name] || fallbackImage}
                           alt={cat.name}
                           className="h-full w-full object-cover"
+                          loading="lazy"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                         <div className="absolute bottom-0 left-0 right-0 p-4">
