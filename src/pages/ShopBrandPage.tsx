@@ -61,8 +61,7 @@ export const ShopBrandPage: React.FC = () => {
     const params = new URLSearchParams();
     if (categoryId) params.set("category", categoryId);
     params.set("brand", brandId || "");
-    params.set("model", model.id);
-    navigate(`/shop/products?${params.toString()}`);
+    navigate(`/shop/model/${model.id}?${params.toString()}`);
   };
 
   return (
