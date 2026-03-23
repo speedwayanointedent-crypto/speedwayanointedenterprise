@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, ShoppingCart, ChevronLeft, ChevronRight, ArrowLeft, X } from "lucide-react";
+import { Search, ShoppingCart, ChevronLeft, ChevronRight, ArrowLeft, X, ChevronUp, ChevronDown } from "lucide-react";
 import api from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
@@ -140,7 +140,10 @@ export const ShopProductsPage: React.FC = () => {
         {galleryImages.length > 0 && (
           <section className="section-band rounded-2xl p-4 sm:p-6 mb-6">
             <div className="card p-4 sm:p-6">
-              <h2 className="text-xl font-semibold mb-4">{model?.name} Gallery</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-foreground">{model?.name} Gallery</h2>
+                <span className="text-sm text-muted-foreground">{galleryImages.length} photos</span>
+              </div>
               {model?.years && model.years.length > 0 && (
                 <div className="mb-4 flex flex-wrap gap-2">
                   {model.years.map((year) => (
@@ -155,14 +158,15 @@ export const ShopProductsPage: React.FC = () => {
                   <button
                     key={idx}
                     onClick={() => setSelectedImage(img)}
-                    className="card card-hover relative aspect-video overflow-hidden rounded-lg"
+                    className="card card-hover relative aspect-video overflow-hidden rounded-lg group"
                   >
                     <img
                       src={img}
                       alt={`${model?.name} gallery ${idx + 1}`}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
                       loading="lazy"
                     />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
                   </button>
                 ))}
               </div>
@@ -304,21 +308,48 @@ export const ShopProductsPage: React.FC = () => {
 
       {selectedImage && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95"
           onClick={() => setSelectedImage(null)}
         >
           <button
-            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+            className="absolute right-4 top-4 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 z-10"
             onClick={() => setSelectedImage(null)}
           >
             <X className="h-6 w-6" />
           </button>
+          {galleryImages.length > 1 && (
+            <>
+              <button
+                className="absolute left-4 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const currentIdx = galleryImages.indexOf(selectedImage);
+                  if (currentIdx > 0) setSelectedImage(galleryImages[currentIdx - 1]);
+                }}
+              >
+                <ChevronLeft className="h-8 w-8" />
+              </button>
+              <button
+                className="absolute right-20 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const currentIdx = galleryImages.indexOf(selectedImage);
+                  if (currentIdx < galleryImages.length - 1) setSelectedImage(galleryImages[currentIdx + 1]);
+                }}
+              >
+                <ChevronRight className="h-8 w-8" />
+              </button>
+            </>
+          )}
           <img
             src={selectedImage}
             alt="Full size"
             className="max-h-[90vh] max-w-[90vw] object-contain"
             onClick={(e) => e.stopPropagation()}
           />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-4 py-2 text-white">
+            {galleryImages.indexOf(selectedImage) + 1} / {galleryImages.length}
+          </div>
         </div>
       )}
 
