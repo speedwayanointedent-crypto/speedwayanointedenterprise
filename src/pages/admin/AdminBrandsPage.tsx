@@ -6,6 +6,7 @@ import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { PageLoading } from "../../components/ui/LoadingSpinner";
 
 type Brand = { id: string; name: string; logo_url?: string | null };
 
@@ -154,7 +155,7 @@ export const AdminBrandsPage: React.FC = () => {
         ) : null}
 
         {loading ? (
-          <Skeleton className="mt-6 h-32" />
+          <PageLoading text="Loading brands..." />
         ) : filtered.length === 0 ? (
           <div className="mt-6">
             <EmptyState
