@@ -1,12 +1,13 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
-import { ShieldCheck, Truck, CheckCircle2, Heart, ShoppingCart } from "lucide-react";
+import { ShieldCheck, Truck, CheckCircle2, Heart, ShoppingCart, Loader2 } from "lucide-react";
 import api from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useToast } from "../components/ui/Toast";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { addToCart } from "../lib/cart";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
+import { PageLoading } from "../components/ui/LoadingSpinner";
 
 type Product = {
   id: string;
@@ -188,10 +189,7 @@ export const ProductDetailsPage: React.FC = () => {
         </Link>
 
         {loading ? (
-          <div className="mt-6 grid gap-6 lg:grid-cols-2">
-            <Skeleton className="h-80 rounded-xl" />
-            <Skeleton className="h-80 rounded-xl" />
-          </div>
+          <PageLoading text="Loading product..." />
         ) : !product ? (
           <div className="mt-6 rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-md">
             Product not found.
