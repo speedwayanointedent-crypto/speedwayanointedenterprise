@@ -8,6 +8,7 @@ import { Skeleton } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/EmptyState";
 import { useToast } from "../components/ui/Toast";
 import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 type Profile = {
   id: string;
@@ -50,6 +51,7 @@ export const AccountPage: React.FC = () => {
   const [wishlist, setWishlist] = React.useState<WishlistItem[]>([]);
   const [notifications, setNotifications] = React.useState<Notification[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [submitting, setSubmitting] = React.useState(false);
   const [profileForm, setProfileForm] = React.useState({ full_name: "", email: "" });
   const [addressForm, setAddressForm] = React.useState({
     label: "",
@@ -98,17 +100,21 @@ export const AccountPage: React.FC = () => {
 
   const updateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       const res = await api.patch<Profile>("/users/me", profileForm);
       setProfile(res.data);
       push("Profile updated", "success");
     } catch {
       push("Failed to update profile", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const addAddress = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       const res = await api.post<Address>("/addresses", addressForm);
       setAddresses((prev) => [res.data, ...prev]);
@@ -126,6 +132,8 @@ export const AccountPage: React.FC = () => {
       push("Address saved", "success");
     } catch {
       push("Failed to save address", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -199,7 +207,10 @@ export const AccountPage: React.FC = () => {
                       setProfileForm((prev) => ({ ...prev, email: e.target.value }))
                     }
                   />
-                  <button className="btn-primary h-10 text-sm">Save profile</button>
+                  <button className="btn-primary h-10 text-sm" disabled={submitting}>
+                    {submitting ? <Loader2 className="btn-spinner mr-2 h-4 w-4" /> : null}
+                    <span>Save profile</span>
+                  </button>
                 </form>
                 <button
                   type="button"
@@ -322,7 +333,10 @@ export const AccountPage: React.FC = () => {
                     />
                     Set as default
                   </label>
-                  <button className="btn-primary h-10 text-sm">Add address</button>
+                  <button className="btn-primary h-10 text-sm" disabled={submitting}>
+                      {submitting ? <Loader2 className="btn-spinner mr-2 h-4 w-4" /> : null}
+                      <span>Add address</span>
+                    </button>
                 </form>
               </div>
             </div>
