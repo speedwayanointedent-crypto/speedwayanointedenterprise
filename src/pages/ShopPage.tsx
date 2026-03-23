@@ -36,7 +36,7 @@ type CategoryWithCount = {
 type Option = { id: string; name?: string; label?: string; brand_id?: string; years?: string[] };
 
 const fallbackImage =
-  "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?q=80&w=1200&auto=format&fit=crop";
+  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop";
 
 const PRODUCTS_PER_PAGE = 24;
 
@@ -45,49 +45,36 @@ function normalizeCategoryName(name: string): string {
 }
 
 const CATEGORY_IMAGES: Record<string, string> = {
-  bonnet: 'https://cdn.pixabay.com/photo/2016/03/12/23/23/automobile-1252872_1280.jpg',
-  door: 'https://cdn.pixabay.com/photo/2016/03/12/23/23/car-1252872_1280.jpg',
-  doors: 'https://cdn.pixabay.com/photo/2016/03/12/23/23/car-1252872_1280.jpg',
-  bumper: 'https://cdn.pixabay.com/photo/2015/09/12/19/39/car-937061_1280.jpg',
-  bumpers: 'https://cdn.pixabay.com/photo/2015/09/12/19/39/car-937061_1280.jpg',
-  mirror: 'https://cdn.pixabay.com/photo/2016/04/13/19/20/side-mirror-1328401_1280.jpg',
-  mirrors: 'https://cdn.pixabay.com/photo/2016/04/13/19/20/side-mirror-1328401_1280.jpg',
-  'side mirror': 'https://cdn.pixabay.com/photo/2016/04/13/19/20/side-mirror-1328401_1280.jpg',
-  'side mirrors': 'https://cdn.pixabay.com/photo/2016/04/13/19/20/side-mirror-1328401_1280.jpg',
-  headlight: 'https://cdn.pixabay.com/photo/2014/11/13/23/54/headlight-534069_1280.jpg',
-  headlights: 'https://cdn.pixabay.com/photo/2014/11/13/23/54/headlight-534069_1280.jpg',
-  'head light': 'https://cdn.pixabay.com/photo/2014/11/13/23/54/headlight-534069_1280.jpg',
-  'head lights': 'https://cdn.pixabay.com/photo/2014/11/13/23/54/headlight-534069_1280.jpg',
-  taillight: 'https://cdn.pixabay.com/photo/2015/05/22/05/57/taillight-779740_1280.jpg',
-  taillights: 'https://cdn.pixabay.com/photo/2015/05/22/05/57/taillight-779740_1280.jpg',
-  'tail light': 'https://cdn.pixabay.com/photo/2015/05/22/05/57/taillight-779740_1280.jpg',
-  'tail lights': 'https://cdn.pixabay.com/photo/2015/05/22/05/57/taillight-779740_1280.jpg',
-  gear: 'https://cdn.pixabay.com/photo/2016/08/01/21/41/gear-stick-1569409_1280.jpg',
-  'gear level': 'https://cdn.pixabay.com/photo/2016/08/01/21/41/gear-stick-1569409_1280.jpg',
-  'gear levels': 'https://cdn.pixabay.com/photo/2016/08/01/21/41/gear-stick-1569409_1280.jpg',
-  fender: 'https://cdn.pixabay.com/photo/2016/11/23/18/36/auto-1853826_1280.jpg',
-  fenders: 'https://cdn.pixabay.com/photo/2016/11/23/18/36/auto-1853826_1280.jpg',
-  grille: 'https://cdn.pixabay.com/photo/2016/11/22/20/09/automobile-1851053_1280.jpg',
-  grilles: 'https://cdn.pixabay.com/photo/2016/11/22/20/09/automobile-1851053_1280.jpg',
+  bonnet: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&h=400&fit=crop',
+  door: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=600&h=400&fit=crop',
+  doors: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=600&h=400&fit=crop',
+  bumper: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=600&h=400&fit=crop',
+  bumpers: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=600&h=400&fit=crop',
+  mirror: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop',
+  mirrors: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop',
+  'side mirror': 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop',
+  'side mirrors': 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop',
+  headlight: 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=600&h=400&fit=crop',
+  headlights: 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=600&h=400&fit=crop',
+  'head light': 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=600&h=400&fit=crop',
+  'head lights': 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=600&h=400&fit=crop',
+  taillight: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=400&fit=crop',
+  taillights: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=400&fit=crop',
+  'tail light': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=400&fit=crop',
+  'tail lights': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=400&fit=crop',
+  gear: 'https://images.unsplash.com/photo-1483581940-31b8fabb23dc?w=600&h=400&fit=crop',
+  'gear level': 'https://images.unsplash.com/photo-1483581940-31b8fabb23dc?w=600&h=400&fit=crop',
+  'gear levels': 'https://images.unsplash.com/photo-1483581940-31b8fabb23dc?w=600&h=400&fit=crop',
+  fender: 'https://images.unsplash.com/photo-1503736334956-4c8f8e92992d?w=600&h=400&fit=crop',
+  fenders: 'https://images.unsplash.com/photo-1503736334956-4c8f8e92992d?w=600&h=400&fit=crop',
+  grille: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=600&h=400&fit=crop',
+  grilles: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=600&h=400&fit=crop',
 };
 
 function getCategoryImage(categoryName: string): string {
   const normalized = normalizeCategoryName(categoryName);
   return CATEGORY_IMAGES[normalized] || fallbackImage;
 }
-
-const CATEGORY_ICONS: Record<string, string> = {
-  'BONNET': 'https://cdn.pixabay.com/photo/2016/03/12/23/23/automobile-1252872_1280.jpg',
-  'Bonnet': 'https://cdn.pixabay.com/photo/2016/03/12/23/23/automobile-1252872_1280.jpg',
-  'Doors': 'https://cdn.pixabay.com/photo/2016/03/12/23/23/car-1252872_1280.jpg',
-  'Bumpers': 'https://cdn.pixabay.com/photo/2015/09/12/19/39/car-937061_1280.jpg',
-  'Side Mirrors': 'https://cdn.pixabay.com/photo/2016/04/13/19/20/side-mirror-1328401_1280.jpg',
-  'Head Lights': 'https://cdn.pixabay.com/photo/2014/11/13/23/54/headlight-534069_1280.jpg',
-  'Tail Lights': 'https://cdn.pixabay.com/photo/2015/05/22/05/57/taillight-779740_1280.jpg',
-  'Gear Levels': 'https://cdn.pixabay.com/photo/2016/08/01/21/41/gear-stick-1569409_1280.jpg',
-  'Fenders': 'https://cdn.pixabay.com/photo/2016/11/23/18/36/auto-1853826_1280.jpg',
-  'Grilles': 'https://cdn.pixabay.com/photo/2016/11/22/20/09/automobile-1851053_1280.jpg',
-};
 
 const FALLBACK_CATEGORIES: CategoryWithCount[] = [
   { id: "cat-bonnet", name: "Bonnet", product_count: 214 },
