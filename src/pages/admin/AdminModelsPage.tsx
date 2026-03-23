@@ -139,6 +139,16 @@ export const AdminModelsPage: React.FC = () => {
     c.name.toLowerCase().includes(query.toLowerCase())
   );
 
+  const groupedModels = React.useMemo(() => {
+    const groups: Record<string, Model[]> = {};
+    filtered.forEach((model) => {
+      const brandName = model.brands?.name || "Unknown";
+      if (!groups[brandName]) groups[brandName] = [];
+      groups[brandName].push(model);
+    });
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [filtered]);
+
   return (
     <div className="space-y-6 text-foreground">
       <PageHeader
@@ -191,60 +201,67 @@ export const AdminModelsPage: React.FC = () => {
             />
           </div>
         ) : (
-          <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((c) => (
-              <div key={c.id} className="card card-hover overflow-hidden p-0">
-                <div className="relative h-32 w-full bg-muted/30">
-                  {c.image_url ? (
-                    <img src={c.image_url} alt={c.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <Truck className="h-5 w-5" />
+          <div className="mt-6 space-y-8">
+            {groupedModels.map(([brandName, models]) => (
+              <div key={brandName}>
+                <h3 className="mb-4 text-lg font-semibold text-foreground">{brandName}</h3>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {models.map((c) => (
+                    <div key={c.id} className="card card-hover overflow-hidden p-0">
+                      <div className="relative h-32 w-full bg-muted/30">
+                        {c.image_url ? (
+                          <img src={c.image_url} alt={c.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <p className="font-semibold text-foreground">{c.name}</p>
-                        <p className="text-xs text-muted-foreground">{c.brands?.name || "No brand"}</p>
+                      <div className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                              <Truck className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground">{c.name}</p>
+                              <p className="text-xs text-muted-foreground">{c.brands?.name || "No brand"}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              className="btn-outline h-9 w-9 p-0"
+                              onClick={() => onOpenEdit(c)}
+                              title="Edit"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              className="btn-destructive h-9 w-9 p-0"
+                              onClick={() => onDelete(c.id)}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                        {c.years?.length ? (
+                          <div className="mt-3 flex flex-wrap gap-1">
+                            {c.years.slice(0, 6).map((y) => (
+                              <span key={y} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                                {y}
+                              </span>
+                            ))}
+                            {c.years.length > 6 && (
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                                +{c.years.length - 6}
+                              </span>
+                            )}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
-                    <div className="flex gap-1">
-                      <button
-                        className="btn-outline h-9 w-9 p-0"
-                        onClick={() => onOpenEdit(c)}
-                        title="Edit"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        className="btn-destructive h-9 w-9 p-0"
-                        onClick={() => onDelete(c.id)}
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                  {c.years?.length ? (
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {c.years.slice(0, 6).map((y) => (
-                        <span key={y} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                          {y}
-                        </span>
-                      ))}
-                      {c.years.length > 6 && (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                          +{c.years.length - 6}
-                        </span>
-                      )}
-                    </div>
-                  ) : null}
+                  ))}
                 </div>
               </div>
             ))}
