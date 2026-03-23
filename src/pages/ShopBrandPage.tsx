@@ -120,14 +120,14 @@ export const ShopBrandPage: React.FC = () => {
                   <p className="mt-2 text-sm text-muted-foreground">Please try again later.</p>
                 </div>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {models.map((model) => (
                     <button
                       key={model.id}
                       onClick={() => handleModelClick(model)}
                       className="card card-hover overflow-hidden p-0 text-left transition-all hover:shadow-lg hover:shadow-primary/10"
                     >
-                      <div className="relative h-32 w-full bg-gradient-to-br from-muted/30 to-muted/10">
+                      <div className="relative h-48 w-full bg-gradient-to-br from-muted/30 to-muted/10">
                         {model.image_url ? (
                           <img
                             src={model.image_url}
@@ -137,14 +137,14 @@ export const ShopBrandPage: React.FC = () => {
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center">
-                            <span className="text-4xl font-bold text-muted-foreground">
+                            <span className="text-5xl font-bold text-muted-foreground">
                               {model.name.charAt(0).toUpperCase()}
                             </span>
                           </div>
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                         <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <h3 className="text-lg font-semibold text-white">{model.name}</h3>
+                          <h3 className="text-xl font-semibold text-white">{model.name}</h3>
                           {model.years && model.years.length > 0 && (
                             <p className="text-sm text-white/80">{model.years.join(", ")}</p>
                           )}
