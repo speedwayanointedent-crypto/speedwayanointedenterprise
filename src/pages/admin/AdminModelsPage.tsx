@@ -6,6 +6,7 @@ import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { PageLoading } from "../../components/ui/LoadingSpinner";
 
 type Model = { id: string; name: string; brand_id?: string; brands?: { name: string }; years?: string[]; image_url?: string | null; gallery?: string[] };
 type Brand = { id: string; name: string };
@@ -352,7 +353,7 @@ export const AdminModelsPage: React.FC = () => {
         ) : null}
 
         {loading ? (
-          <Skeleton className="mt-6 h-32" />
+          <PageLoading text="Loading models..." />
         ) : filtered.length === 0 ? (
           <div className="mt-6">
             <EmptyState
