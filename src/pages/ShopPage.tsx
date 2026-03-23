@@ -30,8 +30,16 @@ export const ShopPage: React.FC = () => {
   React.useEffect(() => {
     async function loadCategories() {
       try {
-        const res = await api.get<CategoryWithCount[]>("/products/by-category");
-        setCategories(res.data && res.data.length > 0 ? res.data : []);
+        let res = await api.get<{ id: string; name: string; image_url?: string }[]>("/categories");
+        if (res.data && res.data.length > 0) {
+          const catsWithCount = res.data.map(cat => ({
+            ...cat,
+            product_count: 0
+          }));
+          setCategories(catsWithCount);
+        } else {
+          setCategories([]);
+        }
         setError(null);
       } catch (err) {
         console.error("Failed to load categories:", err);
