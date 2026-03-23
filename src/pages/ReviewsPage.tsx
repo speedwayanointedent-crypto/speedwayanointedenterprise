@@ -7,6 +7,7 @@ import { useToast } from "../components/ui/Toast";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
+import { PageLoading } from "../components/ui/LoadingSpinner";
 
 type Review = {
   id: number;
@@ -103,7 +104,7 @@ const onSubmit = async (e: React.FormEvent) => {
           <div className={`grid gap-6 ${showForm ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,0.45fr)]" : "grid-cols-1"}`}>
             <div className="card p-6">
               {loading ? (
-                <div className="text-sm text-muted-foreground">Loading reviews...</div>
+                <PageLoading text="Loading reviews..." />
               ) : safeReviews.length === 0 ? (
                 <EmptyState
                   title="No reviews yet"
