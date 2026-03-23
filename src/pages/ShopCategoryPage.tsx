@@ -87,7 +87,7 @@ export const ShopCategoryPage: React.FC = () => {
               <div className="card p-4 sm:p-6">
                 <PageHeader
                   title={category?.name || "Category"}
-                  subtitle="Select a brand to continue"
+                  subtitle={`${brands.length} brand${brands.length !== 1 ? 's' : ''} available`}
                   actions={<WhatsAppButton label="WhatsApp support" className="h-10 px-5 text-sm" />}
                 />
                 <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
