@@ -137,7 +137,7 @@ export const ShopBrandPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {models.map((model) => (
+                  {filteredModels.map((model) => (
                     <button
                       key={model.id}
                       onClick={() => handleModelClick(model)}
