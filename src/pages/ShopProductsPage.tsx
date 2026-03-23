@@ -153,12 +153,12 @@ export const ShopProductsPage: React.FC = () => {
                   ))}
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                 {galleryImages.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setSelectedImage(img)}
-                    className="card card-hover relative aspect-video overflow-hidden rounded-lg group"
+                    className="card card-hover relative aspect-square overflow-hidden rounded-xl group"
                   >
                     <img
                       src={img}
@@ -320,35 +320,59 @@ export const ShopProductsPage: React.FC = () => {
           {galleryImages.length > 1 && (
             <>
               <button
-                className="absolute left-4 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
+                className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20"
                 onClick={(e) => {
                   e.stopPropagation();
                   const currentIdx = galleryImages.indexOf(selectedImage);
                   if (currentIdx > 0) setSelectedImage(galleryImages[currentIdx - 1]);
                 }}
               >
-                <ChevronLeft className="h-8 w-8" />
+                <ChevronLeft className="h-10 w-10" />
               </button>
               <button
-                className="absolute right-20 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
+                className="absolute right-20 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20"
                 onClick={(e) => {
                   e.stopPropagation();
                   const currentIdx = galleryImages.indexOf(selectedImage);
                   if (currentIdx < galleryImages.length - 1) setSelectedImage(galleryImages[currentIdx + 1]);
                 }}
               >
-                <ChevronRight className="h-8 w-8" />
+                <ChevronRight className="h-10 w-10" />
               </button>
             </>
           )}
           <img
             src={selectedImage}
             alt="Full size"
-            className="max-h-[90vh] max-w-[90vw] object-contain"
+            className="max-h-[85vh] max-w-[90vw] object-contain"
             onClick={(e) => e.stopPropagation()}
           />
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-4 py-2 text-white">
-            {galleryImages.indexOf(selectedImage) + 1} / {galleryImages.length}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 rounded-full bg-black/60 px-5 py-2 text-white">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const currentIdx = galleryImages.indexOf(selectedImage);
+                if (currentIdx > 0) setSelectedImage(galleryImages[currentIdx - 1]);
+              }}
+              disabled={galleryImages.indexOf(selectedImage) === 0}
+              className="hover:text-gray-300 disabled:opacity-30"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="text-sm font-medium">
+              {galleryImages.indexOf(selectedImage) + 1} <span className="opacity-60">/ {galleryImages.length}</span>
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const currentIdx = galleryImages.indexOf(selectedImage);
+                if (currentIdx < galleryImages.length - 1) setSelectedImage(galleryImages[currentIdx + 1]);
+              }}
+              disabled={galleryImages.indexOf(selectedImage) === galleryImages.length - 1}
+              className="hover:text-gray-300 disabled:opacity-30"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
           </div>
         </div>
       )}
