@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Search, ShoppingCart, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import api from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
@@ -25,15 +25,16 @@ type Product = {
 };
 
 type Category = { id: string; name: string };
-type Brand = { id: string; name: string };
-type Model = { id: string; name: string };
+type Brand = { id: string; name: string; logo_url?: string | null };
+type Model = { id: string; name: string; image_url?: string | null };
 
 const fallbackImage = "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop";
 
 const PRODUCTS_PER_PAGE = 24;
 
 export const ShopProductsPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { modelId } = useParams<{ modelId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [products, setProducts] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -48,7 +49,6 @@ export const ShopProductsPage: React.FC = () => {
 
   const categoryId = searchParams.get("category");
   const brandId = searchParams.get("brand");
-  const modelId = searchParams.get("model");
   const pageNum = parseInt(searchParams.get("page") || "1");
 
   const loadProducts = React.useCallback(async (pageNum: number = 1) => {
@@ -98,9 +98,8 @@ export const ShopProductsPage: React.FC = () => {
     const params = new URLSearchParams();
     if (categoryId) params.set("category", categoryId);
     if (brandId) params.set("brand", brandId);
-    if (modelId) params.set("model", modelId);
     params.set("page", "1");
-    setSearchParams(params);
+    navigate(`/shop/model/${modelId}?${params.toString()}`);
     loadProducts(1);
   };
 
@@ -108,28 +107,15 @@ export const ShopProductsPage: React.FC = () => {
     if (newPage >= 1 && newPage <= totalPages) {
       const params = new URLSearchParams(searchParams);
       params.set("page", String(newPage));
-      setSearchParams(params);
+      navigate(`/shop/model/${modelId}?${params.toString()}`);
       loadProducts(newPage);
     }
   };
 
   const getBackUrl = () => {
-    if (modelId) {
-      const params = new URLSearchParams();
-      if (categoryId) params.set("category", categoryId);
-      params.set("brand", brandId || "");
-      return `/shop/products?${params.toString()}`;
-    }
-    if (brandId) {
-      return `/shop/brand/${brandId}${categoryId ? `?category=${categoryId}` : ""}`;
-    }
-    return `/shop/category/${categoryId}`;
-  };
-
-  const getBackLabel = () => {
-    if (modelId) return brand?.name || "Brand";
-    if (brandId) return category?.name || "Category";
-    return "Shop";
+    const params = new URLSearchParams();
+    if (categoryId) params.set("category", categoryId);
+    return `/shop/brand/${brandId}?${params.toString()}`;
   };
 
   return (
@@ -142,21 +128,28 @@ export const ShopProductsPage: React.FC = () => {
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to {getBackLabel()}
+            Back to {brand?.name || "Brand"}
           </button>
         </div>
 
         <section className="section-band rounded-2xl p-4 sm:p-6">
           <div className="card p-4 sm:p-6">
-            <PageHeader
-              title={model?.name || brand?.name || category?.name || "Products"}
-              subtitle={
-                [category?.name, brand?.name, model?.name]
-                  .filter(Boolean)
-                  .join(" → ") + ` (${totalProducts} products)`
-              }
-              actions={<WhatsAppButton label="WhatsApp support" className="h-10 px-5 text-sm" />}
-            />
+            <div className="flex items-center gap-4">
+              {model?.image_url && (
+                <img src={model.image_url} alt={model.name} className="h-16 w-16 rounded-lg object-cover" />
+              )}
+              <div>
+                <PageHeader
+                  title={model?.name || "Model"}
+                  subtitle={
+                    [category?.name, brand?.name, model?.name]
+                      .filter(Boolean)
+                      .join(" → ") + ` (${totalProducts} products)`
+                  }
+                  actions={<WhatsAppButton label="WhatsApp support" className="h-10 px-5 text-sm" />}
+                />
+              </div>
+            </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_repeat(3,minmax(0,0.5fr))]">
               <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
