@@ -1,12 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin, MessageCircle } from "lucide-react";
+import { Mail, Phone, MapPin, MessageCircle, Loader2 } from "lucide-react";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { WhatsAppButton } from "../components/ui/WhatsAppButton";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
 import { PageHeader } from "../components/ui/PageHeader";
 
 export const ContactPage: React.FC = () => {
+  const [submitting, setSubmitting] = useState(false);
   return (
     <div className="page-shell">
       <PublicNavbar />
@@ -59,8 +60,19 @@ export const ContactPage: React.FC = () => {
                     placeholder="Tell us about the part you need..."
                   />
                 </div>
-                <button className="btn-primary h-11 w-full" type="button">
-                  Send message
+<button
+                  className="btn-primary h-11 w-full"
+                  type="button"
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send message"
+                  )}
                 </button>
               </form>
             </div>
