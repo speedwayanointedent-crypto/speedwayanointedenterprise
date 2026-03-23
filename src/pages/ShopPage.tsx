@@ -87,14 +87,14 @@ export const ShopPage: React.FC = () => {
               <p className="mt-2 text-sm text-muted-foreground">Please try again later.</p>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {categories.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => handleCategoryClick(cat)}
                   className="card card-hover overflow-hidden p-0 text-left transition-all hover:shadow-lg hover:shadow-primary/10"
                 >
-                  <div className="relative h-40 w-full">
+                  <div className="relative h-56 w-full">
                     <img
                       src={getCategoryImage(cat)}
                       alt={cat.name.trim()}
@@ -103,7 +103,7 @@ export const ShopPage: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <h3 className="text-lg font-semibold text-white">{cat.name.trim()}</h3>
+                      <h3 className="text-xl font-semibold text-white">{cat.name.trim()}</h3>
                       <p className="text-sm text-white/80">{cat.product_count} products</p>
                     </div>
                   </div>
