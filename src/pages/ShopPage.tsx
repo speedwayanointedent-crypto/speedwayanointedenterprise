@@ -40,6 +40,42 @@ const fallbackImage =
 
 const PRODUCTS_PER_PAGE = 24;
 
+function normalizeCategoryName(name: string): string {
+  return (name || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+const CATEGORY_IMAGES: Record<string, string> = {
+  bonnet: 'https://cdn.pixabay.com/photo/2016/03/12/23/23/automobile-1252872_1280.jpg',
+  door: 'https://cdn.pixabay.com/photo/2016/03/12/23/23/car-1252872_1280.jpg',
+  doors: 'https://cdn.pixabay.com/photo/2016/03/12/23/23/car-1252872_1280.jpg',
+  bumper: 'https://cdn.pixabay.com/photo/2015/09/12/19/39/car-937061_1280.jpg',
+  bumpers: 'https://cdn.pixabay.com/photo/2015/09/12/19/39/car-937061_1280.jpg',
+  mirror: 'https://cdn.pixabay.com/photo/2016/04/13/19/20/side-mirror-1328401_1280.jpg',
+  mirrors: 'https://cdn.pixabay.com/photo/2016/04/13/19/20/side-mirror-1328401_1280.jpg',
+  'side mirror': 'https://cdn.pixabay.com/photo/2016/04/13/19/20/side-mirror-1328401_1280.jpg',
+  'side mirrors': 'https://cdn.pixabay.com/photo/2016/04/13/19/20/side-mirror-1328401_1280.jpg',
+  headlight: 'https://cdn.pixabay.com/photo/2014/11/13/23/54/headlight-534069_1280.jpg',
+  headlights: 'https://cdn.pixabay.com/photo/2014/11/13/23/54/headlight-534069_1280.jpg',
+  'head light': 'https://cdn.pixabay.com/photo/2014/11/13/23/54/headlight-534069_1280.jpg',
+  'head lights': 'https://cdn.pixabay.com/photo/2014/11/13/23/54/headlight-534069_1280.jpg',
+  taillight: 'https://cdn.pixabay.com/photo/2015/05/22/05/57/taillight-779740_1280.jpg',
+  taillights: 'https://cdn.pixabay.com/photo/2015/05/22/05/57/taillight-779740_1280.jpg',
+  'tail light': 'https://cdn.pixabay.com/photo/2015/05/22/05/57/taillight-779740_1280.jpg',
+  'tail lights': 'https://cdn.pixabay.com/photo/2015/05/22/05/57/taillight-779740_1280.jpg',
+  gear: 'https://cdn.pixabay.com/photo/2016/08/01/21/41/gear-stick-1569409_1280.jpg',
+  'gear level': 'https://cdn.pixabay.com/photo/2016/08/01/21/41/gear-stick-1569409_1280.jpg',
+  'gear levels': 'https://cdn.pixabay.com/photo/2016/08/01/21/41/gear-stick-1569409_1280.jpg',
+  fender: 'https://cdn.pixabay.com/photo/2016/11/23/18/36/auto-1853826_1280.jpg',
+  fenders: 'https://cdn.pixabay.com/photo/2016/11/23/18/36/auto-1853826_1280.jpg',
+  grille: 'https://cdn.pixabay.com/photo/2016/11/22/20/09/automobile-1851053_1280.jpg',
+  grilles: 'https://cdn.pixabay.com/photo/2016/11/22/20/09/automobile-1851053_1280.jpg',
+};
+
+function getCategoryImage(categoryName: string): string {
+  const normalized = normalizeCategoryName(categoryName);
+  return CATEGORY_IMAGES[normalized] || fallbackImage;
+}
+
 const CATEGORY_ICONS: Record<string, string> = {
   'BONNET': 'https://cdn.pixabay.com/photo/2016/03/12/23/23/automobile-1252872_1280.jpg',
   'Bonnet': 'https://cdn.pixabay.com/photo/2016/03/12/23/23/automobile-1252872_1280.jpg',
@@ -405,14 +441,14 @@ export const ShopPage: React.FC = () => {
                     >
                       <div className="relative h-32 w-full">
                         <img
-                          src={CATEGORY_ICONS[cat.name] || fallbackImage}
-                          alt={cat.name}
+                          src={getCategoryImage(cat.name)}
+                          alt={cat.name.trim()}
                           className="h-full w-full object-cover"
                           loading="lazy"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                         <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <h3 className="text-lg font-semibold text-white">{cat.name}</h3>
+                          <h3 className="text-lg font-semibold text-white">{cat.name.trim()}</h3>
                           <p className="text-sm text-white/80">{cat.product_count} products</p>
                         </div>
                       </div>
