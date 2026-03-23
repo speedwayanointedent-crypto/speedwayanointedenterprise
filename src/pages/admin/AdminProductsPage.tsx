@@ -7,6 +7,7 @@ import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { StickyActionBar } from "../../components/ui/StickyActionBar";
+import { PageLoading } from "../../components/ui/LoadingSpinner";
 
 type Product = {
   id: string;
@@ -580,11 +581,7 @@ export const AdminProductsPage: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, idx) => (
-            <Skeleton key={idx} className="h-64" />
-          ))}
-        </div>
+        <PageLoading text="Loading products..." />
       ) : products.length === 0 ? (
         <div className="card p-8">
           <EmptyState
