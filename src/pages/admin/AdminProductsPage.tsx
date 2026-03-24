@@ -236,7 +236,7 @@ export const AdminProductsPage: React.FC = () => {
         price: Number(price),
         quantity: Number(quantity),
         category_id: categoryId,
-        brand_id: brandId,
+        brand_id: brandId || null,
         model_id: modelId || null,
         year_id: finalYearId || null,
         description,
