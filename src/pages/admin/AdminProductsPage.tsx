@@ -704,7 +704,6 @@ export const AdminProductsPage: React.FC = () => {
               Add new category
             </button>
             <select
-              required
               className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
               value={brandId}
               onChange={(e) => {
@@ -712,7 +711,7 @@ export const AdminProductsPage: React.FC = () => {
                 setModelId("");
               }}
             >
-              <option value="">Select brand</option>
+              <option value="">Select brand (optional for universal products)</option>
               {brands.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
@@ -880,7 +879,6 @@ export const AdminProductsPage: React.FC = () => {
               ))}
             </select>
             <select
-              required
               className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
               value={brandId}
               onChange={(e) => {
@@ -888,7 +886,7 @@ export const AdminProductsPage: React.FC = () => {
                 setModelId("");
               }}
             >
-              <option value="">Select brand</option>
+              <option value="">Select brand (optional for universal products)</option>
               {brands.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
