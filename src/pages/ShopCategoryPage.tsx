@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, ChevronRight, Search, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronRight, Search, Loader2, ShoppingCart } from "lucide-react";
 import api from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
@@ -8,6 +8,8 @@ import { WhatsAppButton } from "../components/ui/WhatsAppButton";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
 import { PageHeader } from "../components/ui/PageHeader";
 import { PageLoading } from "../components/ui/LoadingSpinner";
+import { addToCart } from "../lib/cart";
+import { useToast } from "../components/ui/Toast";
 
 type Brand = {
   id: string;
@@ -15,13 +17,23 @@ type Brand = {
   logo_url?: string | null;
 };
 
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+  image_url?: string | null;
+  status: string;
+};
+
 const fallbackImage = "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&h=400&fit=crop";
 
 export const ShopCategoryPage: React.FC = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const navigate = useNavigate();
+  const { push } = useToast();
   const [category, setCategory] = React.useState<{ id: string; name: string; image_url?: string | null } | null>(null);
   const [brands, setBrands] = React.useState<Brand[]>([]);
+  const [universalProducts, setUniversalProducts] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -31,12 +43,18 @@ export const ShopCategoryPage: React.FC = () => {
       if (!categoryId) return;
       setLoading(true);
       try {
-        const [catRes, brandRes] = await Promise.all([
+        const [catRes, brandRes, productsRes] = await Promise.all([
           api.get<{ id: string; name: string; image_url?: string }>(`/categories/${categoryId}`),
-          api.get<Brand[]>("/brands")
+          api.get<Brand[]>("/brands"),
+          api.get<{ data: Product[] }>("/products", { params: { category_id: categoryId, limit: "50" } })
         ]);
         setCategory(catRes.data);
         setBrands(brandRes.data || []);
+        
+        const products = productsRes.data.data || [];
+        const universal = products.filter((p: any) => !p.brand_id);
+        setUniversalProducts(universal);
+        
         setError(null);
       } catch (err) {
         console.error("Failed to load:", err);
@@ -80,6 +98,53 @@ export const ShopCategoryPage: React.FC = () => {
           </div>
         ) : (
           <>
+            {universalProducts.length > 0 && (
+              <section className="section-band rounded-2xl p-4 sm:p-6 mb-6">
+                <div className="card p-4 sm:p-6">
+                  <h2 className="text-xl font-semibold mb-4">Universal Products</h2>
+                  <p className="text-sm text-muted-foreground mb-4">These products fit most vehicles - no brand selection needed.</p>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {universalProducts.map((product) => (
+                      <div key={product.id} className="card card-hover p-4">
+                        <img
+                          src={product.image_url || fallbackImage}
+                          alt={product.name}
+                          className="h-36 w-full rounded-lg object-cover"
+                          loading="lazy"
+                        />
+                        <div className="mt-3">
+                          <div className="text-sm font-semibold text-foreground line-clamp-2">
+                            {product.name}
+                          </div>
+                          <div className="mt-2 flex items-center justify-between">
+                            <span className="text-sm font-semibold">GHS {product.price.toLocaleString()}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {product.status === "active" ? "In stock" : "Unavailable"}
+                            </span>
+                          </div>
+                          <button
+                            className="btn-outline mt-3 w-full text-sm"
+                            onClick={() => {
+                              addToCart({
+                                id: product.id,
+                                name: product.name,
+                                price: product.price,
+                                image: product.image_url || fallbackImage
+                              });
+                              push("Added to cart", "success");
+                            }}
+                          >
+                            <ShoppingCart className="mr-1 h-4 w-4" />
+                            Add to Cart
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+
             <section className="section-band rounded-2xl p-4 sm:p-6">
               <div className="card p-4 sm:p-6">
                 <PageHeader
