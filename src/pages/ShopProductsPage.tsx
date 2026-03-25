@@ -1,8 +1,7 @@
 import React from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, ShoppingCart, ChevronLeft, ChevronRight, ArrowLeft, X, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
+import { Search, ShoppingCart, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import api from "../lib/api";
-import { Skeleton } from "../components/ui/Skeleton";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { WhatsAppButton } from "../components/ui/WhatsAppButton";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
@@ -20,14 +19,17 @@ type Product = {
   category_id?: string | null;
   brand_id?: string | null;
   model_id?: string | null;
+  year_id?: string | null;
   categories?: { name: string };
   brands?: { name: string };
   models?: { name: string };
+  years?: { id: string; label: string };
 };
 
 type Category = { id: string; name: string };
 type Brand = { id: string; name: string; logo_url?: string | null };
-type Model = { id: string; name: string; image_url?: string | null; gallery?: string[]; years?: string[] };
+type Model = { id: string; name: string; image_url?: string | null; years?: string[] };
+type ModelYearGallery = { model_id: string; year: string; image_url?: string | null; gallery?: string[] };
 
 const fallbackImage = "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop";
 
@@ -46,8 +48,7 @@ export const ShopProductsPage: React.FC = () => {
   const [category, setCategory] = React.useState<Category | null>(null);
   const [brand, setBrand] = React.useState<Brand | null>(null);
   const [model, setModel] = React.useState<Model | null>(null);
-  const [selectedImage, setSelectedImage] = React.useState<string | null>(null);
-  const [currentGalleryIndex, setCurrentGalleryIndex] = React.useState(0);
+  const [modelYearGalleries, setModelYearGalleries] = React.useState<ModelYearGallery[]>([]);
   const { push } = useToast();
 
   const categoryId = searchParams.get("category");
@@ -89,7 +90,17 @@ export const ShopProductsPage: React.FC = () => {
         setCategory(catRes.data);
         setBrand(brandRes.data);
         setModel(modelRes.data);
-        setCurrentGalleryIndex(0);
+
+        if (modelId) {
+          try {
+            const galleryRes = await api.get<ModelYearGallery[]>(`/model-year-galleries/model/${modelId}`);
+            setModelYearGalleries(galleryRes.data || []);
+          } catch {
+            setModelYearGalleries([]);
+          }
+        } else {
+          setModelYearGalleries([]);
+        }
       } catch {
         // ignore
       }
@@ -120,11 +131,20 @@ export const ShopProductsPage: React.FC = () => {
     return `/shop/brand/${brandId}?category=${categoryId}`;
   };
 
-  const galleryImages = model?.gallery && model.gallery.length > 0 
-    ? model.gallery 
-    : model?.image_url 
-      ? [model.image_url] 
-      : [];
+  const getProductImage = (product: Product): string => {
+    if (product.year_id && product.years?.label) {
+      const yearGallery = modelYearGalleries.find(g => g.year === product.years!.label);
+      if (yearGallery?.image_url) {
+        return yearGallery.image_url;
+      }
+    }
+    if (modelId && modelYearGalleries.length > 0) {
+      if (modelYearGalleries[0]?.image_url) {
+        return modelYearGalleries[0].image_url;
+      }
+    }
+    return product.image_url || fallbackImage;
+  };
 
   return (
     <div className="page-shell">
@@ -139,94 +159,6 @@ export const ShopProductsPage: React.FC = () => {
             Back to {brand?.name || "Brand"}
           </button>
         </div>
-
-        {galleryImages.length > 0 && (
-          <section className="section-band rounded-2xl p-4 sm:p-6 mb-6">
-            <div className="card p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-foreground">{model?.name} Gallery</h2>
-                <span className="text-sm text-muted-foreground">{galleryImages.length} photos</span>
-              </div>
-              {model?.years && model.years.length > 0 && (
-                <div className="mb-4 flex flex-wrap gap-2">
-                  {model.years.map((year) => (
-                    <span key={year} className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
-                      {year}
-                    </span>
-                  ))}
-                </div>
-              )}
-              
-              {/* Desktop: Show all images */}
-              <div className="hidden lg:grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-                {galleryImages.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedImage(img)}
-                    className="card card-hover relative aspect-square overflow-hidden rounded-xl group"
-                  >
-                    <img
-                      src={img}
-                      alt={`${model?.name} gallery ${idx + 1}`}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
-                  </button>
-                ))}
-              </div>
-
-              {/* Mobile/Tablet: Carousel with arrows */}
-              <div className="lg:hidden">
-                <div className="relative">
-                  <div className="overflow-hidden rounded-xl">
-                    <img
-                      src={galleryImages[currentGalleryIndex]}
-                      alt={`${model?.name} gallery ${currentGalleryIndex + 1}`}
-                      className="aspect-square w-full object-cover"
-                    />
-                  </div>
-                  {galleryImages.length > 1 && (
-                    <>
-                      <button
-                        className="absolute left-2 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md hover:bg-white"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCurrentGalleryIndex(currentGalleryIndex === 0 ? galleryImages.length - 1 : currentGalleryIndex - 1);
-                        }}
-                      >
-                        <ChevronLeft className="h-6 w-6 text-gray-700" />
-                      </button>
-                      <button
-                        className="absolute right-2 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md hover:bg-white"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCurrentGalleryIndex(currentGalleryIndex === galleryImages.length - 1 ? 0 : currentGalleryIndex + 1);
-                        }}
-                      >
-                        <ChevronRight className="h-6 w-6 text-gray-700" />
-                      </button>
-                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 text-sm text-white">
-                        {currentGalleryIndex + 1} / {galleryImages.length}
-                      </div>
-                      <div className="mt-3 flex justify-center gap-2">
-                        {galleryImages.map((_, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => setCurrentGalleryIndex(idx)}
-                            className={`h-2 rounded-full transition-all ${
-                              idx === currentGalleryIndex ? "w-6 bg-primary" : "w-2 bg-muted"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
 
         <section className="section-band rounded-2xl p-4 sm:p-6">
           <div className="card p-4 sm:p-6">
@@ -280,53 +212,56 @@ export const ShopProductsPage: React.FC = () => {
           ) : (
             <>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {products.map((p) => (
-                  <div key={p.id} className="card card-hover p-4">
-                    <img
-                      src={p.image_url || fallbackImage}
-                      alt={p.name}
-                      className="h-36 w-full rounded-lg object-cover sm:h-40"
-                      loading="lazy"
-                    />
-                    <div className="mt-3">
-                      <div className="text-xs text-muted-foreground">
-                        {p.brands?.name} {p.models?.name && `- ${p.models.name}`}
-                      </div>
-                      <div className="mt-1 text-sm font-semibold text-foreground line-clamp-2">
-                        {p.name}
-                      </div>
-                      <div className="mt-3 flex items-center justify-between">
-                        <span className="text-sm font-semibold">GHS {p.price.toLocaleString()}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {p.status === "active" ? "In stock" : "Unavailable"}
-                        </span>
-                      </div>
-                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                        <button
-                          className="btn-outline flex-1 text-center text-sm"
-                          onClick={() => {
-                            addToCart({
-                              id: p.id,
-                              name: p.name,
-                              price: p.price,
-                              image: p.image_url || fallbackImage
-                            });
-                            push("Added to cart", "success");
-                          }}
-                        >
-                          <ShoppingCart className="mr-1 h-4 w-4" />
-                          Add
-                        </button>
-                        <Link
-                          to={`/product/${p.id}`}
-                          className="btn-primary flex-1 text-center text-sm"
-                        >
-                          View
-                        </Link>
+                {products.map((p) => {
+                  const productImage = getProductImage(p);
+                  return (
+                    <div key={p.id} className="card card-hover p-4">
+                      <img
+                        src={productImage}
+                        alt={p.name}
+                        className="h-36 w-full rounded-lg object-cover sm:h-40"
+                        loading="lazy"
+                      />
+                      <div className="mt-3">
+                        <div className="text-xs text-muted-foreground">
+                          {p.brands?.name} {p.models?.name && `- ${p.models.name}`} {p.years?.label && `- ${p.years.label}`}
+                        </div>
+                        <div className="mt-1 text-sm font-semibold text-foreground line-clamp-2">
+                          {p.name}
+                        </div>
+                        <div className="mt-3 flex items-center justify-between">
+                          <span className="text-sm font-semibold">GHS {p.price.toLocaleString()}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {p.status === "active" ? "In stock" : "Unavailable"}
+                          </span>
+                        </div>
+                        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                          <button
+                            className="btn-outline flex-1 text-center text-sm"
+                            onClick={() => {
+                              addToCart({
+                                id: p.id,
+                                name: p.name,
+                                price: p.price,
+                                image: productImage
+                              });
+                              push("Added to cart", "success");
+                            }}
+                          >
+                            <ShoppingCart className="mr-1 h-4 w-4" />
+                            Add
+                          </button>
+                          <Link
+                            to={`/product/${p.id}`}
+                            className="btn-primary flex-1 text-center text-sm"
+                          >
+                            View
+                          </Link>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {totalPages > 1 && (
@@ -355,75 +290,6 @@ export const ShopProductsPage: React.FC = () => {
           )}
         </section>
       </main>
-
-      {selectedImage && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95"
-          onClick={() => setSelectedImage(null)}
-        >
-          <button
-            className="absolute right-4 top-4 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 z-10"
-            onClick={() => setSelectedImage(null)}
-          >
-            <X className="h-6 w-6" />
-          </button>
-          {galleryImages.length > 1 && (
-            <>
-              <button
-                className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const currentIdx = galleryImages.indexOf(selectedImage);
-                  setSelectedImage(galleryImages[currentIdx === 0 ? galleryImages.length - 1 : currentIdx - 1]);
-                }}
-              >
-                <ChevronLeft className="h-10 w-10" />
-              </button>
-              <button
-                className="absolute right-20 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const currentIdx = galleryImages.indexOf(selectedImage);
-                  setSelectedImage(galleryImages[currentIdx === galleryImages.length - 1 ? 0 : currentIdx + 1]);
-                }}
-              >
-                <ChevronRight className="h-10 w-10" />
-              </button>
-            </>
-          )}
-          <img
-            src={selectedImage}
-            alt="Full size"
-            className="max-h-[85vh] max-w-[90vw] object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 rounded-full bg-black/60 px-5 py-2 text-white">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const currentIdx = galleryImages.indexOf(selectedImage);
-                setSelectedImage(galleryImages[currentIdx === 0 ? galleryImages.length - 1 : currentIdx - 1]);
-              }}
-              className="hover:text-gray-300"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <span className="text-sm font-medium">
-              {galleryImages.indexOf(selectedImage) + 1} <span className="opacity-60">/ {galleryImages.length}</span>
-            </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const currentIdx = galleryImages.indexOf(selectedImage);
-                setSelectedImage(galleryImages[currentIdx === galleryImages.length - 1 ? 0 : currentIdx + 1]);
-              }}
-              className="hover:text-gray-300"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      )}
 
       <PublicFooterCTA />
     </div>
