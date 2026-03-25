@@ -24,10 +24,11 @@ type Product = {
   categories?: { name: string };
   brands?: { name: string };
   models?: { name: string };
-  years?: { label: string };
+  years?: { id: string; label: string };
 };
 
 type Option = { id: string; name?: string; label?: string; brand_id?: string; years?: string[] };
+type ModelYearGallery = { model_id: string; year: string; image_url?: string | null; gallery?: string[] };
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?q=80&w=600&auto=format&fit=crop";
@@ -55,6 +56,7 @@ export const AdminProductsPage: React.FC = () => {
   const [brands, setBrands] = React.useState<Option[]>([]);
   const [models, setModels] = React.useState<Option[]>([]);
   const [years, setYears] = React.useState<Option[]>([]);
+  const [modelYearGalleries, setModelYearGalleries] = React.useState<ModelYearGallery[]>([]);
   const { push } = useToast();
   const [addCategoryOpen, setAddCategoryOpen] = React.useState(false);
   const [addBrandOpen, setAddBrandOpen] = React.useState(false);
@@ -129,6 +131,39 @@ export const AdminProductsPage: React.FC = () => {
   React.useEffect(() => {
     loadProducts(1);
   }, [filterCategory, filterBrand, filterModel, loadProducts]);
+
+  const loadModelYearGalleries = React.useCallback(async () => {
+    try {
+      if (filterModel) {
+        const res = await api.get<ModelYearGallery[]>(`/model-year-galleries/model/${filterModel}`);
+        setModelYearGalleries(res.data || []);
+      } else {
+        setModelYearGalleries([]);
+      }
+    } catch {
+      setModelYearGalleries([]);
+    }
+  }, [filterModel]);
+
+  React.useEffect(() => {
+    loadModelYearGalleries();
+  }, [loadModelYearGalleries]);
+
+  const getProductImage = (product: Product): string => {
+    if (product.year_id && product.years?.label) {
+      const yearGallery = modelYearGalleries.find(g => g.year === product.years!.label);
+      if (yearGallery?.image_url) {
+        return yearGallery.image_url;
+      }
+    }
+    if (filterModel && modelYearGalleries.length > 0) {
+      const firstGallery = modelYearGalleries[0];
+      if (firstGallery?.image_url) {
+        return firstGallery.image_url;
+      }
+    }
+    return fallbackImage;
+  };
 
   const exportCsv = async () => {
     try {
@@ -503,7 +538,7 @@ export const AdminProductsPage: React.FC = () => {
             {products.map((p) => (
               <div key={p.id} className="card p-4">
                 <img
-                  src={p.image_url || fallbackImage}
+                  src={getProductImage(p)}
                   alt={p.name}
                   className="h-40 w-full rounded-lg object-cover"
                 />
