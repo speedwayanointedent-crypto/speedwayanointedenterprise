@@ -49,10 +49,6 @@ export const AdminProductsPage: React.FC = () => {
   const [modelId, setModelId] = React.useState("");
   const [yearId, setYearId] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [imageUrl, setImageUrl] = React.useState("");
-  const [imageFile, setImageFile] = React.useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
-  const [createPreviewUrl, setCreatePreviewUrl] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const [categories, setCategories] = React.useState<Option[]>([]);
@@ -170,26 +166,6 @@ export const AdminProductsPage: React.FC = () => {
     }
   };
 
-  React.useEffect(() => {
-    if (!imageFile) {
-      setPreviewUrl(null);
-      return;
-    }
-    const objectUrl = URL.createObjectURL(imageFile);
-    setPreviewUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [imageFile]);
-
-  React.useEffect(() => {
-    if (!imageFile) {
-      setCreatePreviewUrl(null);
-      return;
-    }
-    const objectUrl = URL.createObjectURL(imageFile);
-    setCreatePreviewUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [imageFile]);
-
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -215,24 +191,10 @@ export const AdminProductsPage: React.FC = () => {
         model_id: modelId || null,
         year_id: finalYearId || null,
         description,
-        image_url: imageUrl || null,
         status: "active"
       };
 
-      if (imageFile) {
-        const formData = new FormData();
-        Object.entries(payload).forEach(([key, value]) => {
-          if (value !== null && value !== undefined) {
-            formData.append(key, String(value));
-          }
-        });
-        formData.append("image", imageFile);
-        await api.post("/products", formData, {
-          headers: { "Content-Type": "multipart/form-data" }
-        });
-      } else {
-        await api.post("/products", payload);
-      }
+      await api.post("/products", payload);
       push("Product created", "success");
       setOpen(false);
       resetForm();
@@ -253,8 +215,6 @@ export const AdminProductsPage: React.FC = () => {
     setModelId("");
     setYearId("");
     setDescription("");
-    setImageUrl("");
-    setImageFile(null);
   };
 
   const onOpenEdit = (product: Product) => {
@@ -267,8 +227,6 @@ export const AdminProductsPage: React.FC = () => {
     setModelId((product as any).model_id || "");
     setYearId((product as any).year_id || "");
     setDescription(product.description || "");
-    setImageUrl(product.image_url || "");
-    setImageFile(null);
     setEditOpen(true);
   };
 
@@ -298,24 +256,10 @@ export const AdminProductsPage: React.FC = () => {
         model_id: modelId || null,
         year_id: finalYearId || null,
         description,
-        image_url: imageUrl || null,
         status: editing.status || "active"
       };
 
-      if (imageFile) {
-        const formData = new FormData();
-        Object.entries(payload).forEach(([key, value]) => {
-          if (value !== null && value !== undefined) {
-            formData.append(key, String(value));
-          }
-        });
-        formData.append("image", imageFile);
-        await api.put(`/products/${editing.id}`, formData, {
-          headers: { "Content-Type": "multipart/form-data" }
-        });
-      } else {
-        await api.put(`/products/${editing.id}`, payload);
-      }
+      await api.put(`/products/${editing.id}`, payload);
 
       push("Product updated", "success");
       setEditOpen(false);
@@ -752,29 +696,6 @@ export const AdminProductsPage: React.FC = () => {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-          <input
-            className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
-            placeholder="Image URL (optional)"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-          />
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-muted-foreground">Product image file</label>
-            <input
-              type="file"
-              accept="image/*"
-              className="w-full text-sm text-foreground"
-              onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-            />
-          </div>
-          <div className="rounded-lg border border-border bg-card p-3">
-            <p className="text-xs text-muted-foreground">Image preview</p>
-            <img
-              src={createPreviewUrl || imageUrl || fallbackImage}
-              alt="Preview"
-              className="mt-2 h-40 w-full rounded-lg object-cover"
-            />
-          </div>
           <StickyActionBar>
             <button className="btn-primary h-11 w-full" disabled={submitting}>
               {submitting ? (
@@ -881,29 +802,6 @@ export const AdminProductsPage: React.FC = () => {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-          <input
-            className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
-            placeholder="Image URL (optional)"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-          />
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-muted-foreground">Product image file</label>
-            <input
-              type="file"
-              accept="image/*"
-              className="w-full text-sm text-foreground"
-              onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-            />
-          </div>
-          <div className="rounded-lg border border-border bg-card p-3">
-            <p className="text-xs text-muted-foreground">Image preview</p>
-            <img
-              src={previewUrl || imageUrl || editing?.image_url || fallbackImage}
-              alt="Preview"
-              className="mt-2 h-40 w-full rounded-lg object-cover"
-            />
-          </div>
           <StickyActionBar>
             <button className="btn-primary h-11 w-full" disabled={submitting}>
               {submitting ? (
