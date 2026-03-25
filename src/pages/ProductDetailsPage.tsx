@@ -22,16 +22,8 @@ type Product = {
   year_id?: string | null;
   categories?: { name: string };
   brands?: { name: string };
-  models?: { name: string };
+  models?: { name: string; image_url?: string | null; gallery?: string[] };
   years?: { id: string; label: string };
-};
-
-type ModelYearGallery = {
-  id: string;
-  model_id: string;
-  year: string;
-  image_url?: string | null;
-  gallery?: string[];
 };
 
 type Review = {
@@ -55,7 +47,6 @@ export const ProductDetailsPage: React.FC = () => {
   const [wishlistBusy, setWishlistBusy] = React.useState(false);
   const [subscribeBusy, setSubscribeBusy] = React.useState(false);
   const [reviews, setReviews] = React.useState<Review[]>([]);
-  const [modelYearGallery, setModelYearGallery] = React.useState<ModelYearGallery | null>(null);
   const [galleryLightbox, setGalleryLightbox] = React.useState<{ index: number; images: string[] } | null>(null);
   const [reviewForm, setReviewForm] = React.useState({
     rating: 5,
@@ -71,15 +62,6 @@ export const ProductDetailsPage: React.FC = () => {
       try {
         const res = await api.get<Product>(`/products/${id}`);
         setProduct(res.data);
-
-        if (res.data.model_id && res.data.years?.label) {
-          try {
-            const galleryRes = await api.get<ModelYearGallery | null>(`/model-year-galleries/model/${res.data.model_id}/year/${res.data.years.label}`);
-            setModelYearGallery(galleryRes.data);
-          } catch {
-            setModelYearGallery(null);
-          }
-        }
 
         setRecommendedLoading(true);
         setReviewLoading(true);
@@ -134,7 +116,7 @@ export const ProductDetailsPage: React.FC = () => {
       id: product.id,
       name: product.name,
       price: product.price,
-      image: product.image_url || fallbackImage
+      image: product.models?.image_url || fallbackImage
     });
     push("Added to cart", "success");
   };
@@ -195,10 +177,10 @@ export const ProductDetailsPage: React.FC = () => {
     }
   };
 
-  const modelYearGalleryImages = modelYearGallery?.gallery || [];
+  const modelGalleryImages = product?.models?.gallery || [];
 
   const handleOpenGallery = (startIndex: number = 0) => {
-    setGalleryLightbox({ index: startIndex, images: modelYearGalleryImages });
+    setGalleryLightbox({ index: startIndex, images: modelGalleryImages });
   };
 
   const handleCloseGallery = () => {
@@ -235,16 +217,16 @@ export const ProductDetailsPage: React.FC = () => {
           <div className="mt-6 grid gap-8 lg:grid-cols-2">
             <div className="space-y-4">
               <div className="overflow-hidden rounded-xl border border-border bg-card shadow-md">
-                {modelYearGallery?.image_url ? (
+                {product.models?.image_url ? (
                   <img
-                    src={modelYearGallery.image_url}
+                    src={product.models.image_url}
                     alt={`${product.name} vehicle`}
                     className="h-56 w-full object-cover sm:h-72 lg:h-80"
                     loading="lazy"
                   />
                 ) : (
                   <div className="flex h-56 items-center justify-center bg-secondary text-sm text-muted-foreground sm:h-72 lg:h-80">
-                    No vehicle image yet - Add images to {product.years?.label || 'model'} gallery
+                    No vehicle image yet - Add image to model in admin
                   </div>
                 )}
                 <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
@@ -252,12 +234,12 @@ export const ProductDetailsPage: React.FC = () => {
                 </div>
               </div>
 
-              {modelYearGallery && modelYearGallery.gallery && modelYearGallery.gallery.length > 0 && (
+              {product.models?.gallery && product.models.gallery.length > 0 && (
                 <button
                   onClick={() => handleOpenGallery()}
                   className="btn-primary w-full py-3"
                 >
-                  View {product.years?.label || 'Model'} Gallery ({modelYearGallery.gallery.length} photos)
+                  View {product.years?.label || 'Model'} Gallery ({product.models.gallery.length} photos)
                 </button>
               )}
             </div>
@@ -384,7 +366,7 @@ export const ProductDetailsPage: React.FC = () => {
               recommended.map((item) => (
                 <div key={item.id} className="card card-hover p-4">
                   <img
-                    src={item.image_url || fallbackImage}
+                    src={item.models?.image_url || fallbackImage}
                     alt={item.name}
                     className="h-32 w-full rounded-lg object-cover sm:h-36"
                     loading="lazy"
@@ -413,7 +395,7 @@ export const ProductDetailsPage: React.FC = () => {
                             id: item.id,
                             name: item.name,
                             price: item.price,
-                            image: item.image_url || fallbackImage
+                            image: item.models?.image_url || fallbackImage
                           });
                           push("Added to cart", "success");
                         }}
