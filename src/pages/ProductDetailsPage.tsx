@@ -35,9 +35,6 @@ type Review = {
   users?: { full_name?: string | null };
 };
 
-const fallbackImage =
-  "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?q=80&w=1200&auto=format&fit=crop";
-
 export const ProductDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = React.useState<Product | null>(null);
@@ -116,7 +113,7 @@ export const ProductDetailsPage: React.FC = () => {
       id: product.id,
       name: product.name,
       price: product.price,
-      image: product.models?.image_url || fallbackImage
+      image: product.model_id ? (product.models?.image_url || "") : (product.image_url || "")
     });
     push("Added to cart", "success");
   };
@@ -217,20 +214,33 @@ export const ProductDetailsPage: React.FC = () => {
           <div className="mt-6 grid gap-8 lg:grid-cols-2">
             <div className="space-y-4">
               <div className="overflow-hidden rounded-xl border border-border bg-card shadow-md">
-                {product.models?.image_url ? (
+                {product.model_id ? (
+                  product.models?.image_url ? (
+                    <img
+                      src={product.models.image_url}
+                      alt={`${product.name} vehicle`}
+                      className="h-56 w-full object-cover sm:h-72 lg:h-80"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-56 items-center justify-center bg-secondary text-sm text-muted-foreground sm:h-72 lg:h-80">
+                      No vehicle image yet - Add image to model in admin
+                    </div>
+                  )
+                ) : product.image_url ? (
                   <img
-                    src={product.models.image_url}
-                    alt={`${product.name} vehicle`}
+                    src={product.image_url}
+                    alt={product.name}
                     className="h-56 w-full object-cover sm:h-72 lg:h-80"
                     loading="lazy"
                   />
                 ) : (
                   <div className="flex h-56 items-center justify-center bg-secondary text-sm text-muted-foreground sm:h-72 lg:h-80">
-                    No vehicle image yet - Add image to model in admin
+                    No image
                   </div>
                 )}
                 <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
-                  {product.years?.label || 'Vehicle'} photo
+                  {product.model_id ? (product.years?.label || 'Vehicle') : 'Product'} photo
                 </div>
               </div>
 
@@ -365,12 +375,29 @@ export const ProductDetailsPage: React.FC = () => {
             ) : (
               recommended.map((item) => (
                 <div key={item.id} className="card card-hover p-4">
-                  <img
-                    src={item.models?.image_url || fallbackImage}
-                    alt={item.name}
-                    className="h-32 w-full rounded-lg object-cover sm:h-36"
-                    loading="lazy"
-                  />
+                  {item.model_id ? (item.models?.image_url ? (
+                    <img
+                      src={item.models.image_url}
+                      alt={item.name}
+                      className="h-32 w-full rounded-lg object-cover sm:h-36"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-32 w-full items-center justify-center rounded-lg bg-muted sm:h-36">
+                      <span className="text-sm text-muted-foreground">No image</span>
+                    </div>
+                  )) : item.image_url ? (
+                    <img
+                      src={item.image_url}
+                      alt={item.name}
+                      className="h-32 w-full rounded-lg object-cover sm:h-36"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-32 w-full items-center justify-center rounded-lg bg-muted sm:h-36">
+                      <span className="text-sm text-muted-foreground">No image</span>
+                    </div>
+                  )}
                   <div className="mt-3">
                     <div className="text-xs text-muted-foreground">
                       {item.categories?.name || "Auto parts"}
@@ -395,7 +422,7 @@ export const ProductDetailsPage: React.FC = () => {
                             id: item.id,
                             name: item.name,
                             price: item.price,
-                            image: item.models?.image_url || fallbackImage
+                            image: item.model_id ? (item.models?.image_url || "") : (item.image_url || "")
                           });
                           push("Added to cart", "success");
                         }}
