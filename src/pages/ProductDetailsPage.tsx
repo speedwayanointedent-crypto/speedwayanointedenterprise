@@ -234,34 +234,21 @@ export const ProductDetailsPage: React.FC = () => {
         ) : (
           <div className="mt-6 grid gap-8 lg:grid-cols-2">
             <div className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="overflow-hidden rounded-xl border border-border bg-card shadow-md">
-                  {modelYearGallery?.image_url ? (
-                    <img
-                      src={modelYearGallery.image_url}
-                      alt={`${product.name} vehicle`}
-                      className="h-56 w-full object-cover sm:h-72 lg:h-80"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-56 items-center justify-center bg-secondary text-sm text-muted-foreground sm:h-72 lg:h-80">
-                      No vehicle image yet
-                    </div>
-                  )}
-                  <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
-                    {product.years?.label || 'Vehicle'} photo
-                  </div>
-                </div>
-                <div className="overflow-hidden rounded-xl border border-border bg-card shadow-md">
+              <div className="overflow-hidden rounded-xl border border-border bg-card shadow-md">
+                {modelYearGallery?.image_url ? (
                   <img
-                    src={product.image_url || fallbackImage}
-                    alt={`${product.name} part`}
+                    src={modelYearGallery.image_url}
+                    alt={`${product.name} vehicle`}
                     className="h-56 w-full object-cover sm:h-72 lg:h-80"
                     loading="lazy"
                   />
-                  <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
-                    Part photo
+                ) : (
+                  <div className="flex h-56 items-center justify-center bg-secondary text-sm text-muted-foreground sm:h-72 lg:h-80">
+                    No vehicle image yet - Add images to {product.years?.label || 'model'} gallery
                   </div>
+                )}
+                <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
+                  {product.years?.label || 'Vehicle'} photo
                 </div>
               </div>
 
