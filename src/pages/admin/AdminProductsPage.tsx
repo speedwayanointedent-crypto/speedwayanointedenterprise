@@ -547,6 +547,7 @@ export const AdminProductsPage: React.FC = () => {
                     {p.categories?.name || "Uncategorized"}
                     {p.brands?.name && ` • ${p.brands.name}`}
                     {p.models?.name && ` • ${p.models.name}`}
+                    {p.years?.label && ` • ${p.years.label}`}
                   </div>
                   <div className="mt-1 line-clamp-2 text-sm font-semibold text-foreground">
                     {p.name}
