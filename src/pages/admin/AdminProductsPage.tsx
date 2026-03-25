@@ -538,7 +538,7 @@ export const AdminProductsPage: React.FC = () => {
             {products.map((p) => (
               <div key={p.id} className="card p-4">
                 <img
-                  src={getProductImage(p)}
+                  src={p.image_url || fallbackImage}
                   alt={p.name}
                   className="h-40 w-full rounded-lg object-cover"
                 />
@@ -725,7 +725,7 @@ export const AdminProductsPage: React.FC = () => {
               onChange={(e) => setQuantity(e.target.value)}
             />
           </div>
-          <textarea
+<textarea
             className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
             placeholder="Description"
             value={description}
@@ -736,9 +736,9 @@ export const AdminProductsPage: React.FC = () => {
               {submitting ? (
                 <span className="flex items-center justify-center">
                   <Loader2 className="btn-spinner mr-2 h-4 w-4" />
-                  Creating...
+                  Saving...
                 </span>
-              ) : "Create"}
+              ) : "Save changes"}
             </button>
           </StickyActionBar>
         </form>
