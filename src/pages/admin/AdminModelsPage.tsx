@@ -1,16 +1,22 @@
 import React from "react";
-import { Plus, Search, Truck, Pencil, Trash2, X, ImageIcon, Loader2, Eye } from "lucide-react";
+import { Plus, Search, Truck, Pencil, Trash2, X, ImageIcon, Loader2 } from "lucide-react";
 import api from "../../lib/api";
-import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageLoading } from "../../components/ui/LoadingSpinner";
 
-type Model = { id: string; name: string; brand_id?: string; brands?: { name: string }; years?: string[]; image_url?: string | null; gallery?: string[] };
+type Model = { 
+  id: string; 
+  name: string; 
+  brand_id?: string; 
+  brands?: { name: string }; 
+  years?: string[]; 
+  image_url?: string | null; 
+  gallery?: string[] 
+};
 type Brand = { id: string; name: string };
-type ModelYearGallery = { id?: string; model_id: string; year: string; image_url?: string | null; gallery?: string[] };
 
 export const AdminModelsPage: React.FC = () => {
   const [items, setItems] = React.useState<Model[]>([]);
@@ -18,22 +24,16 @@ export const AdminModelsPage: React.FC = () => {
   const [open, setOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Model | null>(null);
-  const [detailOpen, setDetailOpen] = React.useState(false);
-  const [selectedDetail, setSelectedDetail] = React.useState<Model | null>(null);
-  const [detailImageErrors, setDetailImageErrors] = React.useState<Set<string>>(new Set());
   const [name, setName] = React.useState("");
   const [brandId, setBrandId] = React.useState("");
-  const [years, setYears] = React.useState<string[]>([]);
-  const [newYear, setNewYear] = React.useState("");
   const [imageUrl, setImageUrl] = React.useState("");
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
+  const [gallery, setGallery] = React.useState<string[]>([]);
+  const [newGalleryUrl, setNewGalleryUrl] = React.useState("");
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const [brands, setBrands] = React.useState<Brand[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
-  const [yearGalleries, setYearGalleries] = React.useState<ModelYearGallery[]>([]);
-  const [selectedYearGallery, setSelectedYearGallery] = React.useState<ModelYearGallery | null>(null);
-  const [yearGalleryOpen, setYearGalleryOpen] = React.useState(false);
   const { push } = useToast();
 
   const load = React.useCallback(async () => {
@@ -60,152 +60,10 @@ export const AdminModelsPage: React.FC = () => {
   const resetForm = () => {
     setName("");
     setBrandId("");
-    setYears([]);
-    setNewYear("");
     setImageUrl("");
     setImagePreview(null);
-  };
-
-  const openDetail = (model: Model) => {
-    setSelectedDetail({ ...model });
-    setDetailOpen(true);
-    loadYearGalleries(model.id);
-  };
-
-  const loadYearGalleries = async (modelId: string) => {
-    try {
-      const res = await api.get<ModelYearGallery[]>(`/model-year-galleries/model/${modelId}`);
-      setYearGalleries(res.data || []);
-    } catch {
-      setYearGalleries([]);
-    }
-  };
-
-  const closeDetail = () => {
-    setDetailOpen(false);
-    setSelectedDetail(null);
-    setDetailImageErrors(new Set());
-    setYearGalleries([]);
-    setSelectedYearGallery(null);
-  };
-
-  const handleDetailImageError = (url: string) => {
-    setDetailImageErrors(prev => new Set(prev).add(url));
-  };
-
-  const handleDetailImageSuccess = (url: string) => {
-    setDetailImageErrors(prev => {
-      const next = new Set(prev);
-      next.delete(url);
-      return next;
-    });
-  };
-
-  const handleDetailAddYear = (year: string) => {
-    if (!selectedDetail) return;
-    if (!selectedDetail.years) selectedDetail.years = [];
-    if (!selectedDetail.years.includes(year)) {
-      setSelectedDetail({
-        ...selectedDetail,
-        years: [...selectedDetail.years, year].sort()
-      });
-    }
-  };
-
-  const handleDetailRemoveYear = (year: string) => {
-    if (!selectedDetail) return;
-    setSelectedDetail({
-      ...selectedDetail,
-      years: (selectedDetail.years || []).filter(y => y !== year)
-    });
-  };
-
-  const handleDetailUpdate = (updates: Partial<Model>) => {
-    if (!selectedDetail) return;
-    setSelectedDetail({
-      ...selectedDetail,
-      ...updates
-    });
-  };
-
-  const handleDetailSave = async () => {
-    if (!selectedDetail) return;
-    setSubmitting(true);
-    try {
-      await api.put(`/models/${selectedDetail.id}`, {
-        name: selectedDetail.name,
-        brand_id: selectedDetail.brand_id,
-        years: selectedDetail.years || [],
-        image_url: selectedDetail.image_url || null
-      });
-      push("Model updated", "success");
-      load();
-    } catch {
-      push("Failed to update model", "error");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const openYearGallery = (gallery: ModelYearGallery | null, year: string) => {
-    if (gallery) {
-      setSelectedYearGallery({ ...gallery });
-    } else {
-      setSelectedYearGallery({ model_id: selectedDetail!.id, year, image_url: null, gallery: [] });
-    }
-    setYearGalleryOpen(true);
-  };
-
-  const closeYearGallery = () => {
-    setYearGalleryOpen(false);
-    setSelectedYearGallery(null);
-  };
-
-  const handleYearGallerySave = async () => {
-    if (!selectedYearGallery || !selectedDetail) return;
-    setSubmitting(true);
-    try {
-      await api.post("/model-year-galleries", {
-        model_id: selectedYearGallery.model_id,
-        year: selectedYearGallery.year,
-        image_url: selectedYearGallery.image_url || null,
-        gallery: selectedYearGallery.gallery || []
-      });
-      push("Year gallery saved", "success");
-      await loadYearGalleries(selectedDetail.id);
-      closeYearGallery();
-    } catch {
-      push("Failed to save year gallery", "error");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const deleteYearGallery = async (galleryId: string) => {
-    if (!selectedDetail) return;
-    const confirmed = window.confirm("Delete this year gallery?");
-    if (!confirmed) return;
-    setSubmitting(true);
-    try {
-      await api.delete(`/model-year-galleries/${galleryId}`);
-      push("Year gallery deleted", "success");
-      await loadYearGalleries(selectedDetail.id);
-    } catch {
-      push("Failed to delete year gallery", "error");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const addYear = () => {
-    if (newYear && !years.includes(newYear)) {
-      setYears([...years, newYear].sort());
-      setNewYear("");
-    }
-  };
-
-  const removeYear = (year: string) => {
-    setYears(years.filter(y => y !== year));
+    setGallery([]);
+    setNewGalleryUrl("");
   };
 
   const onCreate = async (e: React.FormEvent) => {
@@ -219,8 +77,9 @@ export const AdminModelsPage: React.FC = () => {
       await api.post("/models", { 
         name, 
         brand_id: brandId, 
-        years, 
-        image_url: imageUrl || null
+        years: [],
+        image_url: imageUrl || null,
+        gallery: gallery
       });
       push("Model created", "success");
       resetForm();
@@ -237,9 +96,9 @@ export const AdminModelsPage: React.FC = () => {
     setEditing(model);
     setName(model.name);
     setBrandId(model.brand_id || "");
-    setYears(model.years || []);
     setImageUrl(model.image_url || "");
     setImagePreview(model.image_url || null);
+    setGallery(model.gallery || []);
     setEditOpen(true);
   };
 
@@ -255,8 +114,9 @@ export const AdminModelsPage: React.FC = () => {
       await api.put(`/models/${editing.id}`, { 
         name, 
         brand_id: brandId, 
-        years, 
-        image_url: imageUrl || null
+        years: editing.years || [],
+        image_url: imageUrl || null,
+        gallery: gallery
       });
       push("Model updated", "success");
       setEditOpen(false);
@@ -287,11 +147,18 @@ export const AdminModelsPage: React.FC = () => {
 
   const handleImageUrlChange = (url: string) => {
     setImageUrl(url);
-    if (url) {
-      setImagePreview(url);
-    } else {
-      setImagePreview(null);
+    setImagePreview(url || null);
+  };
+
+  const addGalleryImage = () => {
+    if (newGalleryUrl && !gallery.includes(newGalleryUrl)) {
+      setGallery([...gallery, newGalleryUrl]);
+      setNewGalleryUrl("");
     }
+  };
+
+  const removeGalleryImage = (url: string) => {
+    setGallery(gallery.filter(g => g !== url));
   };
 
   const filtered = items.filter((c) =>
@@ -312,13 +179,8 @@ export const AdminModelsPage: React.FC = () => {
     <div className="space-y-6 text-foreground">
       <PageHeader
         title="Vehicle models"
-        subtitle="Maintain fitment models and their compatible years."
-        meta={
-          <>
-            {items.length} total
-            {lastUpdated ? ` · Updated ${lastUpdated.toLocaleTimeString()}` : ""}
-          </>
-        }
+        subtitle="Manage vehicle models and their images."
+        meta={<>{items.length} total</>}
         actions={
           <button className="btn-primary h-10 text-sm" onClick={() => setOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -337,13 +199,6 @@ export const AdminModelsPage: React.FC = () => {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        {query ? (
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span className="rounded-full border border-border bg-background px-2.5 py-1">
-              Search: {query}
-            </span>
-          </div>
-        ) : null}
 
         {loading ? (
           <PageLoading text="Loading models..." />
@@ -390,13 +245,6 @@ export const AdminModelsPage: React.FC = () => {
                           <div className="flex gap-1">
                             <button
                               className="btn-outline h-9 w-9 p-0"
-                              onClick={() => openDetail(c)}
-                              title="View Details"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                            <button
-                              className="btn-outline h-9 w-9 p-0"
                               onClick={() => onOpenEdit(c)}
                               title="Edit"
                             >
@@ -424,22 +272,17 @@ export const AdminModelsPage: React.FC = () => {
                               ))}
                             </div>
                             <span className="text-xs text-muted-foreground">
-                              {c.gallery.length} image{c.gallery.length !== 1 ? 's' : ''}
+                              {c.gallery.length} gallery image{c.gallery.length !== 1 ? 's' : ''}
                             </span>
                           </div>
                         )}
                         {c.years?.length ? (
                           <div className="mt-3 flex flex-wrap gap-1">
-                            {c.years.slice(0, 6).map((y) => (
+                            {c.years.slice(0, 3).map((y) => (
                               <span key={y} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                                 {y}
                               </span>
                             ))}
-                            {c.years.length > 6 && (
-                              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                                +{c.years.length - 6}
-                              </span>
-                            )}
                           </div>
                         ) : null}
                       </div>
@@ -452,6 +295,7 @@ export const AdminModelsPage: React.FC = () => {
         )}
       </div>
 
+      {/* Add Model Modal */}
       <Modal open={open} onClose={() => { setOpen(false); resetForm(); }} title="Add model">
         <form onSubmit={onCreate} className="space-y-4">
           <select
@@ -470,73 +314,30 @@ export const AdminModelsPage: React.FC = () => {
           <input
             required
             className="form-input"
-            placeholder="Model name (e.g., Corolla)"
+            placeholder="Model name (e.g., A1 2010)"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <div>
-            <label className="mb-2 block text-sm font-medium">Image URL (optional)</label>
-            <div className="space-y-3">
-              <input
-                className="form-input"
-                placeholder="https://example.com/model.jpg"
-                value={imageUrl}
-                onChange={(e) => handleImageUrlChange(e.target.value)}
-              />
-              {imagePreview && (
-                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border">
-                  <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => handleImageUrlChange("")}
-                    className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Compatible Years</label>
-            <div className="flex gap-2">
-              <input
-                className="form-input flex-1"
-                placeholder="Enter year (e.g., 2024)"
-                value={newYear}
-                onChange={(e) => setNewYear(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addYear())}
-              />
-              <button
-                type="button"
-                className="btn-outline h-10"
-                onClick={addYear}
-              >
-                Add
-              </button>
-            </div>
-            {years.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {years.map((y) => (
-                  <span
-                    key={y}
-                    className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-sm text-primary"
-                  >
-                    {y}
-                    <button
-                      type="button"
-                      onClick={() => removeYear(y)}
-                      className="ml-1 hover:text-destructive"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
+            <label className="mb-2 block text-sm font-medium">Image URL</label>
+            <input
+              className="form-input"
+              placeholder="https://example.com/model.jpg"
+              value={imageUrl}
+              onChange={(e) => handleImageUrlChange(e.target.value)}
+            />
+            {imagePreview && (
+              <div className="mt-2 relative aspect-video w-full overflow-hidden rounded-lg border border-border">
+                <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => handleImageUrlChange("")}
+                  className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                >
+                  ×
+                </button>
               </div>
             )}
-            <p className="text-xs text-muted-foreground">
-              Add years this model is compatible with. Products will auto-filter by model years.
-            </p>
           </div>
           <button className="btn-primary h-11 w-full" disabled={submitting}>
             {submitting ? (
@@ -549,6 +350,7 @@ export const AdminModelsPage: React.FC = () => {
         </form>
       </Modal>
 
+      {/* Edit Model Modal */}
       <Modal open={editOpen} onClose={() => { setEditOpen(false); setEditing(null); resetForm(); }} title="Edit model">
         <form onSubmit={onUpdate} className="space-y-4">
           <select
@@ -572,68 +374,60 @@ export const AdminModelsPage: React.FC = () => {
             onChange={(e) => setName(e.target.value)}
           />
           <div>
-            <label className="mb-2 block text-sm font-medium">Image URL (optional)</label>
-            <div className="space-y-3">
-              <input
-                className="form-input"
-                placeholder="https://example.com/model.jpg"
-                value={imageUrl}
-                onChange={(e) => handleImageUrlChange(e.target.value)}
-              />
-              {imagePreview && (
-                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border">
-                  <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => handleImageUrlChange("")}
-                    className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-            </div>
+            <label className="mb-2 block text-sm font-medium">Image URL</label>
+            <input
+              className="form-input"
+              placeholder="https://example.com/model.jpg"
+              value={imageUrl}
+              onChange={(e) => handleImageUrlChange(e.target.value)}
+            />
+            {imagePreview && (
+              <div className="mt-2 relative aspect-video w-full overflow-hidden rounded-lg border border-border">
+                <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => handleImageUrlChange("")}
+                  className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                >
+                  ×
+                </button>
+              </div>
+            )}
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Compatible Years</label>
+          <div>
+            <label className="mb-2 block text-sm font-medium">Gallery Images</label>
             <div className="flex gap-2">
               <input
                 className="form-input flex-1"
-                placeholder="Enter year (e.g., 2024)"
-                value={newYear}
-                onChange={(e) => setNewYear(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addYear())}
+                placeholder="https://example.com/gallery1.jpg"
+                value={newGalleryUrl}
+                onChange={(e) => setNewGalleryUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addGalleryImage())}
               />
               <button
                 type="button"
-                className="btn-outline h-10"
-                onClick={addYear}
+                className="btn-outline h-10 px-3"
+                onClick={addGalleryImage}
               >
-                Add
+                <Plus className="h-4 w-4" />
               </button>
             </div>
-            {years.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {years.map((y) => (
-                  <span
-                    key={y}
-                    className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-sm text-primary"
-                  >
-                    {y}
+            {gallery.length > 0 && (
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {gallery.map((url, idx) => (
+                  <div key={idx} className="group relative aspect-square overflow-hidden rounded-lg border border-border">
+                    <img src={url} alt={`Gallery ${idx + 1}`} className="h-full w-full object-cover" />
                     <button
                       type="button"
-                      onClick={() => removeYear(y)}
-                      className="ml-1 hover:text-destructive"
+                      onClick={() => removeGalleryImage(url)}
+                      className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition-opacity hover:bg-red-600 group-hover:opacity-100"
                     >
                       <X className="h-3 w-3" />
                     </button>
-                  </span>
+                  </div>
                 ))}
               </div>
             )}
-            <p className="text-xs text-muted-foreground">
-              Add years this model is compatible with.
-            </p>
           </div>
           <button className="btn-primary h-11 w-full" disabled={submitting}>
             {submitting ? (
@@ -644,305 +438,6 @@ export const AdminModelsPage: React.FC = () => {
             ) : "Save changes"}
           </button>
         </form>
-      </Modal>
-
-      <Modal open={detailOpen} onClose={closeDetail} title="Model Details">
-        {selectedDetail && (
-          <div className="space-y-6 max-h-[70vh] overflow-y-auto">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Truck className="h-7 w-7" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">{selectedDetail.name}</h3>
-                <p className="text-sm text-muted-foreground">{selectedDetail.brands?.name || "No brand"}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <label className="text-sm font-medium text-foreground">Main Image</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newUrl = window.prompt("Enter new image URL:", selectedDetail.image_url || "");
-                      if (newUrl !== null) {
-                        handleDetailUpdate({ image_url: newUrl || null });
-                      }
-                    }}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Change
-                  </button>
-                </div>
-                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-border">
-                  {selectedDetail.image_url ? (
-                    <img src={selectedDetail.image_url} alt={selectedDetail.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-muted">
-                      <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Brand</label>
-                <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-foreground">
-                  {selectedDetail.brands?.name || "Not set"}
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">Compatible Years</label>
-              <div className="flex flex-wrap gap-2">
-                {selectedDetail.years && selectedDetail.years.length > 0 ? (
-                  selectedDetail.years.map((year) => (
-                    <span key={year} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
-                      {year}
-                      <button
-                        type="button"
-                        onClick={() => handleDetailRemoveYear(year)}
-                        className="ml-1 hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">No years added</p>
-                )}
-              </div>
-              <div className="mt-2 flex gap-2">
-                <input
-                  id="detail-year-input"
-                  className="form-input flex-1"
-                  placeholder="Add year (e.g., 2024)"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      const input = e.target as HTMLInputElement;
-                      if (input.value) handleDetailAddYear(input.value);
-                      input.value = "";
-                    }
-                  }}
-                  onBlur={(e) => {
-                    if (e.target.value) handleDetailAddYear(e.target.value);
-                    e.target.value = "";
-                  }}
-                />
-                <button
-                  type="button"
-                  className="btn-outline h-10"
-                  onClick={() => {
-                    const input = document.getElementById("detail-year-input") as HTMLInputElement;
-                    if (input?.value) {
-                      handleDetailAddYear(input.value);
-                      input.value = "";
-                    }
-                  }}
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <label className="text-sm font-medium text-foreground">Year-Specific Galleries</label>
-                <span className="text-xs text-muted-foreground">
-                  {yearGalleries.length} year{yearGalleries.length !== 1 ? 's' : ''} with galleries
-                </span>
-              </div>
-              <p className="mb-3 text-xs text-muted-foreground">
-                Create separate galleries for each model year. These galleries show when viewing product details.
-              </p>
-              <div className="space-y-3">
-                {selectedDetail.years && selectedDetail.years.length > 0 ? (
-                  selectedDetail.years.map((year) => {
-                    const gallery = yearGalleries.find(g => g.year === year);
-                    return (
-                      <div key={year} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary font-semibold">
-                            {year}
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-foreground">{year}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {gallery ? (
-                                <>
-                                  {gallery.gallery?.length || 0} images
-                                  {gallery.image_url && " + 1 main"}
-                                </>
-                              ) : "No gallery yet"}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openYearGallery(gallery || null, year)}
-                            className="btn-outline h-8 px-3 text-xs"
-                          >
-                            {gallery ? "Edit" : "Add"}
-                          </button>
-                          {gallery && gallery.id && (
-                            <button
-                              type="button"
-                              onClick={() => deleteYearGallery(gallery.id!)}
-                              className="btn-destructive h-8 w-8 p-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="rounded-lg border border-dashed border-border py-4 text-center text-sm text-muted-foreground">
-                    Add years to this model first to create year-specific galleries
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <button
-                className="btn-outline flex-1"
-                onClick={() => {
-                  closeDetail();
-                  onOpenEdit(selectedDetail);
-                }}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit All Fields
-              </button>
-              <button
-                className="btn-primary flex-1"
-                disabled={submitting}
-                onClick={() => {
-                  handleDetailSave();
-                  closeDetail();
-                }}
-              >
-                {submitting ? (
-                  <span className="flex items-center justify-center">
-                    <Loader2 className="btn-spinner mr-2 h-4 w-4" />
-                    Saving...
-                  </span>
-                ) : "Save Changes"}
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      <Modal open={yearGalleryOpen} onClose={closeYearGallery} title={`${selectedYearGallery?.id ? "Edit" : "Add"} Gallery: ${selectedYearGallery?.year}`}>
-        {selectedYearGallery && (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-border bg-muted/30 p-3">
-              <div className="text-sm font-medium text-foreground">Year: {selectedYearGallery.year}</div>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium">Main Image URL (optional)</label>
-              <p className="mb-2 text-xs text-muted-foreground">This image will be shown for products of this model year</p>
-              <input
-                className="form-input"
-                placeholder="https://example.com/image.jpg"
-                value={selectedYearGallery.image_url || ""}
-                onChange={(e) => setSelectedYearGallery({ ...selectedYearGallery, image_url: e.target.value || null })}
-              />
-              {selectedYearGallery.image_url && (
-                <div className="mt-2 relative aspect-video w-full overflow-hidden rounded-lg border border-border">
-                  <img src={selectedYearGallery.image_url} alt="Preview" className="h-full w-full object-cover" />
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Gallery Images</label>
-              <p className="text-xs text-muted-foreground">Add image URLs to display in the shop gallery for this year. Click an image to preview.</p>
-              <div className="flex gap-2">
-                <input
-                  id="year-gallery-input"
-                  className="form-input flex-1"
-                  placeholder="Add image URL"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      const input = e.target as HTMLInputElement;
-                      if (input.value) {
-                        setSelectedYearGallery({
-                          ...selectedYearGallery,
-                          gallery: [...(selectedYearGallery.gallery || []), input.value]
-                        });
-                        input.value = "";
-                      }
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  className="btn-outline h-10"
-                  onClick={() => {
-                    const input = document.getElementById("year-gallery-input") as HTMLInputElement;
-                    if (input?.value) {
-                      setSelectedYearGallery({
-                        ...selectedYearGallery,
-                        gallery: [...(selectedYearGallery.gallery || []), input.value]
-                      });
-                      input.value = "";
-                    }
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-              {selectedYearGallery.gallery && selectedYearGallery.gallery.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">{selectedYearGallery.gallery.length} image{selectedYearGallery.gallery.length !== 1 ? 's' : ''} in gallery</p>
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                    {selectedYearGallery.gallery.map((url, idx) => (
-                      <div key={idx} className="group relative aspect-video overflow-hidden rounded-lg border border-border">
-                        <img src={url} alt={`Gallery ${idx + 1}`} className="h-full w-full object-cover" />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedYearGallery({
-                              ...selectedYearGallery,
-                              gallery: selectedYearGallery.gallery!.filter((_, i) => i !== idx)
-                            })}
-                            className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">No gallery images added yet.</p>
-              )}
-            </div>
-
-            <button
-              className="btn-primary h-11 w-full"
-              disabled={submitting}
-              onClick={handleYearGallerySave}
-            >
-              {submitting ? (
-                <span className="flex items-center justify-center">
-                  <Loader2 className="btn-spinner mr-2 h-4 w-4" />
-                  Saving...
-                </span>
-              ) : "Save Year Gallery"}
-            </button>
-          </div>
-        )}
       </Modal>
     </div>
   );
