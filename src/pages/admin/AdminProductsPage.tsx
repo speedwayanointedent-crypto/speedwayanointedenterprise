@@ -29,9 +29,6 @@ type Product = {
 
 type Option = { id: string; name?: string; label?: string; brand_id?: string; years?: string[] };
 
-const fallbackImage =
-  "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?q=80&w=600&auto=format&fit=crop";
-
 const PRODUCTS_PER_PAGE = 24;
 
 export const AdminProductsPage: React.FC = () => {
@@ -49,6 +46,7 @@ export const AdminProductsPage: React.FC = () => {
   const [modelId, setModelId] = React.useState("");
   const [yearId, setYearId] = React.useState("");
   const [description, setDescription] = React.useState("");
+  const [imageUrl, setImageUrl] = React.useState("");
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const [categories, setCategories] = React.useState<Option[]>([]);
@@ -191,6 +189,7 @@ export const AdminProductsPage: React.FC = () => {
         model_id: modelId || null,
         year_id: finalYearId || null,
         description,
+        image_url: imageUrl || null,
         status: "active"
       };
 
@@ -215,6 +214,7 @@ export const AdminProductsPage: React.FC = () => {
     setModelId("");
     setYearId("");
     setDescription("");
+    setImageUrl("");
   };
 
   const onOpenEdit = (product: Product) => {
@@ -227,6 +227,7 @@ export const AdminProductsPage: React.FC = () => {
     setModelId((product as any).model_id || "");
     setYearId((product as any).year_id || "");
     setDescription(product.description || "");
+    setImageUrl(product.image_url || "");
     setEditOpen(true);
   };
 
@@ -256,6 +257,7 @@ export const AdminProductsPage: React.FC = () => {
         model_id: modelId || null,
         year_id: finalYearId || null,
         description,
+        image_url: imageUrl || null,
         status: editing.status || "active"
       };
 
@@ -500,53 +502,62 @@ export const AdminProductsPage: React.FC = () => {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {products.map((p) => (
-              <div key={p.id} className="card p-4">
-                <img
-                  src={p.models?.image_url || fallbackImage}
-                  alt={p.name}
-                  className="h-40 w-full rounded-lg object-cover"
-                />
-                <div className="mt-3">
-                  <div className="text-xs text-muted-foreground">
-                    {p.categories?.name || "Uncategorized"}
-                    {p.brands?.name && ` • ${p.brands.name}`}
-                    {p.models?.name && ` • ${p.models.name}`}
-                    {p.years?.label && ` • ${p.years.label}`}
-                  </div>
-                  <div className="mt-1 line-clamp-2 text-sm font-semibold text-foreground">
-                    {p.name}
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-sm font-semibold">
-                      GHS {p.price.toLocaleString()}
-                    </span>
-                    <span className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
-                      {p.status}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    Qty: {p.quantity}
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      className="btn-outline h-9 flex-1"
-                      onClick={() => onOpenEdit(p)}
-                    >
-                      <Pencil className="mr-1 h-4 w-4" />
-                      Edit
-                    </button>
-                    <button
-                      className="btn-destructive h-9 flex-1"
-                      onClick={() => onDelete(p.id)}
-                    >
-                      <Trash2 className="mr-1 h-4 w-4" />
-                      Delete
-                    </button>
+            {products.map((p) => {
+              const imgSrc = p.model_id ? p.models?.image_url : p.image_url;
+              return (
+                <div key={p.id} className="card p-4">
+                  {imgSrc ? (
+                    <img
+                      src={imgSrc}
+                      alt={p.name}
+                      className="h-40 w-full rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-40 w-full items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                      No image
+                    </div>
+                  )}
+                  <div className="mt-3">
+                    <div className="text-xs text-muted-foreground">
+                      {p.categories?.name || "Uncategorized"}
+                      {p.brands?.name && ` • ${p.brands.name}`}
+                      {p.models?.name && ` • ${p.models.name}`}
+                      {p.years?.label && ` • ${p.years.label}`}
+                    </div>
+                    <div className="mt-1 line-clamp-2 text-sm font-semibold text-foreground">
+                      {p.name}
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-sm font-semibold">
+                        GHS {p.price.toLocaleString()}
+                      </span>
+                      <span className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
+                        {p.status}
+                      </span>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Qty: {p.quantity}
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        className="btn-outline h-9 flex-1"
+                        onClick={() => onOpenEdit(p)}
+                      >
+                        <Pencil className="mr-1 h-4 w-4" />
+                        Edit
+                      </button>
+                      <button
+                        className="btn-destructive h-9 flex-1"
+                        onClick={() => onDelete(p.id)}
+                      >
+                        <Trash2 className="mr-1 h-4 w-4" />
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {totalPages > 1 && (
@@ -803,6 +814,17 @@ export const AdminProductsPage: React.FC = () => {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+          <div>
+            <label className="mb-2 block text-sm font-medium text-foreground">
+              Image URL {modelId ? "(optional - will use model image)" : "(required for universal products)"}
+            </label>
+            <input
+              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+              placeholder="https://example.com/image.jpg"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+            />
+          </div>
           <StickyActionBar>
             <button className="btn-primary h-11 w-full" disabled={submitting}>
               {submitting ? (
