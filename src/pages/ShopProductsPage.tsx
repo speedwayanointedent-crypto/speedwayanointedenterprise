@@ -22,14 +22,13 @@ type Product = {
   year_id?: string | null;
   categories?: { name: string };
   brands?: { name: string };
-  models?: { name: string };
+  models?: { name: string; image_url?: string | null };
   years?: { id: string; label: string };
 };
 
 type Category = { id: string; name: string };
 type Brand = { id: string; name: string; logo_url?: string | null };
 type Model = { id: string; name: string; image_url?: string | null; years?: string[] };
-type ModelYearGallery = { model_id: string; year: string; image_url?: string | null; gallery?: string[] };
 
 const fallbackImage = "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop";
 
@@ -48,7 +47,6 @@ export const ShopProductsPage: React.FC = () => {
   const [category, setCategory] = React.useState<Category | null>(null);
   const [brand, setBrand] = React.useState<Brand | null>(null);
   const [model, setModel] = React.useState<Model | null>(null);
-  const [modelYearGalleries, setModelYearGalleries] = React.useState<ModelYearGallery[]>([]);
   const { push } = useToast();
 
   const categoryId = searchParams.get("category");
@@ -90,17 +88,6 @@ export const ShopProductsPage: React.FC = () => {
         setCategory(catRes.data);
         setBrand(brandRes.data);
         setModel(modelRes.data);
-
-        if (modelId) {
-          try {
-            const galleryRes = await api.get<ModelYearGallery[]>(`/model-year-galleries/model/${modelId}`);
-            setModelYearGalleries(galleryRes.data || []);
-          } catch {
-            setModelYearGalleries([]);
-          }
-        } else {
-          setModelYearGalleries([]);
-        }
       } catch {
         // ignore
       }
@@ -132,18 +119,13 @@ export const ShopProductsPage: React.FC = () => {
   };
 
   const getProductImage = (product: Product): string => {
-    if (product.year_id && product.years?.label) {
-      const yearGallery = modelYearGalleries.find(g => g.year === product.years!.label);
-      if (yearGallery?.image_url) {
-        return yearGallery.image_url;
-      }
+    if (product.models?.image_url) {
+      return product.models.image_url;
     }
-    if (modelId && modelYearGalleries.length > 0) {
-      if (modelYearGalleries[0]?.image_url) {
-        return modelYearGalleries[0].image_url;
-      }
+    if (model?.image_url) {
+      return model.image_url;
     }
-    return product.image_url || fallbackImage;
+    return fallbackImage;
   };
 
   return (
