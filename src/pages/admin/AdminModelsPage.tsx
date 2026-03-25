@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Search, Truck, Pencil, Trash2, X, ImageIcon, Loader2 } from "lucide-react";
+import { Plus, Search, Truck, Pencil, Trash2, X, ImageIcon, Loader2, Eye } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
@@ -388,6 +388,13 @@ export const AdminModelsPage: React.FC = () => {
                             </div>
                           </div>
                           <div className="flex gap-1">
+                            <button
+                              className="btn-outline h-9 w-9 p-0"
+                              onClick={() => openDetail(c)}
+                              title="View Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
                             <button
                               className="btn-outline h-9 w-9 p-0"
                               onClick={() => onOpenEdit(c)}
