@@ -30,8 +30,6 @@ type Category = { id: string; name: string };
 type Brand = { id: string; name: string; logo_url?: string | null };
 type Model = { id: string; name: string; image_url?: string | null; years?: string[] };
 
-const fallbackImage = "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop";
-
 const PRODUCTS_PER_PAGE = 24;
 
 export const ShopProductsPage: React.FC = () => {
@@ -118,14 +116,17 @@ export const ShopProductsPage: React.FC = () => {
     return `/shop/brand/${brandId}?category=${categoryId}`;
   };
 
-  const getProductImage = (product: Product): string => {
-    if (product.models?.image_url) {
+  const getProductImage = (product: Product): string | null => {
+    if (product.model_id && product.models?.image_url) {
       return product.models.image_url;
+    }
+    if (product.image_url) {
+      return product.image_url;
     }
     if (model?.image_url) {
       return model.image_url;
     }
-    return fallbackImage;
+    return null;
   };
 
   return (
@@ -198,12 +199,18 @@ export const ShopProductsPage: React.FC = () => {
                   const productImage = getProductImage(p);
                   return (
                     <div key={p.id} className="card card-hover p-4">
-                      <img
-                        src={productImage}
-                        alt={p.name}
-                        className="h-36 w-full rounded-lg object-cover sm:h-40"
-                        loading="lazy"
-                      />
+                      {productImage ? (
+                        <img
+                          src={productImage}
+                          alt={p.name}
+                          className="h-36 w-full rounded-lg object-cover sm:h-40"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex h-36 w-full items-center justify-center rounded-lg bg-muted sm:h-40">
+                          <span className="text-sm text-muted-foreground">No image</span>
+                        </div>
+                      )}
                       <div className="mt-3">
                         <div className="text-xs text-muted-foreground">
                           {p.brands?.name} {p.models?.name && `- ${p.models.name}`} {p.years?.label && `- ${p.years.label}`}
@@ -225,7 +232,7 @@ export const ShopProductsPage: React.FC = () => {
                                 id: p.id,
                                 name: p.name,
                                 price: p.price,
-                                image: productImage
+                                image: productImage || ""
                               });
                               push("Added to cart", "success");
                             }}
