@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Search, Truck, Pencil, Trash2, X, ImageIcon, ChevronLeft, ChevronRight, Eye, Loader2 } from "lucide-react";
+import { Plus, Search, Truck, Pencil, Trash2, X, ImageIcon, Loader2 } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
@@ -10,6 +10,7 @@ import { PageLoading } from "../../components/ui/LoadingSpinner";
 
 type Model = { id: string; name: string; brand_id?: string; brands?: { name: string }; years?: string[]; image_url?: string | null; gallery?: string[] };
 type Brand = { id: string; name: string };
+type ModelYearGallery = { id?: string; model_id: string; year: string; image_url?: string | null; gallery?: string[] };
 
 export const AdminModelsPage: React.FC = () => {
   const [items, setItems] = React.useState<Model[]>([]);
@@ -26,14 +27,13 @@ export const AdminModelsPage: React.FC = () => {
   const [newYear, setNewYear] = React.useState("");
   const [imageUrl, setImageUrl] = React.useState("");
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
-  const [gallery, setGallery] = React.useState<string[]>([]);
-  const [newGalleryUrl, setNewGalleryUrl] = React.useState("");
-  const [galleryLightbox, setGalleryLightbox] = React.useState<{ index: number; images: string[] } | null>(null);
-  const [imageErrors, setImageErrors] = React.useState<Set<string>>(new Set());
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const [brands, setBrands] = React.useState<Brand[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
+  const [yearGalleries, setYearGalleries] = React.useState<ModelYearGallery[]>([]);
+  const [selectedYearGallery, setSelectedYearGallery] = React.useState<ModelYearGallery | null>(null);
+  const [yearGalleryOpen, setYearGalleryOpen] = React.useState(false);
   const { push } = useToast();
 
   const load = React.useCallback(async () => {
@@ -64,63 +64,29 @@ export const AdminModelsPage: React.FC = () => {
     setNewYear("");
     setImageUrl("");
     setImagePreview(null);
-    setGallery([]);
-    setNewGalleryUrl("");
-  };
-
-  const addGalleryImage = () => {
-    if (newGalleryUrl && !gallery.includes(newGalleryUrl)) {
-      setGallery([...gallery, newGalleryUrl]);
-      setNewGalleryUrl("");
-    }
-  };
-
-  const removeGalleryImage = (url: string) => {
-    setGallery(gallery.filter(g => g !== url));
-    setImageErrors(prev => {
-      const next = new Set(prev);
-      next.delete(url);
-      return next;
-    });
-  };
-
-  const handleImageError = (url: string) => {
-    setImageErrors(prev => new Set(prev).add(url));
-  };
-
-  const handleImageSuccess = (url: string) => {
-    setImageErrors(prev => {
-      const next = new Set(prev);
-      next.delete(url);
-      return next;
-    });
-  };
-
-  const openLightbox = (images: string[], index: number) => {
-    setGalleryLightbox({ index, images });
-  };
-
-  const closeLightbox = () => {
-    setGalleryLightbox(null);
-  };
-
-  const navigateLightbox = (direction: number) => {
-    if (!galleryLightbox) return;
-    const newIndex = galleryLightbox.index + direction;
-    if (newIndex >= 0 && newIndex < galleryLightbox.images.length) {
-      setGalleryLightbox({ ...galleryLightbox, index: newIndex });
-    }
   };
 
   const openDetail = (model: Model) => {
     setSelectedDetail({ ...model });
     setDetailOpen(true);
+    loadYearGalleries(model.id);
+  };
+
+  const loadYearGalleries = async (modelId: string) => {
+    try {
+      const res = await api.get<ModelYearGallery[]>(`/model-year-galleries/model/${modelId}`);
+      setYearGalleries(res.data || []);
+    } catch {
+      setYearGalleries([]);
+    }
   };
 
   const closeDetail = () => {
     setDetailOpen(false);
     setSelectedDetail(null);
     setDetailImageErrors(new Set());
+    setYearGalleries([]);
+    setSelectedYearGallery(null);
   };
 
   const handleDetailImageError = (url: string) => {
@@ -154,25 +120,6 @@ export const AdminModelsPage: React.FC = () => {
     });
   };
 
-  const handleDetailAddGallery = (url: string) => {
-    if (!selectedDetail) return;
-    if (!selectedDetail.gallery) selectedDetail.gallery = [];
-    if (!selectedDetail.gallery.includes(url)) {
-      setSelectedDetail({
-        ...selectedDetail,
-        gallery: [...selectedDetail.gallery, url]
-      });
-    }
-  };
-
-  const handleDetailRemoveGallery = (url: string) => {
-    if (!selectedDetail) return;
-    setSelectedDetail({
-      ...selectedDetail,
-      gallery: (selectedDetail.gallery || []).filter(g => g !== url)
-    });
-  };
-
   const handleDetailUpdate = (updates: Partial<Model>) => {
     if (!selectedDetail) return;
     setSelectedDetail({
@@ -189,13 +136,62 @@ export const AdminModelsPage: React.FC = () => {
         name: selectedDetail.name,
         brand_id: selectedDetail.brand_id,
         years: selectedDetail.years || [],
-        image_url: selectedDetail.image_url || null,
-        gallery: selectedDetail.gallery || []
+        image_url: selectedDetail.image_url || null
       });
       push("Model updated", "success");
       load();
     } catch {
       push("Failed to update model", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openYearGallery = (gallery: ModelYearGallery | null, year: string) => {
+    if (gallery) {
+      setSelectedYearGallery({ ...gallery });
+    } else {
+      setSelectedYearGallery({ model_id: selectedDetail!.id, year, image_url: null, gallery: [] });
+    }
+    setYearGalleryOpen(true);
+  };
+
+  const closeYearGallery = () => {
+    setYearGalleryOpen(false);
+    setSelectedYearGallery(null);
+  };
+
+  const handleYearGallerySave = async () => {
+    if (!selectedYearGallery || !selectedDetail) return;
+    setSubmitting(true);
+    try {
+      await api.post("/model-year-galleries", {
+        model_id: selectedYearGallery.model_id,
+        year: selectedYearGallery.year,
+        image_url: selectedYearGallery.image_url || null,
+        gallery: selectedYearGallery.gallery || []
+      });
+      push("Year gallery saved", "success");
+      await loadYearGalleries(selectedDetail.id);
+      closeYearGallery();
+    } catch {
+      push("Failed to save year gallery", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const deleteYearGallery = async (galleryId: string) => {
+    if (!selectedDetail) return;
+    const confirmed = window.confirm("Delete this year gallery?");
+    if (!confirmed) return;
+    setSubmitting(true);
+    try {
+      await api.delete(`/model-year-galleries/${galleryId}`);
+      push("Year gallery deleted", "success");
+      await loadYearGalleries(selectedDetail.id);
+    } catch {
+      push("Failed to delete year gallery", "error");
     } finally {
       setSubmitting(false);
     }
@@ -224,8 +220,7 @@ export const AdminModelsPage: React.FC = () => {
         name, 
         brand_id: brandId, 
         years, 
-        image_url: imageUrl || null,
-        gallery: gallery.length > 0 ? gallery : []
+        image_url: imageUrl || null
       });
       push("Model created", "success");
       resetForm();
@@ -245,7 +240,6 @@ export const AdminModelsPage: React.FC = () => {
     setYears(model.years || []);
     setImageUrl(model.image_url || "");
     setImagePreview(model.image_url || null);
-    setGallery(model.gallery || []);
     setEditOpen(true);
   };
 
@@ -262,8 +256,7 @@ export const AdminModelsPage: React.FC = () => {
         name, 
         brand_id: brandId, 
         years, 
-        image_url: imageUrl || null,
-        gallery: gallery.length > 0 ? gallery : []
+        image_url: imageUrl || null
       });
       push("Model updated", "success");
       setEditOpen(false);
@@ -538,70 +531,6 @@ export const AdminModelsPage: React.FC = () => {
               Add years this model is compatible with. Products will auto-filter by model years.
             </p>
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Gallery Images (optional)</label>
-            <p className="text-xs text-muted-foreground">Add image URLs to display in the shop gallery. Click an image to preview.</p>
-            <div className="flex gap-2">
-              <input
-                className="form-input flex-1"
-                placeholder="Add image URL for gallery"
-                value={newGalleryUrl}
-                onChange={(e) => setNewGalleryUrl(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addGalleryImage())}
-              />
-              <button
-                type="button"
-                className="btn-outline h-10"
-                onClick={addGalleryImage}
-              >
-                Add
-              </button>
-            </div>
-            {gallery.length > 0 ? (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">{gallery.length} image{gallery.length !== 1 ? 's' : ''} in gallery</p>
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-                  {gallery.map((url, idx) => (
-                    <div key={idx} className="group relative aspect-video overflow-hidden rounded-lg border border-border">
-                      {imageErrors.has(url) ? (
-                        <div className="flex h-full w-full items-center justify-center bg-muted">
-                          <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                      ) : (
-                        <img 
-                          src={url} 
-                          alt={`Gallery ${idx + 1}`} 
-                          className="h-full w-full object-cover"
-                          onError={() => handleImageError(url)}
-                          onLoad={() => handleImageSuccess(url)}
-                        />
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button
-                          type="button"
-                          onClick={() => openLightbox(gallery, idx)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black hover:bg-gray-100"
-                          title="Preview"
-                        >
-                          <ImageIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeGalleryImage(url)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
-                          title="Remove"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">No gallery images added yet.</p>
-            )}
-          </div>
           <button className="btn-primary h-11 w-full" disabled={submitting}>
             {submitting ? (
               <span className="flex items-center justify-center">
@@ -699,70 +628,6 @@ export const AdminModelsPage: React.FC = () => {
               Add years this model is compatible with.
             </p>
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Gallery Images (optional)</label>
-            <p className="text-xs text-muted-foreground">Add image URLs to display in the shop gallery. Click an image to preview.</p>
-            <div className="flex gap-2">
-              <input
-                className="form-input flex-1"
-                placeholder="Add image URL for gallery"
-                value={newGalleryUrl}
-                onChange={(e) => setNewGalleryUrl(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addGalleryImage())}
-              />
-              <button
-                type="button"
-                className="btn-outline h-10"
-                onClick={addGalleryImage}
-              >
-                Add
-              </button>
-            </div>
-            {gallery.length > 0 ? (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">{gallery.length} image{gallery.length !== 1 ? 's' : ''} in gallery</p>
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-                  {gallery.map((url, idx) => (
-                    <div key={idx} className="group relative aspect-video overflow-hidden rounded-lg border border-border">
-                      {imageErrors.has(url) ? (
-                        <div className="flex h-full w-full items-center justify-center bg-muted">
-                          <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                      ) : (
-                        <img 
-                          src={url} 
-                          alt={`Gallery ${idx + 1}`} 
-                          className="h-full w-full object-cover"
-                          onError={() => handleImageError(url)}
-                          onLoad={() => handleImageSuccess(url)}
-                        />
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button
-                          type="button"
-                          onClick={() => openLightbox(gallery, idx)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black hover:bg-gray-100"
-                          title="Preview"
-                        >
-                          <ImageIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeGalleryImage(url)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
-                          title="Remove"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">No gallery images added yet.</p>
-            )}
-          </div>
           <button className="btn-primary h-11 w-full" disabled={submitting}>
             {submitting ? (
               <span className="flex items-center justify-center">
@@ -773,45 +638,6 @@ export const AdminModelsPage: React.FC = () => {
           </button>
         </form>
       </Modal>
-
-      {galleryLightbox && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
-          onClick={closeLightbox}
-        >
-          <button
-            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
-            onClick={closeLightbox}
-          >
-            <X className="h-6 w-6" />
-          </button>
-          {galleryLightbox.index > 0 && (
-            <button
-              className="absolute left-4 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
-              onClick={(e) => { e.stopPropagation(); navigateLightbox(-1); }}
-            >
-              <ChevronLeft className="h-8 w-8" />
-            </button>
-          )}
-          {galleryLightbox.index < galleryLightbox.images.length - 1 && (
-            <button
-              className="absolute right-16 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
-              onClick={(e) => { e.stopPropagation(); navigateLightbox(1); }}
-            >
-              <ChevronRight className="h-8 w-8" />
-            </button>
-          )}
-          <img
-            src={galleryLightbox.images[galleryLightbox.index]}
-            alt={`Gallery ${galleryLightbox.index + 1}`}
-            className="max-h-[90vh] max-w-[90vw] object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <div className="absolute bottom-4 text-white">
-            {galleryLightbox.index + 1} / {galleryLightbox.images.length}
-          </div>
-        </div>
-      )}
 
       <Modal open={detailOpen} onClose={closeDetail} title="Model Details">
         {selectedDetail && (
@@ -917,82 +743,60 @@ export const AdminModelsPage: React.FC = () => {
 
             <div>
               <div className="mb-3 flex items-center justify-between">
-                <label className="text-sm font-medium text-foreground">Gallery Images</label>
+                <label className="text-sm font-medium text-foreground">Year-Specific Galleries</label>
                 <span className="text-xs text-muted-foreground">
-                  {selectedDetail.gallery?.length || 0} photos
+                  {yearGalleries.length} year{yearGalleries.length !== 1 ? 's' : ''} with galleries
                 </span>
               </div>
-              <div className="mb-3 flex gap-2">
-                <input
-                  id="detail-gallery-input"
-                  className="form-input flex-1"
-                  placeholder="Add image URL to gallery"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      const input = e.target as HTMLInputElement;
-                      if (input.value) handleDetailAddGallery(input.value);
-                      input.value = "";
-                    }
-                  }}
-                  onBlur={(e) => {
-                    if (e.target.value) handleDetailAddGallery(e.target.value);
-                    e.target.value = "";
-                  }}
-                />
-                <button
-                  type="button"
-                  className="btn-outline h-10"
-                  onClick={() => {
-                    const input = document.getElementById("detail-gallery-input") as HTMLInputElement;
-                    if (input?.value) {
-                      handleDetailAddGallery(input.value);
-                      input.value = "";
-                    }
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-                {selectedDetail.gallery && selectedDetail.gallery.length > 0 ? (
-                  selectedDetail.gallery.map((url, idx) => (
-                    <div key={idx} className="group relative aspect-square overflow-hidden rounded-lg border border-border">
-                      {detailImageErrors.has(url) ? (
-                        <div className="flex h-full w-full items-center justify-center bg-muted">
-                          <ImageIcon className="h-10 w-10 text-muted-foreground" />
+              <p className="mb-3 text-xs text-muted-foreground">
+                Create separate galleries for each model year. These galleries show when viewing product details.
+              </p>
+              <div className="space-y-3">
+                {selectedDetail.years && selectedDetail.years.length > 0 ? (
+                  selectedDetail.years.map((year) => {
+                    const gallery = yearGalleries.find(g => g.year === year);
+                    return (
+                      <div key={year} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary font-semibold">
+                            {year}
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-foreground">{year}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {gallery ? (
+                                <>
+                                  {gallery.gallery?.length || 0} images
+                                  {gallery.image_url && " + 1 main"}
+                                </>
+                              ) : "No gallery yet"}
+                            </div>
+                          </div>
                         </div>
-                      ) : (
-                        <img 
-                          src={url} 
-                          alt={`Gallery ${idx + 1}`} 
-                          className="h-full w-full object-cover"
-                          onError={() => handleDetailImageError(url)}
-                          onLoad={() => handleDetailImageSuccess(url)}
-                        />
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          type="button"
-                          onClick={() => openLightbox(selectedDetail.gallery!, idx)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black hover:bg-gray-100"
-                          title="Preview"
-                        >
-                          <ImageIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDetailRemoveGallery(url)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
-                          title="Remove"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openYearGallery(gallery || null, year)}
+                            className="btn-outline h-8 px-3 text-xs"
+                          >
+                            {gallery ? "Edit" : "Add"}
+                          </button>
+                          {gallery && gallery.id && (
+                            <button
+                              type="button"
+                              onClick={() => deleteYearGallery(gallery.id!)}
+                              className="btn-destructive h-8 w-8 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
-                  <div className="col-span-full flex items-center justify-center rounded-lg border border-dashed border-border py-8 text-sm text-muted-foreground">
-                    No gallery images added yet
+                  <div className="rounded-lg border border-dashed border-border py-4 text-center text-sm text-muted-foreground">
+                    Add years to this model first to create year-specific galleries
                   </div>
                 )}
               </div>
@@ -1025,6 +829,111 @@ export const AdminModelsPage: React.FC = () => {
                 ) : "Save Changes"}
               </button>
             </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={yearGalleryOpen} onClose={closeYearGallery} title={`${selectedYearGallery?.id ? "Edit" : "Add"} Gallery: ${selectedYearGallery?.year}`}>
+        {selectedYearGallery && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <div className="text-sm font-medium text-foreground">Year: {selectedYearGallery.year}</div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium">Main Image URL (optional)</label>
+              <p className="mb-2 text-xs text-muted-foreground">This image will be shown for products of this model year</p>
+              <input
+                className="form-input"
+                placeholder="https://example.com/image.jpg"
+                value={selectedYearGallery.image_url || ""}
+                onChange={(e) => setSelectedYearGallery({ ...selectedYearGallery, image_url: e.target.value || null })}
+              />
+              {selectedYearGallery.image_url && (
+                <div className="mt-2 relative aspect-video w-full overflow-hidden rounded-lg border border-border">
+                  <img src={selectedYearGallery.image_url} alt="Preview" className="h-full w-full object-cover" />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Gallery Images</label>
+              <p className="text-xs text-muted-foreground">Add image URLs to display in the shop gallery for this year. Click an image to preview.</p>
+              <div className="flex gap-2">
+                <input
+                  id="year-gallery-input"
+                  className="form-input flex-1"
+                  placeholder="Add image URL"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const input = e.target as HTMLInputElement;
+                      if (input.value) {
+                        setSelectedYearGallery({
+                          ...selectedYearGallery,
+                          gallery: [...(selectedYearGallery.gallery || []), input.value]
+                        });
+                        input.value = "";
+                      }
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn-outline h-10"
+                  onClick={() => {
+                    const input = document.getElementById("year-gallery-input") as HTMLInputElement;
+                    if (input?.value) {
+                      setSelectedYearGallery({
+                        ...selectedYearGallery,
+                        gallery: [...(selectedYearGallery.gallery || []), input.value]
+                      });
+                      input.value = "";
+                    }
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              {selectedYearGallery.gallery && selectedYearGallery.gallery.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">{selectedYearGallery.gallery.length} image{selectedYearGallery.gallery.length !== 1 ? 's' : ''} in gallery</p>
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    {selectedYearGallery.gallery.map((url, idx) => (
+                      <div key={idx} className="group relative aspect-video overflow-hidden rounded-lg border border-border">
+                        <img src={url} alt={`Gallery ${idx + 1}`} className="h-full w-full object-cover" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedYearGallery({
+                              ...selectedYearGallery,
+                              gallery: selectedYearGallery.gallery!.filter((_, i) => i !== idx)
+                            })}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No gallery images added yet.</p>
+              )}
+            </div>
+
+            <button
+              className="btn-primary h-11 w-full"
+              disabled={submitting}
+              onClick={handleYearGallerySave}
+            >
+              {submitting ? (
+                <span className="flex items-center justify-center">
+                  <Loader2 className="btn-spinner mr-2 h-4 w-4" />
+                  Saving...
+                </span>
+              ) : "Save Year Gallery"}
+            </button>
           </div>
         )}
       </Modal>
