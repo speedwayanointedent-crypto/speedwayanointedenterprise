@@ -16,7 +16,6 @@ type Product = {
   quantity: number;
   status: string;
   image_url?: string | null;
-  car_image_url?: string | null;
   description?: string | null;
   category_id?: string | null;
   brand_id?: string | null;
@@ -52,12 +51,8 @@ export const AdminProductsPage: React.FC = () => {
   const [description, setDescription] = React.useState("");
   const [imageUrl, setImageUrl] = React.useState("");
   const [imageFile, setImageFile] = React.useState<File | null>(null);
-  const [carImageUrl, setCarImageUrl] = React.useState("");
-  const [carImageFile, setCarImageFile] = React.useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [createPreviewUrl, setCreatePreviewUrl] = React.useState<string | null>(null);
-  const [carPreviewUrl, setCarPreviewUrl] = React.useState<string | null>(null);
-  const [carCreatePreviewUrl, setCarCreatePreviewUrl] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const [categories, setCategories] = React.useState<Option[]>([]);
@@ -195,26 +190,6 @@ export const AdminProductsPage: React.FC = () => {
     return () => URL.revokeObjectURL(objectUrl);
   }, [imageFile]);
 
-  React.useEffect(() => {
-    if (!carImageFile) {
-      setCarPreviewUrl(null);
-      return;
-    }
-    const objectUrl = URL.createObjectURL(carImageFile);
-    setCarPreviewUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [carImageFile]);
-
-  React.useEffect(() => {
-    if (!carImageFile) {
-      setCarCreatePreviewUrl(null);
-      return;
-    }
-    const objectUrl = URL.createObjectURL(carImageFile);
-    setCarCreatePreviewUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [carImageFile]);
-
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -241,23 +216,17 @@ export const AdminProductsPage: React.FC = () => {
         year_id: finalYearId || null,
         description,
         image_url: imageUrl || null,
-        car_image_url: carImageUrl || null,
         status: "active"
       };
 
-      if (imageFile || carImageFile) {
+      if (imageFile) {
         const formData = new FormData();
         Object.entries(payload).forEach(([key, value]) => {
           if (value !== null && value !== undefined) {
             formData.append(key, String(value));
           }
         });
-        if (imageFile) {
-          formData.append("image", imageFile);
-        }
-        if (carImageFile) {
-          formData.append("car_image", carImageFile);
-        }
+        formData.append("image", imageFile);
         await api.post("/products", formData, {
           headers: { "Content-Type": "multipart/form-data" }
         });
@@ -286,8 +255,6 @@ export const AdminProductsPage: React.FC = () => {
     setDescription("");
     setImageUrl("");
     setImageFile(null);
-    setCarImageUrl("");
-    setCarImageFile(null);
   };
 
   const onOpenEdit = (product: Product) => {
@@ -301,9 +268,7 @@ export const AdminProductsPage: React.FC = () => {
     setYearId((product as any).year_id || "");
     setDescription(product.description || "");
     setImageUrl(product.image_url || "");
-    setCarImageUrl(product.car_image_url || "");
     setImageFile(null);
-    setCarImageFile(null);
     setEditOpen(true);
   };
 
@@ -334,23 +299,17 @@ export const AdminProductsPage: React.FC = () => {
         year_id: finalYearId || null,
         description,
         image_url: imageUrl || null,
-        car_image_url: carImageUrl || null,
         status: editing.status || "active"
       };
 
-      if (imageFile || carImageFile) {
+      if (imageFile) {
         const formData = new FormData();
         Object.entries(payload).forEach(([key, value]) => {
           if (value !== null && value !== undefined) {
             formData.append(key, String(value));
           }
         });
-        if (imageFile) {
-          formData.append("image", imageFile);
-        }
-        if (carImageFile) {
-          formData.append("car_image", carImageFile);
-        }
+        formData.append("image", imageFile);
         await api.put(`/products/${editing.id}`, formData, {
           headers: { "Content-Type": "multipart/form-data" }
         });
@@ -799,12 +758,6 @@ export const AdminProductsPage: React.FC = () => {
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
           />
-          <input
-            className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
-            placeholder="Car image URL (optional)"
-            value={carImageUrl}
-            onChange={(e) => setCarImageUrl(e.target.value)}
-          />
           <div className="space-y-2">
             <label className="text-xs font-semibold text-muted-foreground">Product image file</label>
             <input
@@ -814,28 +767,11 @@ export const AdminProductsPage: React.FC = () => {
               onChange={(e) => setImageFile(e.target.files?.[0] || null)}
             />
           </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-muted-foreground">Car image file</label>
-            <input
-              type="file"
-              accept="image/*"
-              className="w-full text-sm text-foreground"
-              onChange={(e) => setCarImageFile(e.target.files?.[0] || null)}
-            />
-          </div>
           <div className="rounded-lg border border-border bg-card p-3">
             <p className="text-xs text-muted-foreground">Image preview</p>
             <img
               src={createPreviewUrl || imageUrl || fallbackImage}
               alt="Preview"
-              className="mt-2 h-40 w-full rounded-lg object-cover"
-            />
-          </div>
-          <div className="rounded-lg border border-border bg-card p-3">
-            <p className="text-xs text-muted-foreground">Car image preview</p>
-            <img
-              src={carCreatePreviewUrl || carImageUrl || fallbackImage}
-              alt="Car preview"
               className="mt-2 h-40 w-full rounded-lg object-cover"
             />
           </div>
@@ -951,12 +887,6 @@ export const AdminProductsPage: React.FC = () => {
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
           />
-          <input
-            className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
-            placeholder="Car image URL (optional)"
-            value={carImageUrl}
-            onChange={(e) => setCarImageUrl(e.target.value)}
-          />
           <div className="space-y-2">
             <label className="text-xs font-semibold text-muted-foreground">Product image file</label>
             <input
@@ -966,28 +896,11 @@ export const AdminProductsPage: React.FC = () => {
               onChange={(e) => setImageFile(e.target.files?.[0] || null)}
             />
           </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-muted-foreground">Car image file</label>
-            <input
-              type="file"
-              accept="image/*"
-              className="w-full text-sm text-foreground"
-              onChange={(e) => setCarImageFile(e.target.files?.[0] || null)}
-            />
-          </div>
           <div className="rounded-lg border border-border bg-card p-3">
             <p className="text-xs text-muted-foreground">Image preview</p>
             <img
               src={previewUrl || imageUrl || editing?.image_url || fallbackImage}
               alt="Preview"
-              className="mt-2 h-40 w-full rounded-lg object-cover"
-            />
-          </div>
-          <div className="rounded-lg border border-border bg-card p-3">
-            <p className="text-xs text-muted-foreground">Car image preview</p>
-            <img
-              src={carPreviewUrl || carImageUrl || editing?.car_image_url || fallbackImage}
-              alt="Car preview"
               className="mt-2 h-40 w-full rounded-lg object-cover"
             />
           </div>
