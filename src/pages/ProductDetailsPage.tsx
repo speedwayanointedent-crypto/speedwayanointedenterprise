@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
-import { ShieldCheck, Truck, CheckCircle2, Heart, ShoppingCart, Loader2 } from "lucide-react";
+import { ShieldCheck, Truck, CheckCircle2, Heart, ShoppingCart, ChevronLeft, ChevronRight, X } from "lucide-react";
 import api from "../lib/api";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useToast } from "../components/ui/Toast";
@@ -16,7 +16,6 @@ type Product = {
   price: number;
   quantity: number;
   image_url?: string | null;
-  car_image_url?: string | null;
   category_id?: string | null;
   brand_id?: string | null;
   model_id?: string | null;
@@ -24,7 +23,15 @@ type Product = {
   categories?: { name: string };
   brands?: { name: string };
   models?: { name: string };
-  years?: { label: string };
+  years?: { id: string; label: string };
+};
+
+type ModelYearGallery = {
+  id: string;
+  model_id: string;
+  year: string;
+  image_url?: string | null;
+  gallery?: string[];
 };
 
 type Review = {
@@ -48,6 +55,8 @@ export const ProductDetailsPage: React.FC = () => {
   const [wishlistBusy, setWishlistBusy] = React.useState(false);
   const [subscribeBusy, setSubscribeBusy] = React.useState(false);
   const [reviews, setReviews] = React.useState<Review[]>([]);
+  const [modelYearGallery, setModelYearGallery] = React.useState<ModelYearGallery | null>(null);
+  const [galleryLightbox, setGalleryLightbox] = React.useState<{ index: number; images: string[] } | null>(null);
   const [reviewForm, setReviewForm] = React.useState({
     rating: 5,
     title: "",
@@ -59,13 +68,23 @@ export const ProductDetailsPage: React.FC = () => {
 
   React.useEffect(() => {
     async function load() {
-        try {
-          const res = await api.get<Product>(`/products/${id}`);
-          setProduct(res.data);
-          setRecommendedLoading(true);
-          setReviewLoading(true);
+      try {
+        const res = await api.get<Product>(`/products/${id}`);
+        setProduct(res.data);
+
+        if (res.data.model_id && res.data.years?.label) {
           try {
-            const listRes = await api.get<Product[]>("/products");
+            const galleryRes = await api.get<ModelYearGallery | null>(`/model-year-galleries/model/${res.data.model_id}/year/${res.data.years.label}`);
+            setModelYearGallery(galleryRes.data);
+          } catch {
+            setModelYearGallery(null);
+          }
+        }
+
+        setRecommendedLoading(true);
+        setReviewLoading(true);
+        try {
+          const listRes = await api.get<Product[]>("/products");
           const all = Array.isArray(listRes.data) ? listRes.data : [];
           const filtered = all.filter((item) => item.id !== res.data.id);
           const related = filtered.filter((item) => {
@@ -88,24 +107,24 @@ export const ProductDetailsPage: React.FC = () => {
         } catch {
           setRecommended([]);
         } finally {
-            setRecommendedLoading(false);
-          }
-          try {
-            const reviewRes = await api.get<Review[]>(`/reviews/product/${res.data.id}`);
-            setReviews(reviewRes.data || []);
-          } catch {
-            setReviews([]);
-          } finally {
-            setReviewLoading(false);
-          }
+          setRecommendedLoading(false);
+        }
+        try {
+          const reviewRes = await api.get<Review[]>(`/reviews/product/${res.data.id}`);
+          setReviews(reviewRes.data || []);
         } catch {
-          setProduct(null);
-          setRecommended([]);
           setReviews([]);
         } finally {
-          setLoading(false);
+          setReviewLoading(false);
         }
+      } catch {
+        setProduct(null);
+        setRecommended([]);
+        setReviews([]);
+      } finally {
+        setLoading(false);
       }
+    }
     if (id) load();
   }, [id]);
 
@@ -176,9 +195,27 @@ export const ProductDetailsPage: React.FC = () => {
     }
   };
 
-  const gallery = product
-    ? [product.car_image_url || null, product.image_url || fallbackImage].filter(Boolean)
-    : [];
+  const modelYearGalleryImages = modelYearGallery?.gallery || [];
+
+  const handleOpenGallery = (startIndex: number = 0) => {
+    setGalleryLightbox({ index: startIndex, images: modelYearGalleryImages });
+  };
+
+  const handleCloseGallery = () => {
+    setGalleryLightbox(null);
+  };
+
+  const handlePrevImage = () => {
+    if (!galleryLightbox) return;
+    const newIndex = galleryLightbox.index === 0 ? galleryLightbox.images.length - 1 : galleryLightbox.index - 1;
+    setGalleryLightbox({ ...galleryLightbox, index: newIndex });
+  };
+
+  const handleNextImage = () => {
+    if (!galleryLightbox) return;
+    const newIndex = galleryLightbox.index === galleryLightbox.images.length - 1 ? 0 : galleryLightbox.index + 1;
+    setGalleryLightbox({ ...galleryLightbox, index: newIndex });
+  };
 
   return (
     <div className="page-shell">
@@ -199,9 +236,9 @@ export const ProductDetailsPage: React.FC = () => {
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="overflow-hidden rounded-xl border border-border bg-card shadow-md">
-                    {product.car_image_url ? (
+                  {modelYearGallery?.image_url ? (
                     <img
-                      src={product.car_image_url}
+                      src={modelYearGallery.image_url}
                       alt={`${product.name} vehicle`}
                       className="h-56 w-full object-cover sm:h-72 lg:h-80"
                       loading="lazy"
@@ -212,7 +249,7 @@ export const ProductDetailsPage: React.FC = () => {
                     </div>
                   )}
                   <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
-                    Vehicle photo
+                    {product.years?.label || 'Vehicle'} photo
                   </div>
                 </div>
                 <div className="overflow-hidden rounded-xl border border-border bg-card shadow-md">
@@ -227,23 +264,15 @@ export const ProductDetailsPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-              {gallery.length > 1 ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {gallery.map((image, idx) => (
-                    <div
-                      key={`${image}-${idx}`}
-                      className="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
-                    >
-                      <img
-                        src={image as string}
-                        alt={`${product.name} view ${idx + 1}`}
-                        className="h-20 w-full object-cover sm:h-24"
-                        loading="lazy"
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+
+              {modelYearGallery && modelYearGallery.gallery && modelYearGallery.gallery.length > 0 && (
+                <button
+                  onClick={() => handleOpenGallery()}
+                  className="btn-primary w-full py-3"
+                >
+                  View {product.years?.label || 'Model'} Gallery ({modelYearGallery.gallery.length} photos)
+                </button>
+              )}
             </div>
 
             <div className="rounded-xl border border-border bg-card p-5 shadow-md sm:p-6">
@@ -489,8 +518,52 @@ export const ProductDetailsPage: React.FC = () => {
           </div>
         </section>
       </div>
+
       <PublicFooterCTA />
+
+      {galleryLightbox && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95" onClick={handleCloseGallery}>
+          <button
+            className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
+            onClick={handleCloseGallery}
+          >
+            <X className="h-6 w-6" />
+          </button>
+          {galleryLightbox.images.length > 1 && (
+            <>
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); handlePrevImage(); }}
+              >
+                <ChevronLeft className="h-10 w-10" />
+              </button>
+              <button
+                className="absolute right-20 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); handleNextImage(); }}
+              >
+                <ChevronRight className="h-10 w-10" />
+              </button>
+            </>
+          )}
+          <img
+            src={galleryLightbox.images[galleryLightbox.index]}
+            alt={`Gallery ${galleryLightbox.index + 1}`}
+            className="max-h-[85vh] max-w-[90vw] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-3 rounded-full bg-black/60 px-5 py-2 text-white">
+            <button onClick={(e) => { e.stopPropagation(); handlePrevImage(); }} className="hover:text-gray-300">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="text-sm font-medium">
+              {galleryLightbox.index + 1} <span className="opacity-60">/ {galleryLightbox.images.length}</span>
+            </span>
+            <button onClick={(e) => { e.stopPropagation(); handleNextImage(); }} className="hover:text-gray-300">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-
