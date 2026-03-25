@@ -702,12 +702,23 @@ export const AdminProductsPage: React.FC = () => {
               onChange={(e) => setQuantity(e.target.value)}
             />
           </div>
-<textarea
+          <textarea
             className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
             placeholder="Description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+          <div>
+            <label className="mb-2 block text-sm font-medium text-foreground">
+              Image URL {modelId ? "(optional)" : "(required for universal products)"}
+            </label>
+            <input
+              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+              placeholder="https://example.com/image.jpg"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+            />
+          </div>
           <StickyActionBar>
             <button className="btn-primary h-11 w-full" disabled={submitting}>
               {submitting ? (
@@ -715,7 +726,7 @@ export const AdminProductsPage: React.FC = () => {
                   <Loader2 className="btn-spinner mr-2 h-4 w-4" />
                   Saving...
                 </span>
-              ) : "Save changes"}
+              ) : "Create"}
             </button>
           </StickyActionBar>
         </form>
