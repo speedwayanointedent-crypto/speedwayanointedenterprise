@@ -1,12 +1,12 @@
 import React from "react";
 import { Plus, Search, Layers, Pencil, Trash2, ImageIcon, Loader2 } from "lucide-react";
 import api from "../../lib/api";
-import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageLoading } from "../../components/ui/LoadingSpinner";
+import { ImageUploader } from "../../components/ui/ImageUploader";
 
 type Brand = { id: string; name: string; logo_url?: string | null };
 
@@ -19,7 +19,6 @@ export const AdminBrandsPage: React.FC = () => {
   const [editing, setEditing] = React.useState<Brand | null>(null);
   const [name, setName] = React.useState("");
   const [logoUrl, setLogoUrl] = React.useState("");
-  const [logoPreview, setLogoPreview] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const { push } = useToast();
@@ -44,7 +43,6 @@ export const AdminBrandsPage: React.FC = () => {
   const resetForm = () => {
     setName("");
     setLogoUrl("");
-    setLogoPreview(null);
   };
 
   const onCreate = async (e: React.FormEvent) => {
@@ -67,7 +65,6 @@ export const AdminBrandsPage: React.FC = () => {
     setEditing(brand);
     setName(brand.name);
     setLogoUrl(brand.logo_url || "");
-    setLogoPreview(brand.logo_url || null);
     setEditOpen(true);
   };
 
@@ -101,15 +98,6 @@ export const AdminBrandsPage: React.FC = () => {
       push("Failed to delete brand", "error");
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleLogoUrlChange = (url: string) => {
-    setLogoUrl(url);
-    if (url) {
-      setLogoPreview(url);
-    } else {
-      setLogoPreview(null);
     }
   };
 
@@ -228,32 +216,13 @@ export const AdminBrandsPage: React.FC = () => {
               onChange={(e) => setName(e.target.value)}
             />
           </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium">Logo URL (optional)</label>
-            <div className="space-y-3">
-              <input
-                className="form-input"
-                placeholder="https://example.com/logo.png"
-                value={logoUrl}
-                onChange={(e) => handleLogoUrlChange(e.target.value)}
-              />
-              {logoPreview && (
-                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted/30">
-                  <img src={logoPreview} alt="Preview" className="h-full w-full object-contain p-4" />
-                  <button
-                    type="button"
-                    onClick={() => handleLogoUrlChange("")}
-                    className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Paste a logo URL (transparent PNG works best).
-              </p>
-            </div>
-          </div>
+          <ImageUploader
+            value={logoUrl}
+            onChange={setLogoUrl}
+            endpoint="/brands/upload"
+            label="Logo (optional)"
+            previewSize="sm"
+          />
           <button className="btn-primary h-11 w-full" disabled={submitting}>
             {submitting ? (
               <span className="flex items-center justify-center">
@@ -277,29 +246,13 @@ export const AdminBrandsPage: React.FC = () => {
               onChange={(e) => setName(e.target.value)}
             />
           </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium">Logo URL (optional)</label>
-            <div className="space-y-3">
-              <input
-                className="form-input"
-                placeholder="https://example.com/logo.png"
-                value={logoUrl}
-                onChange={(e) => handleLogoUrlChange(e.target.value)}
-              />
-              {logoPreview && (
-                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted/30">
-                  <img src={logoPreview} alt="Preview" className="h-full w-full object-contain p-4" />
-                  <button
-                    type="button"
-                    onClick={() => handleLogoUrlChange("")}
-                    className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          <ImageUploader
+            value={logoUrl}
+            onChange={setLogoUrl}
+            endpoint="/brands/upload"
+            label="Logo (optional)"
+            previewSize="sm"
+          />
           <button className="btn-primary h-11 w-full" disabled={submitting}>
             {submitting ? (
               <span className="flex items-center justify-center">
