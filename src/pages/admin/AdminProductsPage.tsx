@@ -8,6 +8,7 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { StickyActionBar } from "../../components/ui/StickyActionBar";
 import { PageLoading } from "../../components/ui/LoadingSpinner";
+import { ImageUploader } from "../../components/ui/ImageUploader";
 
 type Product = {
   id: string;
@@ -708,17 +709,12 @@ export const AdminProductsPage: React.FC = () => {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-          <div>
-            <label className="mb-2 block text-sm font-medium text-foreground">
-              Image URL {modelId ? "(optional)" : "(required for universal products)"}
-            </label>
-            <input
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
-              placeholder="https://example.com/image.jpg"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-            />
-          </div>
+          <ImageUploader
+            value={imageUrl}
+            onChange={setImageUrl}
+            endpoint="/products/upload"
+            label={modelId ? "Image (optional)" : "Image (required for universal products)"}
+          />
           <StickyActionBar>
             <button className="btn-primary h-11 w-full" disabled={submitting}>
               {submitting ? (
@@ -825,17 +821,12 @@ export const AdminProductsPage: React.FC = () => {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-          <div>
-            <label className="mb-2 block text-sm font-medium text-foreground">
-              Image URL {modelId ? "(optional - will use model image)" : "(required for universal products)"}
-            </label>
-            <input
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
-              placeholder="https://example.com/image.jpg"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-            />
-          </div>
+          <ImageUploader
+            value={imageUrl}
+            onChange={setImageUrl}
+            endpoint="/products/upload"
+            label={modelId ? "Image (optional)" : "Image (required for universal products)"}
+          />
           <StickyActionBar>
             <button className="btn-primary h-11 w-full" disabled={submitting}>
               {submitting ? (
