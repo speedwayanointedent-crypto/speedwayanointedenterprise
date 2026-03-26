@@ -1,12 +1,12 @@
 import React from "react";
-import { Plus, Search, Tag, Pencil, Trash2, ImageIcon, Upload, Loader2 } from "lucide-react";
+import { Plus, Search, Tag, Pencil, Trash2, ImageIcon, Loader2 } from "lucide-react";
 import api from "../../lib/api";
-import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageLoading } from "../../components/ui/LoadingSpinner";
+import { ImageUploader } from "../../components/ui/ImageUploader";
 
 type Category = { id: string; name: string; image_url?: string | null };
 
@@ -21,7 +21,6 @@ export const AdminCategoriesPage: React.FC = () => {
   const [editing, setEditing] = React.useState<Category | null>(null);
   const [name, setName] = React.useState("");
   const [imageUrl, setImageUrl] = React.useState("");
-  const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const { push } = useToast();
@@ -46,7 +45,6 @@ export const AdminCategoriesPage: React.FC = () => {
   const resetForm = () => {
     setName("");
     setImageUrl("");
-    setImagePreview(null);
   };
 
   const onCreate = async (e: React.FormEvent) => {
@@ -69,7 +67,6 @@ export const AdminCategoriesPage: React.FC = () => {
     setEditing(category);
     setName(category.name);
     setImageUrl(category.image_url || "");
-    setImagePreview(category.image_url || null);
     setEditOpen(true);
   };
 
@@ -103,15 +100,6 @@ export const AdminCategoriesPage: React.FC = () => {
       push("Failed to delete category", "error");
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleImageUrlChange = (url: string) => {
-    setImageUrl(url);
-    if (url) {
-      setImagePreview(url);
-    } else {
-      setImagePreview(null);
     }
   };
 
@@ -230,32 +218,12 @@ export const AdminCategoriesPage: React.FC = () => {
               onChange={(e) => setName(e.target.value)}
             />
           </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium">Image URL (optional)</label>
-            <div className="space-y-3">
-              <input
-                className="form-input"
-                placeholder="https://example.com/image.jpg"
-                value={imageUrl}
-                onChange={(e) => handleImageUrlChange(e.target.value)}
-              />
-              {imagePreview && (
-                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border">
-                  <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => handleImageUrlChange("")}
-                    className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Paste an image URL or leave empty to use default placeholder.
-              </p>
-            </div>
-          </div>
+          <ImageUploader
+            value={imageUrl}
+            onChange={setImageUrl}
+            endpoint="/categories/upload"
+            label="Image (optional)"
+          />
           <button className="btn-primary h-11 w-full" disabled={submitting}>
             {submitting ? (
               <span className="flex items-center justify-center">
@@ -279,29 +247,12 @@ export const AdminCategoriesPage: React.FC = () => {
               onChange={(e) => setName(e.target.value)}
             />
           </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium">Image URL (optional)</label>
-            <div className="space-y-3">
-              <input
-                className="form-input"
-                placeholder="https://example.com/image.jpg"
-                value={imageUrl}
-                onChange={(e) => handleImageUrlChange(e.target.value)}
-              />
-              {imagePreview && (
-                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border">
-                  <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => handleImageUrlChange("")}
-                    className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          <ImageUploader
+            value={imageUrl}
+            onChange={setImageUrl}
+            endpoint="/categories/upload"
+            label="Image (optional)"
+          />
           <button className="btn-primary h-11 w-full" disabled={submitting}>
             {submitting ? (
               <span className="flex items-center justify-center">
