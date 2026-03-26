@@ -6,6 +6,7 @@ import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageLoading } from "../../components/ui/LoadingSpinner";
+import { ImageUploader } from "../../components/ui/ImageUploader";
 
 type Model = { 
   id: string; 
@@ -27,7 +28,6 @@ export const AdminModelsPage: React.FC = () => {
   const [name, setName] = React.useState("");
   const [brandId, setBrandId] = React.useState("");
   const [imageUrl, setImageUrl] = React.useState("");
-  const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const [gallery, setGallery] = React.useState<string[]>([]);
   const [newGalleryUrl, setNewGalleryUrl] = React.useState("");
   const [query, setQuery] = React.useState("");
@@ -61,7 +61,6 @@ export const AdminModelsPage: React.FC = () => {
     setName("");
     setBrandId("");
     setImageUrl("");
-    setImagePreview(null);
     setGallery([]);
     setNewGalleryUrl("");
   };
@@ -97,7 +96,6 @@ export const AdminModelsPage: React.FC = () => {
     setName(model.name);
     setBrandId(model.brand_id || "");
     setImageUrl(model.image_url || "");
-    setImagePreview(model.image_url || null);
     setGallery(model.gallery || []);
     setEditOpen(true);
   };
@@ -143,11 +141,6 @@ export const AdminModelsPage: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleImageUrlChange = (url: string) => {
-    setImageUrl(url);
-    setImagePreview(url || null);
   };
 
   const addGalleryImage = () => {
@@ -318,27 +311,12 @@ export const AdminModelsPage: React.FC = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <div>
-            <label className="mb-2 block text-sm font-medium">Image URL</label>
-            <input
-              className="form-input"
-              placeholder="https://example.com/model.jpg"
-              value={imageUrl}
-              onChange={(e) => handleImageUrlChange(e.target.value)}
-            />
-            {imagePreview && (
-              <div className="mt-2 relative aspect-video w-full overflow-hidden rounded-lg border border-border">
-                <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => handleImageUrlChange("")}
-                  className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
-                >
-                  ×
-                </button>
-              </div>
-            )}
-          </div>
+          <ImageUploader
+            value={imageUrl}
+            onChange={setImageUrl}
+            endpoint="/models/upload"
+            label="Image (optional)"
+          />
           <button className="btn-primary h-11 w-full" disabled={submitting}>
             {submitting ? (
               <span className="flex items-center justify-center">
@@ -373,27 +351,12 @@ export const AdminModelsPage: React.FC = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <div>
-            <label className="mb-2 block text-sm font-medium">Image URL</label>
-            <input
-              className="form-input"
-              placeholder="https://example.com/model.jpg"
-              value={imageUrl}
-              onChange={(e) => handleImageUrlChange(e.target.value)}
-            />
-            {imagePreview && (
-              <div className="mt-2 relative aspect-video w-full overflow-hidden rounded-lg border border-border">
-                <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => handleImageUrlChange("")}
-                  className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
-                >
-                  ×
-                </button>
-              </div>
-            )}
-          </div>
+          <ImageUploader
+            value={imageUrl}
+            onChange={setImageUrl}
+            endpoint="/models/upload"
+            label="Image (optional)"
+          />
           <div>
             <label className="mb-2 block text-sm font-medium">Gallery Images</label>
             <div className="flex gap-2">
