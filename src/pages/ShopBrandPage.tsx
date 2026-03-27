@@ -300,24 +300,34 @@ export const ShopBrandPage: React.FC = () => {
                               <p className="text-lg font-bold text-gray-900 dark:text-white">GHS {product.price.toLocaleString()}</p>
                             </div>
 
-                            <button
-                              onClick={() => handleAddToCart(product)}
-                              disabled={product.quantity === 0 || addedProducts.has(product.id)}
-                              className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all ${
-                                addedProducts.has(product.id)
-                                  ? "bg-green-500 text-white shadow-lg shadow-green-500/30"
-                                  : product.quantity === 0
-                                  ? "cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-400"
-                                  : "bg-gray-900 dark:bg-white dark:text-gray-900 text-white shadow-lg hover:bg-gray-800 dark:hover:bg-gray-100 active:scale-95"
-                              }`}
-                            >
-                              {addedProducts.has(product.id) ? (
-                                <Check className="h-5 w-5" />
-                              ) : (
-                                <ShoppingCart className="h-5 w-5" />
-                              )}
-                            </button>
+                            <div className="flex flex-col items-center gap-1">
+                              <button
+                                onClick={() => handleAddToCart(product)}
+                                disabled={product.quantity === 0 || addedProducts.has(product.id)}
+                                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-all ${
+                                  addedProducts.has(product.id)
+                                    ? "bg-green-500 text-white"
+                                    : product.quantity === 0
+                                    ? "cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-400"
+                                    : "bg-gray-900 dark:bg-white dark:text-gray-900 text-white hover:bg-gray-800 dark:hover:bg-gray-100"
+                                }`}
+                                title={addedProducts.has(product.id) ? "Added to cart" : "Add to cart"}
+                              >
+                                {addedProducts.has(product.id) ? (
+                                  <Check className="h-4 w-4" />
+                                ) : (
+                                  <ShoppingCart className="h-4 w-4" />
+                                )}
+                              </button>
+                              <span className="text-[10px] text-gray-400 dark:text-gray-500">Cart</span>
+                            </div>
                           </div>
+                          <button
+                            onClick={() => navigate(`/product/${product.id}`)}
+                            className="mt-3 w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all"
+                          >
+                            View Details
+                          </button>
                         </div>
                       </div>
                     );
