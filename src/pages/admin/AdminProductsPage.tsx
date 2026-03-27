@@ -562,25 +562,59 @@ export const AdminProductsPage: React.FC = () => {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <button
-                className="btn-outline h-10 w-10 p-0"
-                disabled={page <= 1}
-                onClick={() => loadProducts(page - 1)}
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <span className="text-sm">
-                Page <span className="font-semibold">{page}</span> of{" "}
-                <span className="font-semibold">{totalPages}</span>
-              </span>
-              <button
-                className="btn-outline h-10 w-10 p-0"
-                disabled={page >= totalPages}
-                onClick={() => loadProducts(page + 1)}
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
+            <div className="mt-6 flex flex-col items-center justify-between gap-4 border-t border-border pt-4 sm:flex-row">
+              <div className="text-sm text-muted-foreground">
+                Page <span className="font-medium text-foreground">{page}</span> of{" "}
+                <span className="font-medium text-foreground">{totalPages}</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => loadProducts(page - 1)}
+                  disabled={page <= 1}
+                  className="flex items-center gap-1 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (page <= 3) {
+                      pageNum = i + 1;
+                    } else if (page >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = page - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => loadProducts(pageNum)}
+                        className={`h-9 w-9 rounded-lg text-sm font-medium ${
+                          page === pageNum
+                            ? "bg-primary text-white"
+                            : "border border-border bg-background hover:bg-muted"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                <button
+                  onClick={() => loadProducts(page + 1)}
+                  disabled={page >= totalPages}
+                  className="flex items-center gap-1 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           )}
         </>
