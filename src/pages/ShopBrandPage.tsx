@@ -274,15 +274,6 @@ export const ShopBrandPage: React.FC = () => {
                               </span>
                             </div>
                           )}
-                          
-                          <button
-                            onClick={() => navigate(`/product/${product.id}`)}
-                            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
-                          >
-                            <span className="px-6 py-2.5 rounded-full bg-white/95 dark:bg-gray-900/95 text-gray-900 dark:text-white text-sm font-semibold shadow-xl backdrop-blur-sm transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                              View Details
-                            </span>
-                          </button>
                         </div>
 
                         <div className="p-5">
@@ -322,6 +313,13 @@ export const ShopBrandPage: React.FC = () => {
                               )}
                             </button>
                           </div>
+                          
+                          <button
+                            onClick={() => navigate(`/product/${product.id}`)}
+                            className="mt-3 w-full py-2.5 rounded-xl border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300"
+                          >
+                            View Details
+                          </button>
                         </div>
                       </div>
                     );
