@@ -1,10 +1,6 @@
 import React from "react";
-import { Edit3, Search, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Search, Loader2, Check, X } from "lucide-react";
 import api from "../../lib/api";
-import { Skeleton } from "../../components/ui/Skeleton";
-import { Modal } from "../../components/ui/Modal";
-import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageLoading } from "../../components/ui/LoadingSpinner";
@@ -25,57 +21,68 @@ const fallbackImage =
 export const AdminInventoryPage: React.FC = () => {
   const [items, setItems] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [adjustOpen, setAdjustOpen] = React.useState(false);
-  const [selected, setSelected] = React.useState<Product | null>(null);
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
-  const { push } = useToast();
-  const navigate = useNavigate();
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [editValue, setEditValue] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
 
-  const [adjustDelta, setAdjustDelta] = React.useState("");
-  const [adjustReason, setAdjustReason] = React.useState("restock");
-  const [adjustNote, setAdjustNote] = React.useState("");
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get<{ data: Product[] }>("/products?limit=1000");
+      setItems(res.data.data || []);
+      setLastUpdated(new Date());
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   React.useEffect(() => {
-    async function load() {
-      try {
-        const res = await api.get<Product[]>("/products");
-        setItems(Array.isArray(res.data) ? res.data : []);
-        setLastUpdated(new Date());
-      } catch {
-        setItems([]);
-      } finally {
-        setLoading(false);
-      }
-    }
     load();
-  }, []);
+  }, [load]);
 
   const filtered = items.filter((item) =>
     item.name.toLowerCase().includes(query.toLowerCase())
   );
-  const lowStock = items.filter((item) => item.quantity <= 5).slice(0, 5);
+  const lowStock = items.filter((item) => item.quantity <= 5 && item.quantity > 0);
+  const outOfStock = items.filter((item) => item.quantity === 0);
 
-  const onAdjust = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selected) return;
+  const startEdit = (item: Product) => {
+    setEditingId(item.id);
+    setEditValue(String(item.quantity));
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValue("");
+  };
+
+  const saveEdit = async (id: string) => {
+    setSaving(true);
     try {
-      await api.post("/inventory/adjust", {
-        product_id: selected.id,
-        delta: Number(adjustDelta),
-        reason: adjustReason,
-        note: adjustNote || null
+      await api.put(`/products/${id}`, {
+        quantity: Number(editValue)
       });
-      push("Inventory adjusted", "success");
-      setAdjustOpen(false);
-      setSelected(null);
-      setAdjustDelta("");
-      setAdjustReason("restock");
-      setAdjustNote("");
-      const res = await api.get<Product[]>("/products");
-      setItems(res.data);
+      setItems(items.map(item =>
+        item.id === id ? { ...item, quantity: Number(editValue) } : item
+      ));
+      setEditingId(null);
+      setEditValue("");
     } catch {
-      push("Failed to update inventory", "error");
+      console.error("Failed to update quantity");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, id: string) => {
+    if (e.key === "Enter") {
+      saveEdit(id);
+    } else if (e.key === "Escape") {
+      cancelEdit();
     }
   };
 
@@ -83,57 +90,36 @@ export const AdminInventoryPage: React.FC = () => {
     <div className="space-y-6 text-foreground">
       <PageHeader
         title="Inventory"
-        subtitle="Track stock levels and restock priorities."
+        subtitle="View and manage product stock levels."
         meta={
           <>
             {items.length} items
             {lastUpdated ? ` · Updated ${lastUpdated.toLocaleTimeString()}` : ""}
           </>
         }
-        actions={
-          <button className="btn-primary" onClick={() => navigate("/admin/products")}>
-            Add item
-          </button>
-        }
       />
 
-      {lowStock.length > 0 ? (
-        <div className="card p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold">Low stock alerts</div>
-              <div className="text-xs text-muted-foreground">
-                Reorder suggestions for fast-moving items.
-              </div>
-            </div>
-            <span className="text-xs text-muted-foreground">
-              {lowStock.length} items
-            </span>
+      {outOfStock.length > 0 && (
+        <div className="card border-red-200 bg-red-50 p-4">
+          <div className="text-sm font-semibold text-red-700">
+            Out of stock: {outOfStock.length} items
           </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {lowStock.map((item) => (
-              <div key={item.id} className="rounded-xl border border-border p-3">
-                <div className="text-sm font-semibold">{item.name}</div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Stock: {item.quantity}
-                </div>
-                <button
-                  className="btn-outline mt-3 h-8 text-xs"
-                  onClick={() => {
-                    setSelected(item);
-                    setAdjustDelta("");
-                    setAdjustReason("restock");
-                    setAdjustNote("");
-                    setAdjustOpen(true);
-                  }}
-                >
-                  Create restock
-                </button>
-              </div>
-            ))}
+          <div className="mt-2 text-xs text-red-600">
+            Consider restocking these items.
           </div>
         </div>
-      ) : null}
+      )}
+
+      {lowStock.length > 0 && (
+        <div className="card border-yellow-200 bg-yellow-50 p-4">
+          <div className="text-sm font-semibold text-yellow-700">
+            Low stock: {lowStock.length} items
+          </div>
+          <div className="mt-2 text-xs text-yellow-600">
+            These items have 5 or fewer units remaining.
+          </div>
+        </div>
+      )}
 
       <div className="card p-4">
         <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
@@ -146,10 +132,8 @@ export const AdminInventoryPage: React.FC = () => {
           />
         </div>
         {query ? (
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span className="rounded-full border border-border bg-background px-2.5 py-1">
-              Search: {query}
-            </span>
+          <div className="mt-3 text-xs text-muted-foreground">
+            Showing {filtered.length} results for "{query}"
           </div>
         ) : null}
 
@@ -158,13 +142,8 @@ export const AdminInventoryPage: React.FC = () => {
         ) : filtered.length === 0 ? (
           <div className="mt-6">
             <EmptyState
-              title="No inventory items found"
-              description="Try adjusting your search or add new products to stock."
-              action={
-                <button className="btn-primary h-10 text-sm" onClick={() => navigate("/admin/products")}>
-                  Add product
-                </button>
-              }
+              title="No products found"
+              description="Try adjusting your search."
             />
           </div>
         ) : (
@@ -174,10 +153,9 @@ export const AdminInventoryPage: React.FC = () => {
                 <tr>
                   <th>Image</th>
                   <th>Name</th>
-                  <th>Quantity</th>
                   <th>Category</th>
                   <th>Brand</th>
-                  <th className="text-right">Actions</th>
+                  <th className="text-center">Quantity</th>
                 </tr>
               </thead>
               <tbody>
@@ -190,24 +168,49 @@ export const AdminInventoryPage: React.FC = () => {
                         className="h-10 w-10 rounded-md object-cover"
                       />
                     </td>
-                    <td className="font-medium">{item.name}</td>
-                    <td>{item.quantity}</td>
+                    <td className="font-medium max-w-xs truncate">{item.name}</td>
                     <td>{item.categories?.name || "—"}</td>
                     <td>{item.brands?.name || "—"}</td>
-                    <td className="text-right">
-                      <button
-                        className="btn-outline h-8 px-3 text-xs"
-                        onClick={() => {
-                          setSelected(item);
-                          setAdjustDelta("");
-                          setAdjustReason("restock");
-                          setAdjustNote("");
-                          setAdjustOpen(true);
-                        }}
-                      >
-                        <Edit3 className="mr-1 h-4 w-4" />
-                        Adjust
-                      </button>
+                    <td className="text-center">
+                      {editingId === item.id ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            className="w-20 rounded border border-border bg-background px-2 py-1 text-center text-foreground outline-none"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, item.id)}
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => saveEdit(item.id)}
+                            disabled={saving}
+                            className="flex h-7 w-7 items-center justify-center rounded bg-green-500 text-white hover:bg-green-600 disabled:opacity-50"
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="flex h-7 w-7 items-center justify-center rounded bg-gray-500 text-white hover:bg-gray-600"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEdit(item)}
+                          className={`min-w-[60px] rounded px-3 py-1 text-center font-medium transition-colors ${
+                            item.quantity === 0
+                              ? "bg-red-100 text-red-700 hover:bg-red-200"
+                              : item.quantity <= 5
+                              ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                              : "bg-green-100 text-green-700 hover:bg-green-200"
+                          }`}
+                        >
+                          {item.quantity}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -216,45 +219,6 @@ export const AdminInventoryPage: React.FC = () => {
           </div>
         )}
       </div>
-
-      <Modal
-        open={adjustOpen}
-        onClose={() => setAdjustOpen(false)}
-        title="Adjust stock"
-      >
-        <form onSubmit={onAdjust} className="space-y-4">
-          <input
-            disabled
-            className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground"
-            value={selected?.name || ""}
-          />
-          <input
-            required
-            type="number"
-            className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
-            placeholder="Adjustment (e.g. 5 or -3)"
-            value={adjustDelta}
-            onChange={(e) => setAdjustDelta(e.target.value)}
-          />
-          <select
-            className="form-input"
-            value={adjustReason}
-            onChange={(e) => setAdjustReason(e.target.value)}
-          >
-            <option value="restock">Restock</option>
-            <option value="damage">Damaged stock</option>
-            <option value="correction">Stock correction</option>
-            <option value="transfer">Transfer</option>
-          </select>
-          <input
-            className="form-input"
-            placeholder="Note (optional)"
-            value={adjustNote}
-            onChange={(e) => setAdjustNote(e.target.value)}
-          />
-          <button className="btn-primary w-full">Update quantity</button>
-        </form>
-      </Modal>
     </div>
   );
 };
