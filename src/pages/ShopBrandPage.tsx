@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, ShoppingCart, Check, SlidersHorizontal, X, Package } from "lucide-react";
+import { ArrowLeft, Search, ShoppingCart, Check, SlidersHorizontal, X, Package, Star } from "lucide-react";
 import api from "../lib/api";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { WhatsAppButton } from "../components/ui/WhatsAppButton";
@@ -35,10 +35,6 @@ type Product = {
 type GroupedProduct = {
   model: Model;
   products: Product[];
-};
-
-type ProductWithModel = Product & {
-  modelImage?: string | null;
 };
 
 export const ShopBrandPage: React.FC = () => {
@@ -129,17 +125,15 @@ export const ShopBrandPage: React.FC = () => {
     loadData();
   }, [brandId, categoryId]);
 
-  const handleAddToCart = (product: Product & { modelImage?: string | null }) => {
+  const handleAddToCart = (product: Product) => {
     setAddedProducts(prev => new Set(prev).add(product.id));
-
     addToCart({
       id: product.id,
       name: product.name,
       price: product.price,
-      image: product.modelImage || ""
+      image: product.image_url || ""
     });
     push("Added to cart", "success");
-
     setTimeout(() => {
       setAddedProducts(prev => {
         const next = new Set(prev);
@@ -164,76 +158,76 @@ export const ShopBrandPage: React.FC = () => {
   const totalProducts = filteredGroups.reduce((sum, g) => sum + g.products.length, 0);
 
   const displayedProducts = React.useMemo(() => {
-    const all = filteredGroups.flatMap(group =>
-      group.products.map(p => ({
-        ...p,
-        modelImage: group.model.image_url
-      } as ProductWithModel))
+    const all = filteredGroups.flatMap(g => 
+      g.products.map(p => ({ ...p, _modelImage: g.model.image_url }))
     );
     return showAll ? all : all.slice(0, 24);
   }, [filteredGroups, showAll]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900">
       <PublicNavbar />
       <main className="mx-auto max-w-7xl px-4 pb-20 pt-24 sm:pt-28">
         {loading ? (
           <PageLoading text="Loading products..." />
         ) : error ? (
-          <div className="flex min-h-[50vh] items-center justify-center">
-            <div className="text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-                <Package className="h-8 w-8 text-red-500" />
+          <div className="flex min-h-[60vh] items-center justify-center">
+            <div className="text-center max-w-md mx-auto px-4">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-red-100 to-red-50 dark:from-red-900/30 dark:to-red-800/30 flex items-center justify-center">
+                <X className="w-10 h-10 text-red-500" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{error}</h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Please try again later.</p>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{error}</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-6">Please try again later.</p>
+              <button onClick={() => navigate(-1)} className="px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-all">
+                Go Back
+              </button>
             </div>
           </div>
         ) : (
           <>
-            <div className="mb-8">
+            <div className="mb-10">
               <button
                 onClick={() => navigate(categoryId ? `/shop/category/${categoryId}` : "/shop")}
-                className="group mb-6 inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                className="group inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors mb-6"
               >
-                <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                 Back to {category?.name || "Shop"}
               </button>
 
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
                 <div className="flex items-center gap-5">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800 shadow-lg">
-                    {brand?.logo_url ? (
-                      <img src={brand.logo_url} alt={brand.name} className="h-14 w-14 object-contain" />
-                    ) : (
-                      <span className="text-3xl font-bold text-gray-800 dark:text-white">{brand?.name?.charAt(0)}</span>
-                    )}
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl blur-xl"></div>
+                    <div className="relative w-20 h-20 rounded-2xl bg-white dark:bg-gray-800 shadow-xl shadow-gray-200/50 dark:shadow-none overflow-hidden flex items-center justify-center border border-gray-100 dark:border-gray-700">
+                      {brand?.logo_url ? (
+                        <img src={brand.logo_url} alt={brand.name} className="w-full h-full object-contain p-2" />
+                      ) : (
+                        <span className="text-3xl font-bold bg-gradient-to-br from-primary to-primary/60 bg-clip-text text-transparent">{brand?.name?.charAt(0)}</span>
+                      )}
+                    </div>
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{brand?.name}</h1>
+                    <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">{brand?.name}</h1>
                     <p className="mt-1 text-gray-500 dark:text-gray-400">
                       {category ? `${category.name} · ` : ""}
-                      <span className="font-medium text-gray-900 dark:text-white">{totalProducts}</span> products available
+                      <span className="font-semibold text-gray-900 dark:text-white">{totalProducts}</span> products available
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <div className="relative flex-1 sm:min-w-[320px]">
-                    <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
                       placeholder="Search products..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-12 w-full rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 pl-12 pr-10 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 shadow-sm transition-all focus:border-gray-900 dark:focus:border-white focus:outline-none focus:ring-2 focus:ring-gray-900/10 dark:focus:ring-white/10"
+                      className="w-full h-12 pl-12 pr-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                     />
                     {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery("")}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                      >
-                        <X className="h-4 w-4" />
+                      <button onClick={() => setSearchQuery("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <X className="w-4 h-4" />
                       </button>
                     )}
                   </div>
@@ -243,91 +237,91 @@ export const ShopBrandPage: React.FC = () => {
             </div>
 
             {filteredGroups.length === 0 ? (
-              <div className="flex min-h-[40vh] items-center justify-center">
+              <div className="flex min-h-[60vh] items-center justify-center">
                 <div className="text-center">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                    <Search className="h-8 w-8 text-gray-400" />
+                  <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                    <Search className="w-10 h-10 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">No products found</h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Try adjusting your search.</p>
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">No products found</h3>
+                  <p className="text-gray-500 dark:text-gray-400">Try adjusting your search.</p>
                 </div>
               </div>
             ) : (
               <>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {displayedProducts.map((product) => {
-                    const imageUrl = product.image_url || product.modelImage;
+                  {displayedProducts.map((product: any) => {
+                    const imageUrl = product.image_url || product._modelImage;
+                    const isAdded = addedProducts.has(product.id);
                     return (
                       <div
                         key={product.id}
-                        className="group relative overflow-hidden rounded-2xl bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50 transition-all hover:shadow-xl"
+                        className="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-2xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-700 overflow-hidden transition-all duration-500 hover:-translate-y-2"
                       >
-                        <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-700">
+                        <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
                           {imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt={product.name}
-                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            />
+                            <img src={imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center bg-gray-200 dark:bg-gray-600">
-                              <Package className="h-12 w-12 text-gray-400 dark:text-gray-500" />
+                            <div className="flex items-center justify-center h-full">
+                              <Package className="w-16 h-16 text-gray-300 dark:text-gray-600" />
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-
-                          {product.quantity === 0 && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                              <span className="rounded-full bg-white dark:bg-gray-900 px-4 py-1.5 text-sm font-semibold text-gray-900 dark:text-white">Out of Stock</span>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          
+                          {product.quantity <= 5 && product.quantity > 0 && (
+                            <div className="absolute left-3 top-3">
+                              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-500 to-orange-400 text-white text-xs font-bold shadow-lg shadow-orange-500/30">
+                                <Star className="w-3 h-3" /> Only {product.quantity} left
+                              </span>
                             </div>
                           )}
-
-                          {product.quantity > 0 && product.quantity <= 5 && (
-                            <div className="absolute left-3 top-3 rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">
-                              Only {product.quantity} left
-                            </div>
-                          )}
+                          
+                          <button
+                            onClick={() => navigate(`/product/${product.id}`)}
+                            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
+                          >
+                            <span className="px-6 py-2.5 rounded-full bg-white/95 dark:bg-gray-900/95 text-gray-900 dark:text-white text-sm font-semibold shadow-xl backdrop-blur-sm transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                              View Details
+                            </span>
+                          </button>
                         </div>
 
                         <div className="p-5">
-                          <h3 className="line-clamp-2 text-sm font-semibold text-gray-900 dark:text-white leading-snug">
+                          <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug mb-4 min-h-[2.5rem]">
                             {product.name}
                           </h3>
-
-                          <div className="mt-3 flex items-center justify-between">
+                          
+                          <div className="flex items-center justify-between">
                             <div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">Price</p>
-                              <p className="text-lg font-bold text-gray-900 dark:text-white">GHS {product.price.toLocaleString()}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Price</p>
+                              <p className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-200 bg-clip-text text-transparent">
+                                GHS {product.price.toLocaleString()}
+                              </p>
                             </div>
-
-                            <div className="flex flex-col items-center gap-1">
-                              <button
-                                onClick={() => handleAddToCart(product)}
-                                disabled={product.quantity === 0 || addedProducts.has(product.id)}
-                                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-all ${
-                                  addedProducts.has(product.id)
-                                    ? "bg-green-500 text-white"
-                                    : product.quantity === 0
-                                    ? "cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-400"
-                                    : "bg-gray-900 dark:bg-white dark:text-gray-900 text-white hover:bg-gray-800 dark:hover:bg-gray-100"
-                                }`}
-                                title={addedProducts.has(product.id) ? "Added to cart" : "Add to cart"}
-                              >
-                                {addedProducts.has(product.id) ? (
-                                  <Check className="h-4 w-4" />
-                                ) : (
-                                  <ShoppingCart className="h-4 w-4" />
-                                )}
-                              </button>
-                              <span className="text-[10px] text-gray-400 dark:text-gray-500">Cart</span>
-                            </div>
+                            
+                            <button
+                              onClick={() => handleAddToCart(product)}
+                              disabled={product.quantity === 0 || isAdded}
+                              className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 ${
+                                isAdded
+                                  ? "bg-green-500 text-white shadow-lg shadow-green-500/30"
+                                  : product.quantity === 0
+                                  ? "bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
+                                  : "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:shadow-lg hover:shadow-gray-900/20 dark:hover:shadow-white/20 active:scale-95"
+                              }`}
+                            >
+                              {isAdded ? (
+                                <>
+                                  <Check className="w-4 h-4" />
+                                  Added
+                                </>
+                              ) : (
+                                <>
+                                  <ShoppingCart className="w-4 h-4" />
+                                  Add
+                                </>
+                              )}
+                            </button>
                           </div>
-                          <button
-                            onClick={() => navigate(`/product/${product.id}`)}
-                            className="mt-3 w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all"
-                          >
-                            View Details
-                          </button>
                         </div>
                       </div>
                     );
@@ -338,9 +332,9 @@ export const ShopBrandPage: React.FC = () => {
                   <div className="mt-12 text-center">
                     <button
                       onClick={() => setShowAll(true)}
-                      className="inline-flex items-center gap-2 rounded-full bg-gray-900 dark:bg-white dark:text-gray-900 px-8 py-4 text-sm font-semibold text-white shadow-xl transition-all hover:bg-gray-800 dark:hover:bg-gray-100 active:scale-95"
+                      className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-gray-900 to-gray-800 dark:from-white dark:to-gray-100 text-white dark:text-gray-900 font-semibold shadow-xl shadow-gray-900/20 hover:shadow-2xl hover:shadow-gray-900/30 transition-all duration-300 hover:-translate-y-1 active:scale-95"
                     >
-                      <SlidersHorizontal className="h-4 w-4" />
+                      <SlidersHorizontal className="w-5 h-5" />
                       View all {totalProducts} products
                     </button>
                   </div>
