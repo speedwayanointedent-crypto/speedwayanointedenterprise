@@ -8,7 +8,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { PageLoading } from "../../components/ui/LoadingSpinner";
 import { ImageUploader } from "../../components/ui/ImageUploader";
 
-type Category = { id: string; name: string; image_url?: string | null };
+type Category = { id: string; name: string; image_url?: string | null; show_by_brand?: boolean };
 
 const fallbackImage = "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop";
 
@@ -21,6 +21,7 @@ export const AdminCategoriesPage: React.FC = () => {
   const [editing, setEditing] = React.useState<Category | null>(null);
   const [name, setName] = React.useState("");
   const [imageUrl, setImageUrl] = React.useState("");
+  const [showByBrand, setShowByBrand] = React.useState(true);
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const { push } = useToast();
@@ -45,13 +46,14 @@ export const AdminCategoriesPage: React.FC = () => {
   const resetForm = () => {
     setName("");
     setImageUrl("");
+    setShowByBrand(true);
   };
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await api.post("/categories", { name, image_url: imageUrl || null });
+      await api.post("/categories", { name, image_url: imageUrl || null, show_by_brand: showByBrand });
       push("Category created", "success");
       resetForm();
       setOpen(false);
@@ -67,6 +69,7 @@ export const AdminCategoriesPage: React.FC = () => {
     setEditing(category);
     setName(category.name);
     setImageUrl(category.image_url || "");
+    setShowByBrand(category.show_by_brand !== false);
     setEditOpen(true);
   };
 
@@ -75,7 +78,7 @@ export const AdminCategoriesPage: React.FC = () => {
     if (!editing) return;
     setSubmitting(true);
     try {
-      await api.put(`/categories/${editing.id}`, { name, image_url: imageUrl || null });
+      await api.put(`/categories/${editing.id}`, { name, image_url: imageUrl || null, show_by_brand: showByBrand });
       push("Category updated", "success");
       setEditOpen(false);
       setEditing(null);
@@ -224,6 +227,25 @@ export const AdminCategoriesPage: React.FC = () => {
             endpoint="/categories/upload"
             label="Image (optional)"
           />
+          <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
+            <div>
+              <p className="font-medium text-foreground">Show by brand</p>
+              <p className="text-xs text-muted-foreground">When enabled, products are organized by brand. Disable for general categories.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowByBrand(!showByBrand)}
+              className={`relative h-6 w-11 rounded-full transition-colors ${
+                showByBrand ? "bg-primary" : "bg-muted"
+              }`}
+            >
+              <span
+                className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                  showByBrand ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
           <button className="btn-primary h-11 w-full" disabled={submitting}>
             {submitting ? (
               <span className="flex items-center justify-center">
@@ -253,6 +275,25 @@ export const AdminCategoriesPage: React.FC = () => {
             endpoint="/categories/upload"
             label="Image (optional)"
           />
+          <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
+            <div>
+              <p className="font-medium text-foreground">Show by brand</p>
+              <p className="text-xs text-muted-foreground">When enabled, products are organized by brand. Disable for general categories.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowByBrand(!showByBrand)}
+              className={`relative h-6 w-11 rounded-full transition-colors ${
+                showByBrand ? "bg-primary" : "bg-muted"
+              }`}
+            >
+              <span
+                className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                  showByBrand ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
           <button className="btn-primary h-11 w-full" disabled={submitting}>
             {submitting ? (
               <span className="flex items-center justify-center">
