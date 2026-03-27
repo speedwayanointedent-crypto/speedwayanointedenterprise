@@ -58,6 +58,11 @@ type ProductsResponse = {
   pagination?: { total: number; totalPages: number; page: number };
 };
 
+type CategoryOption = {
+  id: string;
+  name: string;
+};
+
 const PRODUCTS_LIMIT = 60;
 
 const formatCurrency = (value: number) =>
@@ -86,6 +91,7 @@ const getFriendlyDate = (value?: string) => {
 export const AdminSalesPage: React.FC = () => {
   const [sales, setSales] = React.useState<SaleRecord[]>([]);
   const [products, setProducts] = React.useState<Product[]>([]);
+  const [categories, setCategories] = React.useState<CategoryOption[]>([]);
   const [loadingSales, setLoadingSales] = React.useState(true);
   const [loadingProducts, setLoadingProducts] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -129,10 +135,15 @@ export const AdminSalesPage: React.FC = () => {
     async (search = "") => {
       setLoadingProducts(true);
       try {
-        const res = await api.get<ProductsResponse>("/products", {
+        const res = await api.get<ProductsResponse | Product[]>("/products", {
           params: { limit: PRODUCTS_LIMIT, q: search || undefined }
         });
-        setProducts(Array.isArray(res.data?.data) ? res.data.data : []);
+        const rows = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.data)
+          ? res.data.data
+          : [];
+        setProducts(rows);
       } catch {
         setProducts([]);
         push("Failed to load products", "error");
@@ -142,6 +153,15 @@ export const AdminSalesPage: React.FC = () => {
     },
     [push]
   );
+
+  const loadCategories = React.useCallback(async () => {
+    try {
+      const res = await api.get<CategoryOption[]>("/categories");
+      setCategories(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setCategories([]);
+    }
+  }, []);
 
   const refreshPage = React.useCallback(async () => {
     setRefreshing(true);
@@ -157,6 +177,10 @@ export const AdminSalesPage: React.FC = () => {
     loadProducts(deferredCatalogQuery.trim());
   }, [deferredCatalogQuery, loadProducts]);
 
+  React.useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
   const productLookup = React.useMemo(() => {
     return new Map(products.map((product) => [product.id, product]));
   }, [products]);
@@ -170,14 +194,6 @@ export const AdminSalesPage: React.FC = () => {
   const todayItems = todaySales.reduce((sum, sale) => sum + sale.quantity, 0);
   const todayTransactions = todaySales.length;
   const avgTicket = todayTransactions ? todayRevenue / todayTransactions : 0;
-
-  const categories = React.useMemo(() => {
-    const values = new Set<string>();
-    products.forEach((product) => {
-      if (product.categories?.name) values.add(product.categories.name);
-    });
-    return Array.from(values).sort((a, b) => a.localeCompare(b));
-  }, [products]);
 
   const visibleProducts = React.useMemo(() => {
     const search = deferredCatalogQuery.trim().toLowerCase();
@@ -489,8 +505,8 @@ export const AdminSalesPage: React.FC = () => {
               >
                 <option value="all">All categories</option>
                 {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
+                  <option key={category.id} value={category.name}>
+                    {category.name}
                   </option>
                 ))}
               </select>
@@ -505,6 +521,11 @@ export const AdminSalesPage: React.FC = () => {
                 <EmptyState
                   title="No products found"
                   description="Try another search or category to find products to sell."
+                  action={
+                    <button className="btn-outline h-10 px-4" onClick={refreshPage}>
+                      Refresh products
+                    </button>
+                  }
                 />
               </div>
             ) : (
@@ -580,7 +601,7 @@ export const AdminSalesPage: React.FC = () => {
                           disabled={product.quantity <= 0}
                         >
                           <Plus className="h-4 w-4" />
-                          {product.quantity <= 0 ? "Unavailable" : "Add to sale"}
+                          {product.quantity <= 0 ? "Unavailable" : "Add Product"}
                         </button>
                       </div>
                     </div>
