@@ -16,13 +16,14 @@ import {
 } from "lucide-react";
 import api from "../../lib/api";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { Modal } from "../../components/ui/Modal";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { PageLoading } from "../../components/ui/LoadingSpinner";
 import { useToast } from "../../components/ui/Toast";
 
 type SaleRecord = {
   id: string;
-  product_id: string;
+  product_id?: string | null;
   product_name: string;
   quantity: number;
   unit_price: number;
@@ -43,7 +44,8 @@ type Product = {
 };
 
 type CartItem = {
-  product_id: string;
+  id: string;
+  product_id?: string | null;
   product_name: string;
   quantity: number;
   unit_price: number;
@@ -51,6 +53,7 @@ type CartItem = {
   image_url?: string | null;
   category?: string;
   brand?: string;
+  isManual?: boolean;
 };
 
 type ProductsResponse = {
@@ -96,6 +99,7 @@ export const AdminSalesPage: React.FC = () => {
   const [loadingProducts, setLoadingProducts] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [saleModalOpen, setSaleModalOpen] = React.useState(false);
   const [cartItems, setCartItems] = React.useState<CartItem[]>([]);
   const [catalogQuery, setCatalogQuery] = React.useState("");
   const [salesQuery, setSalesQuery] = React.useState("");
@@ -104,6 +108,9 @@ export const AdminSalesPage: React.FC = () => {
   );
   const [selectedCategory, setSelectedCategory] = React.useState("all");
   const [note, setNote] = React.useState("");
+  const [manualName, setManualName] = React.useState("");
+  const [manualPrice, setManualPrice] = React.useState("");
+  const [manualQuantity, setManualQuantity] = React.useState("1");
   const deferredCatalogQuery = React.useDeferredValue(catalogQuery);
   const { push } = useToast();
 
@@ -114,8 +121,8 @@ export const AdminSalesPage: React.FC = () => {
       const rows = Array.isArray(res.data) ? res.data : [];
       const mapped = rows.map((sale) => ({
         id: String(sale.id),
-        product_id: sale.product_id,
-        product_name: sale.products?.name || "Unknown Product",
+        product_id: sale.product_id || null,
+        product_name: sale.product_name || sale.products?.name || "Unknown Product",
         quantity: Number(sale.quantity || 0),
         unit_price: Number(sale.price || 0),
         total: Number(sale.total || 0),
@@ -257,7 +264,7 @@ export const AdminSalesPage: React.FC = () => {
     }
 
     setCartItems((current) => {
-      const existing = current.find((item) => item.product_id === product.id);
+      const existing = current.find((item) => item.product_id === product.id && !item.isManual);
       if (existing) {
         if (existing.quantity >= product.quantity) {
           push(`Only ${product.quantity} unit(s) available for ${product.name}`, "error");
@@ -273,6 +280,7 @@ export const AdminSalesPage: React.FC = () => {
       return [
         ...current,
         {
+          id: crypto.randomUUID(),
           product_id: product.id,
           product_name: product.name,
           quantity: 1,
@@ -280,21 +288,60 @@ export const AdminSalesPage: React.FC = () => {
           availableStock: product.quantity,
           image_url: product.models?.image_url || product.image_url || null,
           category: product.categories?.name,
-          brand: product.brands?.name
+          brand: product.brands?.name,
+          isManual: false
         }
       ];
     });
   };
 
-  const updateCartQuantity = (productId: string, nextQuantity: number) => {
+  const addManualItemToCart = () => {
+    const trimmedName = manualName.trim();
+    const quantity = Number(manualQuantity);
+    const price = Number(manualPrice);
+
+    if (!trimmedName) {
+      push("Enter a product name for the manual sale", "error");
+      return;
+    }
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      push("Enter a valid quantity", "error");
+      return;
+    }
+    if (!Number.isFinite(price) || price <= 0) {
+      push("Enter a valid price", "error");
+      return;
+    }
+
+    setCartItems((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        product_id: null,
+        product_name: trimmedName,
+        quantity,
+        unit_price: price,
+        availableStock: Number.MAX_SAFE_INTEGER,
+        isManual: true
+      }
+    ]);
+    setManualName("");
+    setManualPrice("");
+    setManualQuantity("1");
+  };
+
+  const updateCartQuantity = (itemId: string, nextQuantity: number) => {
     setCartItems((current) => {
       if (nextQuantity <= 0) {
-        return current.filter((item) => item.product_id !== productId);
+        return current.filter((item) => item.id !== itemId);
       }
 
       return current.map((item) => {
-        if (item.product_id !== productId) return item;
-        const available = productLookup.get(productId)?.quantity ?? item.availableStock;
+        if (item.id !== itemId) return item;
+        if (item.isManual || !item.product_id) {
+          return { ...item, quantity: nextQuantity };
+        }
+        const available = productLookup.get(item.product_id)?.quantity ?? item.availableStock;
         if (nextQuantity > available) {
           push(`Only ${available} unit(s) available for ${item.product_name}`, "error");
           return { ...item, availableStock: available };
@@ -304,23 +351,26 @@ export const AdminSalesPage: React.FC = () => {
     });
   };
 
-  const updateCartPrice = (productId: string, nextPrice: string) => {
+  const updateCartPrice = (itemId: string, nextPrice: string) => {
     const parsed = Number(nextPrice);
     if (Number.isNaN(parsed) || parsed < 0) return;
     setCartItems((current) =>
       current.map((item) =>
-        item.product_id === productId ? { ...item, unit_price: parsed } : item
+        item.id === itemId ? { ...item, unit_price: parsed } : item
       )
     );
   };
 
-  const removeCartItem = (productId: string) => {
-    setCartItems((current) => current.filter((item) => item.product_id !== productId));
+  const removeCartItem = (itemId: string) => {
+    setCartItems((current) => current.filter((item) => item.id !== itemId));
   };
 
   const clearSaleBuilder = () => {
     setCartItems([]);
     setNote("");
+    setManualName("");
+    setManualPrice("");
+    setManualQuantity("1");
   };
 
   const completeSale = async () => {
@@ -330,9 +380,9 @@ export const AdminSalesPage: React.FC = () => {
     }
 
     for (const item of cartItems) {
-      const liveProduct = productLookup.get(item.product_id);
+      const liveProduct = item.product_id ? productLookup.get(item.product_id) : null;
       const available = liveProduct?.quantity ?? item.availableStock;
-      if (item.quantity > available) {
+      if (!item.isManual && item.product_id && item.quantity > available) {
         push(`Only ${available} unit(s) available for ${item.product_name}`, "error");
         return;
       }
@@ -346,7 +396,8 @@ export const AdminSalesPage: React.FC = () => {
     try {
       for (const item of cartItems) {
         await api.post("/sales", {
-          product_id: item.product_id,
+          product_id: item.product_id || null,
+          product_name: item.isManual ? item.product_name : null,
           quantity: item.quantity,
           price: item.unit_price,
           note: note.trim() || null
@@ -358,6 +409,7 @@ export const AdminSalesPage: React.FC = () => {
         "success"
       );
       clearSaleBuilder();
+      setSaleModalOpen(false);
       await Promise.all([loadSales(), loadProducts(deferredCatalogQuery.trim())]);
     } catch (error: any) {
       push(error?.response?.data?.error || "Failed to complete sale", "error");
@@ -371,12 +423,13 @@ export const AdminSalesPage: React.FC = () => {
   const topProducts = React.useMemo(() => {
     const bucket = new Map<string, { name: string; quantity: number; total: number }>();
     sales.forEach((sale) => {
-      const current = bucket.get(sale.product_id) || {
+      const key = sale.product_id || `manual:${sale.product_name}`;
+      const current = bucket.get(key) || {
         name: sale.product_name,
         quantity: 0,
         total: 0
       };
-      bucket.set(sale.product_id, {
+      bucket.set(key, {
         name: current.name,
         quantity: current.quantity + sale.quantity,
         total: current.total + sale.total
@@ -394,18 +447,27 @@ export const AdminSalesPage: React.FC = () => {
         subtitle="Run in-store sales with a faster product picker, a live cart, and cleaner checkout."
         meta={`${sales.length} sales recorded`}
         actions={
-          <button
-            className="btn-outline h-10 gap-2 px-4 text-sm"
-            onClick={refreshPage}
-            disabled={refreshing}
-          >
-            {refreshing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCcw className="h-4 w-4" />
-            )}
-            Refresh
-          </button>
+          <>
+            <button
+              className="btn-outline h-10 gap-2 px-4 text-sm"
+              onClick={refreshPage}
+              disabled={refreshing}
+            >
+              {refreshing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCcw className="h-4 w-4" />
+              )}
+              Refresh
+            </button>
+            <button
+              className="btn-primary h-10 gap-2 px-4 text-sm"
+              onClick={() => setSaleModalOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              Add Sale
+            </button>
+          </>
         }
       />
 
@@ -709,7 +771,7 @@ export const AdminSalesPage: React.FC = () => {
                   {cartItems.map((item) => {
                     const lineTotal = item.quantity * item.unit_price;
                     return (
-                      <div key={item.product_id} className="rounded-2xl border border-border bg-background p-3">
+                      <div key={item.id} className="rounded-2xl border border-border bg-background p-3">
                         <div className="flex items-start gap-3">
                           <div className="h-16 w-16 overflow-hidden rounded-xl bg-muted/50">
                             {item.image_url ? (
@@ -730,12 +792,14 @@ export const AdminSalesPage: React.FC = () => {
                               <div>
                                 <p className="line-clamp-2 font-medium">{item.product_name}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  {[item.category, item.brand].filter(Boolean).join(" | ") || "Store product"}
+                                  {item.isManual
+                                    ? "Manual sale item"
+                                    : [item.category, item.brand].filter(Boolean).join(" | ") || "Store product"}
                                 </p>
                               </div>
                               <button
                                 className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
-                                onClick={() => removeCartItem(item.product_id)}
+                                onClick={() => removeCartItem(item.id)}
                                 aria-label={`Remove ${item.product_name}`}
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -750,7 +814,7 @@ export const AdminSalesPage: React.FC = () => {
                                 <div className="inline-flex items-center rounded-xl border border-border bg-card">
                                   <button
                                     className="px-3 py-2 text-muted-foreground hover:text-foreground"
-                                    onClick={() => updateCartQuantity(item.product_id, item.quantity - 1)}
+                                    onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
                                   >
                                     <Minus className="h-4 w-4" />
                                   </button>
@@ -759,14 +823,20 @@ export const AdminSalesPage: React.FC = () => {
                                   </span>
                                   <button
                                     className="px-3 py-2 text-muted-foreground hover:text-foreground"
-                                    onClick={() => updateCartQuantity(item.product_id, item.quantity + 1)}
+                                    onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
                                   >
                                     <Plus className="h-4 w-4" />
                                   </button>
                                 </div>
-                                <p className="mt-1 text-[11px] text-muted-foreground">
-                                  {item.availableStock} available
-                                </p>
+                                {!item.isManual ? (
+                                  <p className="mt-1 text-[11px] text-muted-foreground">
+                                    {item.availableStock} available
+                                  </p>
+                                ) : (
+                                  <p className="mt-1 text-[11px] text-muted-foreground">
+                                    Not linked to inventory
+                                  </p>
+                                )}
                               </div>
 
                               <div>
@@ -780,7 +850,7 @@ export const AdminSalesPage: React.FC = () => {
                                   className="form-input h-10 w-full"
                                   value={item.unit_price}
                                   onChange={(event) =>
-                                    updateCartPrice(item.product_id, event.target.value)
+                                    updateCartPrice(item.id, event.target.value)
                                   }
                                 />
                               </div>
@@ -912,6 +982,219 @@ export const AdminSalesPage: React.FC = () => {
           </div>
         </aside>
       </div>
+
+      <Modal
+        open={saleModalOpen}
+        onClose={() => setSaleModalOpen(false)}
+        title="Add Sale"
+        size="lg"
+      >
+        <div className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Select From Products
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Pick an item already in inventory, or add a manual sale below.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 lg:flex-row">
+                <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-background px-3 py-2">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <input
+                    className="w-full bg-transparent outline-none"
+                    placeholder="Search products..."
+                    value={catalogQuery}
+                    onChange={(event) => setCatalogQuery(event.target.value)}
+                  />
+                </div>
+                <select
+                  className="form-input h-11 min-w-[200px]"
+                  value={selectedCategory}
+                  onChange={(event) => setSelectedCategory(event.target.value)}
+                >
+                  <option value="all">All categories</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.name}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="max-h-[26rem] space-y-3 overflow-y-auto pr-1">
+                {loadingProducts ? (
+                  <PageLoading text="Loading products..." />
+                ) : visibleProducts.length === 0 ? (
+                  <EmptyState
+                    title="No products found"
+                    description="Try another search or category, or use the manual sale form."
+                  />
+                ) : (
+                  visibleProducts.slice(0, 20).map((product) => (
+                    <div
+                      key={product.id}
+                      className="flex items-center justify-between rounded-2xl border border-border p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{product.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {[product.categories?.name, product.brands?.name].filter(Boolean).join(" | ") || "Store product"}
+                        </p>
+                        <p className="mt-1 text-sm font-semibold">{formatCurrency(product.price)}</p>
+                      </div>
+                      <div className="ml-4 flex items-center gap-3">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getStockTone(
+                            product.quantity
+                          )}`}
+                        >
+                          {product.quantity <= 0 ? "Out" : `${product.quantity} in stock`}
+                        </span>
+                        <button
+                          className="btn-primary h-10 px-4 text-sm"
+                          onClick={() => addProductToCart(product)}
+                          disabled={product.quantity <= 0}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Manual Sale
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Use this when the product is not yet in the database. Manual sales do not affect inventory.
+                </p>
+
+                <div className="mt-4 space-y-3">
+                  <input
+                    className="form-input w-full"
+                    placeholder="Type product name"
+                    value={manualName}
+                    onChange={(event) => setManualName(event.target.value)}
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="number"
+                      min="1"
+                      className="form-input w-full"
+                      placeholder="Qty"
+                      value={manualQuantity}
+                      onChange={(event) => setManualQuantity(event.target.value)}
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="form-input w-full"
+                      placeholder="Price"
+                      value={manualPrice}
+                      onChange={(event) => setManualPrice(event.target.value)}
+                    />
+                  </div>
+                  <button className="btn-outline h-11 w-full" onClick={addManualItemToCart}>
+                    Add Manual Item
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">Cart</h3>
+                    <p className="text-sm text-muted-foreground">{cartCount} item(s)</p>
+                  </div>
+                  {cartItems.length > 0 ? (
+                    <button className="btn-outline h-9 px-3 text-xs" onClick={clearSaleBuilder}>
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
+
+                {cartItems.length === 0 ? (
+                  <div className="mt-4">
+                    <EmptyState
+                      title="No items added yet"
+                      description="Add products or type a manual sale item."
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    {cartItems.map((item) => (
+                      <div key={item.id} className="rounded-xl border border-border bg-background p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{item.product_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.isManual ? "Manual sale item" : "Inventory product"}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Qty {item.quantity} | {formatCurrency(item.unit_price)} each
+                            </p>
+                          </div>
+                          <button
+                            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
+                            onClick={() => removeCartItem(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <textarea
+                      className="form-input min-h-[90px] w-full resize-none"
+                      placeholder="Optional note for this sale"
+                      value={note}
+                      onChange={(event) => setNote(event.target.value)}
+                    />
+
+                    <div className="rounded-xl border border-border bg-muted/20 p-4">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Items</span>
+                        <span className="font-medium">{cartCount}</span>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between text-lg font-bold">
+                        <span>Total</span>
+                        <span>{formatCurrency(subtotal)}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      className="btn-primary h-12 w-full gap-2"
+                      onClick={completeSale}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Processing sale...
+                        </>
+                      ) : (
+                        <>
+                          Create Sale
+                          <ArrowRight className="h-4 w-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
