@@ -146,6 +146,15 @@ export const AdminSalesPage: React.FC = () => {
       return;
     }
 
+    // Check stock levels before selling
+    for (const item of cartItems) {
+      const product = searchResults.find(p => p.id === item.product_id);
+      if (product && item.quantity > product.quantity) {
+        push(`Insufficient stock for ${item.product_name}. Only ${product.quantity} available.`, "error");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       for (const item of cartItems) {
@@ -358,7 +367,18 @@ export const AdminSalesPage: React.FC = () => {
                     }}
                     className="cursor-pointer border-b border-border/50 p-3 hover:bg-muted/50 last:border-0"
                   >
-                    <div className="font-medium">{product.name}</div>
+                    <div className="flex items-center justify-between">
+                      <div className="font-medium">{product.name}</div>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                        product.quantity === 0
+                          ? "bg-red-100 text-red-700"
+                          : product.quantity <= 5
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-green-100 text-green-700"
+                      }`}>
+                        Stock: {product.quantity}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       {product.brands?.name} · {product.categories?.name}
                       <span className="font-semibold text-foreground">
@@ -373,7 +393,18 @@ export const AdminSalesPage: React.FC = () => {
 
           {selectedProduct && (
             <div className="rounded-lg border border-primary/50 bg-primary/5 p-3">
-              <div className="font-medium">{selectedProduct.name}</div>
+              <div className="flex items-center justify-between">
+                <div className="font-medium">{selectedProduct.name}</div>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                  selectedProduct.quantity === 0
+                    ? "bg-red-100 text-red-700"
+                    : selectedProduct.quantity <= 5
+                    ? "bg-yellow-100 text-yellow-700"
+                    : "bg-green-100 text-green-700"
+                }`}>
+                  Stock: {selectedProduct.quantity}
+                </span>
+              </div>
               <div className="text-xs text-muted-foreground">
                 {selectedProduct.brands?.name} · {selectedProduct.categories?.name}
               </div>
