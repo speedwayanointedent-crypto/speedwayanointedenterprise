@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Edit3, Loader2, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Search, Edit3, Loader2, ChevronLeft, ChevronRight, Filter, X } from "lucide-react";
 import api from "../../lib/api";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Modal } from "../../components/ui/Modal";
@@ -110,12 +110,13 @@ export const AdminInventoryPage: React.FC = () => {
     setPage(1);
   };
 
-  const filtered = items.filter((item) =>
-    item.name.toLowerCase().includes(query.toLowerCase())
-  );
+  const hasFilters = query || filterCategory || filterBrand;
 
   const lowStock = items.filter((item) => item.quantity <= 5 && item.quantity > 0).length;
   const outOfStock = items.filter((item) => item.quantity === 0).length;
+
+  const startItem = (page - 1) * PRODUCTS_PER_PAGE + 1;
+  const endItem = Math.min(page * PRODUCTS_PER_PAGE, totalProducts);
 
   return (
     <div className="space-y-6 text-foreground">
@@ -126,14 +127,16 @@ export const AdminInventoryPage: React.FC = () => {
       />
 
       {(outOfStock > 0 || lowStock > 0) && (
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           {outOfStock > 0 && (
-            <div className="card border-red-200 bg-red-50 px-4 py-2">
+            <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2">
+              <span className="h-2 w-2 rounded-full bg-red-500"></span>
               <span className="text-sm font-medium text-red-700">Out of stock: {outOfStock}</span>
             </div>
           )}
           {lowStock > 0 && (
-            <div className="card border-yellow-200 bg-yellow-50 px-4 py-2">
+            <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2">
+              <span className="h-2 w-2 rounded-full bg-yellow-500"></span>
               <span className="text-sm font-medium text-yellow-700">Low stock: {lowStock}</span>
             </div>
           )}
@@ -141,29 +144,43 @@ export const AdminInventoryPage: React.FC = () => {
       )}
 
       <div className="card p-4">
-        <div className="flex flex-wrap gap-3">
-          <div className="flex flex-1 items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-            <Search className="h-4 w-4" />
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+          <div className="flex flex-1 items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
+            <Search className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
             <input
               className="w-full bg-transparent outline-none"
               placeholder="Search products..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
+            {query && (
+              <button onClick={() => setQuery("")} className="text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`btn-outline h-10 gap-2 ${showFilters ? "bg-primary/10" : ""}`}
+            className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+              showFilters || filterCategory || filterBrand
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-background text-foreground hover:bg-muted"
+            }`}
           >
             <Filter className="h-4 w-4" />
             Filters
+            {(filterCategory || filterBrand) && (
+              <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-white">
+                {(filterCategory ? 1 : 0) + (filterBrand ? 1 : 0)}
+              </span>
+            )}
           </button>
         </div>
 
         {showFilters && (
-          <div className="mt-4 flex flex-wrap gap-3 rounded-lg border border-border bg-muted/30 p-4">
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/30 p-4">
             <select
-              className="form-input w-48"
+              className="min-w-[180px] rounded-lg border border-border bg-background px-3 py-2 text-sm"
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
             >
@@ -173,7 +190,7 @@ export const AdminInventoryPage: React.FC = () => {
               ))}
             </select>
             <select
-              className="form-input w-48"
+              className="min-w-[180px] rounded-lg border border-border bg-background px-3 py-2 text-sm"
               value={filterBrand}
               onChange={(e) => setFilterBrand(e.target.value)}
             >
@@ -182,48 +199,57 @@ export const AdminInventoryPage: React.FC = () => {
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
             </select>
-            <button onClick={clearFilters} className="btn-outline h-10 text-sm">
-              Clear
-            </button>
+            {hasFilters && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 hover:bg-red-100"
+              >
+                <X className="h-3 w-3" />
+                Clear all
+              </button>
+            )}
           </div>
         )}
 
         {loading ? (
-          <PageLoading text="Loading inventory..." />
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            title="No products found"
-            description={query || filterCategory || filterBrand ? "Try adjusting your filters." : "Add products to your inventory."}
-          />
+          <div className="py-12">
+            <PageLoading text="Loading inventory..." />
+          </div>
+        ) : items.length === 0 ? (
+          <div className="py-12">
+            <EmptyState
+              title="No products found"
+              description={hasFilters ? "Try adjusting your filters." : "Add products to your inventory."}
+            />
+          </div>
         ) : (
           <>
             <div className="mt-6 overflow-x-auto">
-              <table className="table text-sm">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr>
-                    <th>Image</th>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Brand</th>
-                    <th className="text-center">Quantity</th>
-                    <th className="text-right">Action</th>
+                  <tr className="border-b border-border text-left">
+                    <th className="pb-3 font-medium text-muted-foreground">Product</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Category</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Brand</th>
+                    <th className="pb-3 text-center font-medium text-muted-foreground">Quantity</th>
+                    <th className="pb-3 text-right font-medium text-muted-foreground">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((item) => (
-                    <tr key={item.id}>
-                      <td>
+                  {items.map((item) => (
+                    <tr key={item.id} className="border-b border-border/50 hover:bg-muted/30">
+                      <td className="flex items-center gap-3 py-3">
                         <img
                           src={item.image_url || fallbackImage}
                           alt={item.name}
-                          className="h-10 w-10 rounded-md object-cover"
+                          className="h-10 w-10 flex-shrink-0 rounded-lg object-cover"
                         />
+                        <span className="line-clamp-1 font-medium">{item.name}</span>
                       </td>
-                      <td className="font-medium max-w-xs truncate">{item.name}</td>
-                      <td>{item.categories?.name || "—"}</td>
-                      <td>{item.brands?.name || "—"}</td>
-                      <td className="text-center">
-                        <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
+                      <td className="py-3 text-muted-foreground">{item.categories?.name || "—"}</td>
+                      <td className="py-3 text-muted-foreground">{item.brands?.name || "—"}</td>
+                      <td className="py-3 text-center">
+                        <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
                           item.quantity === 0
                             ? "bg-red-100 text-red-700"
                             : item.quantity <= 5
@@ -233,10 +259,10 @@ export const AdminInventoryPage: React.FC = () => {
                           {item.quantity}
                         </span>
                       </td>
-                      <td className="text-right">
+                      <td className="py-3 text-right">
                         <button
                           onClick={() => openEdit(item)}
-                          className="btn-outline h-8 gap-1 px-3 text-xs"
+                          className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20"
                         >
                           <Edit3 className="h-3 w-3" />
                           Edit
@@ -248,20 +274,24 @@ export const AdminInventoryPage: React.FC = () => {
               </table>
             </div>
 
-            {totalPages > 1 && (
-              <div className="mt-4 flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                  Showing {((page - 1) * PRODUCTS_PER_PAGE) + 1} - {Math.min(page * PRODUCTS_PER_PAGE, totalProducts)} of {totalProducts}
-                </div>
-                <div className="flex gap-2">
+            <div className="mt-6 flex flex-col items-center justify-between gap-4 border-t border-border pt-4 sm:flex-row">
+              <div className="text-sm text-muted-foreground">
+                Showing <span className="font-medium text-foreground">{startItem}</span> to{" "}
+                <span className="font-medium text-foreground">{endItem}</span> of{" "}
+                <span className="font-medium text-foreground">{totalProducts}</span> products
+              </div>
+              
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="btn-outline h-9 gap-1 px-3 disabled:opacity-50"
+                    className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ChevronLeft className="h-4 w-4" />
-                    Prev
+                    Previous
                   </button>
+                  
                   <div className="flex items-center gap-1">
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                       let pageNum;
@@ -278,10 +308,10 @@ export const AdminInventoryPage: React.FC = () => {
                         <button
                           key={pageNum}
                           onClick={() => setPage(pageNum)}
-                          className={`h-9 w-9 rounded-md text-sm ${
+                          className={`h-9 w-9 rounded-lg text-sm font-medium ${
                             page === pageNum
                               ? "bg-primary text-white"
-                              : "btn-outline"
+                              : "border border-border bg-background hover:bg-muted"
                           }`}
                         >
                           {pageNum}
@@ -289,17 +319,18 @@ export const AdminInventoryPage: React.FC = () => {
                       );
                     })}
                   </div>
+                  
                   <button
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
-                    className="btn-outline h-9 gap-1 px-3 disabled:opacity-50"
+                    className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Next
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </>
         )}
       </div>
@@ -307,8 +338,8 @@ export const AdminInventoryPage: React.FC = () => {
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Quantity">
         <div className="space-y-4">
           <div className="rounded-lg border border-border bg-muted/30 p-3">
-            <div className="text-sm font-medium">{editing?.name}</div>
-            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="font-medium">{editing?.name}</div>
+            <div className="mt-1 text-xs text-muted-foreground">
               {editing?.categories?.name} · {editing?.brands?.name}
             </div>
           </div>
@@ -317,7 +348,7 @@ export const AdminInventoryPage: React.FC = () => {
             <input
               type="number"
               min="0"
-              className="form-input w-full"
+              className="w-full rounded-lg border border-border bg-background px-4 py-3 text-lg outline-none focus:border-primary"
               value={editQuantity}
               onChange={(e) => setEditQuantity(e.target.value)}
               autoFocus
@@ -326,9 +357,9 @@ export const AdminInventoryPage: React.FC = () => {
           <button
             onClick={saveEdit}
             disabled={saving}
-            className="btn-primary w-full"
+            className="w-full rounded-lg bg-primary py-3 font-medium text-white hover:bg-primary/90 disabled:opacity-50"
           >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
+            {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </Modal>
