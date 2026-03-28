@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./lib/theme";
 import { ToastProvider } from "./components/ui/Toast";
@@ -47,6 +47,7 @@ const App: React.FC = () => {
           <Route path="/shop/category/:categoryId" element={<ShopCategoryPage />} />
           <Route path="/shop/brand/:brandId" element={<ShopBrandPage />} />
           <Route path="/shop/model/:modelId" element={<ShopProductsPage />} />
+          <Route path="/shop/products" element={<ShopProductsPage />} />
           <Route path="/product/:id" element={<ProductDetailsPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
