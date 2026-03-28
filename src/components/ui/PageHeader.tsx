@@ -17,22 +17,22 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   meta,
   size = "md"
 }) => {
-  const titleClass = size === "lg" ? "text-3xl sm:text-4xl" : "text-xl sm:text-2xl";
+  const titleClass = size === "lg" ? "text-2xl sm:text-3xl lg:text-4xl" : "text-xl sm:text-2xl";
   return (
-    <div className="section-header">
-      <div>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
         {kicker ? (
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">
             {kicker}
           </p>
         ) : null}
-        <h1 className={`${titleClass} font-bold text-foreground text-balance`}>{title}</h1>
+        <h1 className={`${titleClass} font-bold text-foreground`}>{title}</h1>
         {subtitle ? (
-          <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
+          <p className="mt-1.5 text-sm text-muted-foreground max-w-2xl">{subtitle}</p>
         ) : null}
         {meta ? <div className="mt-2 text-xs text-muted-foreground">{meta}</div> : null}
       </div>
-      {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
+      {actions ? <div className="flex flex-wrap gap-2 flex-shrink-0">{actions}</div> : null}
     </div>
   );
 };
