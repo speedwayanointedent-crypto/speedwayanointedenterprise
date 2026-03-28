@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "./lib/theme";
 import { ToastProvider } from "./components/ui/Toast";
 import { DashboardShell } from "./components/layout/Shell";
@@ -36,10 +36,19 @@ import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
 import { AdminAuditLogsPage } from "./pages/admin/AdminAuditLogsPage";
 import { AdminSystemHealthPage } from "./pages/admin/AdminSystemHealthPage";
 
+const ScrollToTop: React.FC = () => {
+  const { pathname } = useLocation();
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [pathname]);
+  return null;
+};
+
 const App: React.FC = () => {
   return (
     <ThemeProvider>
       <ToastProvider>
+        <ScrollToTop />
         <Routes>
           {/* Public shop */}
           <Route path="/" element={<LandingPage />} />
