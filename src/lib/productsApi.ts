@@ -23,6 +23,10 @@ function normalizeProduct(raw: any): Product {
     brand_id: raw.brand_id ?? null,
     model_id: raw.model_id ?? null,
     year_id: raw.year_id ?? null,
+    gallery: Array.isArray(raw.gallery) ? raw.gallery.map((g: any) => ({
+      url: String(g.url || ''),
+      type: g.type === 'video' ? 'video' : 'image'
+    })).filter((g: any) => g.url) : [],
     categories: raw.categories ? { id: String(raw.categories.id || ''), name: String(raw.categories.name || '') } : undefined,
     brands: raw.brands ? { id: String(raw.brands.id || ''), name: String(raw.brands.name || '') } : undefined,
     models: raw.models ? { id: String(raw.models.id || ''), name: String(raw.models.name || ''), image_url: raw.models.image_url ?? null } : undefined,
