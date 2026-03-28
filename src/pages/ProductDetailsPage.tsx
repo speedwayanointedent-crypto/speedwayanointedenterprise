@@ -1,16 +1,19 @@
 import React from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ShieldCheck, Truck, CheckCircle2, Heart, ShoppingCart, ChevronLeft, ChevronRight, X, Star, Minus, Plus, Package } from "lucide-react";
+import { ShieldCheck, Truck, CheckCircle2, Heart, ShoppingCart, ChevronLeft, ChevronRight, X, Star, Minus, Plus, Package, Video } from "lucide-react";
 import api from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { addToCart } from "../lib/cart";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
 
+type GalleryItem = { url: string; type: "image" | "video" };
+
 type Product = {
   id: string; name: string; description?: string | null; price: number; quantity: number;
   image_url?: string | null; category_id?: string | null; brand_id?: string | null;
   model_id?: string | null; year_id?: string | null;
+  gallery?: GalleryItem[];
   categories?: { name: string }; brands?: { name: string };
   models?: { name: string; image_url?: string | null; gallery?: string[] };
   years?: { id: string; label: string };
@@ -28,7 +31,8 @@ export const ProductDetailsPage: React.FC = () => {
   const [recommendedLoading, setRecommendedLoading] = React.useState(true);
   const [reviews, setReviews] = React.useState<Review[]>([]);
   const [reviewLoading, setReviewLoading] = React.useState(true);
-  const [galleryLightbox, setGalleryLightbox] = React.useState<{ index: number; images: string[] } | null>(null);
+  const [galleryLightbox, setGalleryLightbox] = React.useState<{ index: number; items: GalleryItem[] } | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = React.useState(0);
   const [reviewForm, setReviewForm] = React.useState({ rating: 5, title: "", body: "" });
   const [wishlistBusy, setWishlistBusy] = React.useState(false);
   const [subscribeBusy, setSubscribeBusy] = React.useState(false);
@@ -42,6 +46,7 @@ export const ProductDetailsPage: React.FC = () => {
       try {
         const res = await api.get<Product>(`/products/${id}`);
         setProduct(res.data);
+        setActiveImageIndex(0);
         
         const [recRes, revRes] = await Promise.all([
           api.get<{ data: Product[] }>("/products?limit=10").catch(() => ({ data: { data: [] } })),
@@ -107,6 +112,46 @@ export const ProductDetailsPage: React.FC = () => {
 
   const productImage = product?.model_id ? product.models?.image_url : product?.image_url;
 
+  const galleryItems: GalleryItem[] = React.useMemo(() => {
+    if (!product) return [];
+    const items: GalleryItem[] = [];
+    const seen = new Set<string>();
+
+    const addItem = (url: string | null | undefined, type: "image" | "video") => {
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      items.push({ url, type });
+    };
+
+    // Primary image first
+    const mainImg = product.model_id ? product.models?.image_url : product.image_url;
+    addItem(mainImg, "image");
+
+    // Product gallery (supports images + videos)
+    if (Array.isArray(product.gallery)) {
+      for (const item of product.gallery) {
+        if (item?.url) addItem(item.url, item.type || "image");
+      }
+    }
+
+    // Model gallery (legacy, images only)
+    if (product.models?.gallery && Array.isArray(product.models.gallery)) {
+      for (const url of product.models.gallery) {
+        addItem(url, "image");
+      }
+    }
+
+    // Fallback product image if not already included
+    if (product.image_url && !seen.has(product.image_url)) {
+      addItem(product.image_url, "image");
+    }
+
+    return items;
+  }, [product]);
+
+  const displayItem = galleryItems[activeImageIndex] || null;
+  const displayImage = displayItem?.url || productImage;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900">
       <PublicNavbar />
@@ -134,21 +179,120 @@ export const ProductDetailsPage: React.FC = () => {
             <div className="grid gap-8 lg:grid-cols-2">
               <div className="space-y-4">
                 <div className="relative rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-xl border border-gray-100 dark:border-gray-700">
-                  <div className="aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-800">
-                    {productImage ? (
-                      <img src={productImage} alt={product.name} className="w-full h-full object-cover" />
+                  <div className="aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
+                    {displayItem ? (
+                      displayItem.type === "video" ? (
+                        <video
+                          src={displayItem.url}
+                          className="w-full h-full object-contain"
+                          controls
+                          playsInline
+                          preload="metadata"
+                        />
+                      ) : (
+                        <img src={displayItem.url} alt={product.name} className="w-full h-full object-contain p-4" />
+                      )
+                    ) : displayImage ? (
+                      <img src={displayImage} alt={product.name} className="w-full h-full object-contain p-4" />
                     ) : (
                       <div className="flex items-center justify-center h-full">
                         <Package className="w-20 h-20 text-gray-300 dark:text-gray-600" />
                       </div>
                     )}
                   </div>
-                  {product.quantity <= 5 && product.quantity > 0 && (
+
+                  {/* Prev/Next arrows */}
+                  {galleryItems.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setActiveImageIndex(prev => prev === 0 ? galleryItems.length - 1 : prev - 1)}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 active:scale-95 transition-all"
+                        aria-label="Previous image"
+                      >
+                        <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+                      </button>
+                      <button
+                        onClick={() => setActiveImageIndex(prev => prev === galleryItems.length - 1 ? 0 : prev + 1)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 active:scale-95 transition-all"
+                        aria-label="Next image"
+                      >
+                        <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+                      </button>
+                    </>
+                  )}
+
+                  {/* Expand button */}
+                  {galleryItems.length > 1 && (
+                    <button
+                      onClick={() => setGalleryLightbox({ index: activeImageIndex, items: galleryItems })}
+                      className="absolute right-4 top-4 w-10 h-10 rounded-xl bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                      aria-label="View full size"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                    </button>
+                  )}
+
+                  {/* Counter badge */}
+                  {galleryItems.length > 1 && (
+                    <div className="absolute bottom-3 right-3">
+                      <span className="px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs font-medium">
+                        {activeImageIndex + 1} / {galleryItems.length}
+                      </span>
+                    </div>
+                  )}
+
+                  {displayItem?.type === "video" && (
+                    <div className="absolute left-4 top-4">
+                      <span className="px-3 py-1.5 rounded-full bg-purple-600 text-white text-xs font-bold shadow-lg flex items-center gap-1.5">
+                        <Video className="w-3.5 h-3.5" /> Video
+                      </span>
+                    </div>
+                  )}
+                  {product.quantity <= 5 && product.quantity > 0 && displayItem?.type !== "video" && (
                     <div className="absolute left-4 top-4">
                       <span className="px-4 py-2 rounded-full bg-orange-500 text-white text-sm font-bold shadow-lg">Only {product.quantity} left</span>
                     </div>
                   )}
                 </div>
+
+                {/* Gallery thumbnails */}
+                {galleryItems.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                    {galleryItems.map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setActiveImageIndex(idx)}
+                        className={`relative flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-2 transition-all ${
+                          idx === activeImageIndex
+                            ? "border-primary shadow-md shadow-primary/20"
+                            : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
+                        }`}
+                      >
+                        {item.type === "video" ? (
+                          <div className="relative w-full h-full bg-gray-900 flex items-center justify-center">
+                            <video
+                              src={item.url}
+                              className="w-full h-full object-cover"
+                              muted
+                              playsInline
+                              preload="metadata"
+                            />
+                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                              <div className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center">
+                                <Video className="w-3.5 h-3.5 text-gray-800" />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <img src={item.url} alt={`${product.name} view ${idx + 1}`} className="w-full h-full object-cover" />
+                        )}
+                        {idx === activeImageIndex && (
+                          <div className="absolute inset-0 ring-2 ring-primary ring-inset rounded-xl" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-6 sm:p-8">
@@ -305,15 +449,36 @@ export const ProductDetailsPage: React.FC = () => {
       {galleryLightbox && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95" onClick={() => setGalleryLightbox(null)}>
           <button className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-3 text-white hover:bg-white/20" onClick={() => setGalleryLightbox(null)}><X className="w-6 h-6" /></button>
-          {galleryLightbox.images.length > 1 && (
+          {galleryLightbox.items.length > 1 && (
             <>
-              <button className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20" onClick={e => { e.stopPropagation(); setGalleryLightbox(li => li ? { ...li, index: li.index === 0 ? li.images.length - 1 : li.index - 1 } : null); }}><ChevronLeft className="w-10 h-10" /></button>
-              <button className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20" onClick={e => { e.stopPropagation(); setGalleryLightbox(li => li ? { ...li, index: li.index === li.images.length - 1 ? 0 : li.index + 1 } : null); }}><ChevronRight className="w-10 h-10" /></button>
+              <button className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20 z-10" onClick={e => { e.stopPropagation(); setGalleryLightbox(li => li ? { ...li, index: li.index === 0 ? li.items.length - 1 : li.index - 1 } : null); }}><ChevronLeft className="w-10 h-10" /></button>
+              <button className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20 z-10" onClick={e => { e.stopPropagation(); setGalleryLightbox(li => li ? { ...li, index: li.index === li.items.length - 1 ? 0 : li.index + 1 } : null); }}><ChevronRight className="w-10 h-10" /></button>
             </>
           )}
-          <img src={galleryLightbox.images[galleryLightbox.index]} alt={`Gallery ${galleryLightbox.index + 1}`} className="max-h-[85vh] max-w-[90vw] object-contain" onClick={e => e.stopPropagation()} />
+          {galleryLightbox.items[galleryLightbox.index]?.type === "video" ? (
+            <video
+              src={galleryLightbox.items[galleryLightbox.index].url}
+              className="max-h-[85vh] max-w-[90vw]"
+              controls
+              autoPlay
+              playsInline
+              onClick={e => e.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={galleryLightbox.items[galleryLightbox.index]?.url}
+              alt={`Gallery ${galleryLightbox.index + 1}`}
+              className="max-h-[85vh] max-w-[90vw] object-contain"
+              onClick={e => e.stopPropagation()}
+            />
+          )}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 rounded-full bg-black/60 px-6 py-3 text-white">
-            <span className="text-sm font-medium">{galleryLightbox.index + 1} / {galleryLightbox.images.length}</span>
+            <span className="text-sm font-medium">{galleryLightbox.index + 1} / {galleryLightbox.items.length}</span>
+            {galleryLightbox.items[galleryLightbox.index]?.type === "video" && (
+              <span className="flex items-center gap-1.5 text-xs bg-purple-600 px-2 py-1 rounded-full">
+                <Video className="w-3 h-3" /> Video
+              </span>
+            )}
           </div>
         </div>
       )}
