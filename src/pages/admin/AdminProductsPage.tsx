@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Plus, Search, Trash2, Pencil, ChevronLeft, ChevronRight, Filter, X, Loader2, Upload, Download, Package } from "lucide-react";
 import api from "../../lib/api";
-import { Skeleton } from "../../components/ui/Skeleton";
+import { Skeleton, ProductCardSkeleton, StatCardSkeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -492,10 +492,21 @@ export const AdminProductsPage: React.FC = () => {
       </Card>
 
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-72 rounded-2xl" />
-          ))}
+        <div className="space-y-6">
+          {/* Stats skeleton */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <StatCardSkeleton key={i} />
+            ))}
+          </div>
+          {/* Product cards skeleton */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="animate-fade-in-up" style={{ animationDelay: `${i * 50}ms` }}>
+                <ProductCardSkeleton />
+              </div>
+            ))}
+          </div>
         </div>
       ) : filteredByCategoryBrandModel.length === 0 ? (
         <Card className="p-12">
