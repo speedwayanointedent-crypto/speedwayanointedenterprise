@@ -1,23 +1,29 @@
 import React from "react";
+import { Package } from "lucide-react";
 
 type EmptyStateProps = {
   title: string;
   description?: string;
   action?: React.ReactNode;
+  icon?: React.ReactNode;
 };
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
   title,
   description,
-  action
+  action,
+  icon
 }) => {
   return (
-    <div className="rounded-2xl border border-dashed border-border bg-background p-6 text-center shadow-sm">
-      <div className="text-base font-semibold text-foreground">{title}</div>
+    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/60 mb-5">
+        {icon || <Package className="h-7 w-7 text-muted-foreground/60" />}
+      </div>
+      <h3 className="text-base font-semibold text-foreground mb-1.5">{title}</h3>
       {description ? (
-        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+        <p className="text-sm text-muted-foreground max-w-sm">{description}</p>
       ) : null}
-      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
+      {action ? <div className="mt-5">{action}</div> : null}
     </div>
   );
 };
