@@ -1,3 +1,8 @@
+export type GalleryItem = {
+  url: string;
+  type: "image" | "video";
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -10,6 +15,7 @@ export type Product = {
   brand_id?: string | null;
   model_id?: string | null;
   year_id?: string | null;
+  gallery?: GalleryItem[];
   categories?: { id: string; name: string };
   brands?: { id: string; name: string };
   models?: { id: string; name: string; image_url?: string | null };
