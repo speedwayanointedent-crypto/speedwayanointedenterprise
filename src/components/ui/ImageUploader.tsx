@@ -48,9 +48,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     formData.append("image", file);
 
     try {
-      const res = await api.post(endpoint, formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
+      const res = await api.post(endpoint, formData);
       onChange(res.data.url);
     } catch (err: any) {
       setError(err.response?.data?.error || "Upload failed");
