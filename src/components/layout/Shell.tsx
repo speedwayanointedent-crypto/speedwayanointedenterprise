@@ -93,7 +93,7 @@ export const DashboardShell: React.FC = () => {
   );
 
   return (
-    <div className="page-shell flex min-h-screen bg-background">
+    <div className="page-shell flex min-h-screen bg-background overflow-x-hidden">
       {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-[260px] border-r border-border/50 bg-card/80 backdrop-blur-xl transition-transform duration-300 lg:translate-x-0 ${
@@ -144,7 +144,7 @@ export const DashboardShell: React.FC = () => {
       )}
 
       {/* Main */}
-      <div className="flex-1 lg:ml-[260px]">
+      <div className="flex-1 lg:ml-[260px] overflow-x-hidden">
         {/* Header */}
         <header className="sticky top-0 z-30 h-16 border-b border-border/50 bg-background/80 backdrop-blur-xl">
           <div className="flex h-full items-center justify-between px-4 sm:px-6">

@@ -1,7 +1,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink } from "react-router-dom";
-import { Menu, X, Sun, Moon, ShoppingCart, User, LayoutDashboard, ChevronRight } from "lucide-react";
+import { Menu, X, Sun, Moon, ShoppingCart, User, LayoutDashboard, ChevronRight, Sparkles } from "lucide-react";
 import { useTheme } from "../../lib/theme";
 import { getCartCount } from "../../lib/cart";
 
@@ -40,56 +40,31 @@ export const PublicNavbar: React.FC = () => {
     };
   }, []);
 
-  // Lock body scroll when mobile menu is open
   React.useEffect(() => {
     if (mobileMenuOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
     }
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => { document.body.style.overflow = ""; };
   }, [mobileMenuOpen]);
 
-  // Trap focus + escape in mobile menu
   React.useEffect(() => {
     if (!mobileMenuOpen) return;
-
     const menu = mobileMenuRef.current;
     if (!menu) return;
-
-    const focusableSelector =
-      'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
-    const focusables = Array.from(
-      menu.querySelectorAll<HTMLElement>(focusableSelector)
-    ).filter((el) => !el.hasAttribute("disabled"));
+    const focusableSelector = 'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const focusables = Array.from(menu.querySelectorAll<HTMLElement>(focusableSelector)).filter((el) => !el.hasAttribute("disabled"));
     const first = focusables[0];
     const last = focusables[focusables.length - 1];
-
     first?.focus();
-
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setMobileMenuOpen(false);
-        return;
-      }
+      if (event.key === "Escape") { event.preventDefault(); setMobileMenuOpen(false); return; }
       if (event.key !== "Tab" || focusables.length === 0) return;
       const active = document.activeElement;
-      if (event.shiftKey) {
-        if (active === first) {
-          event.preventDefault();
-          last?.focus();
-        }
-        return;
-      }
-      if (active === last) {
-        event.preventDefault();
-        first?.focus();
-      }
+      if (event.shiftKey) { if (active === first) { event.preventDefault(); last?.focus(); } return; }
+      if (active === last) { event.preventDefault(); first?.focus(); }
     };
-
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [mobileMenuOpen]);
@@ -120,35 +95,43 @@ export const PublicNavbar: React.FC = () => {
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 h-14 sm:h-16 md:px-6">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-primary text-white shadow-sm shadow-primary/25">
-            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-blue-600 text-white shadow-sm shadow-primary/25 transition-transform group-hover:scale-105">
+            <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div className="leading-none">
-            <div className="text-sm sm:text-base font-semibold text-foreground">
+            <div className="text-sm sm:text-base font-bold text-foreground tracking-tight">
               Speedway
             </div>
-            <div className="text-[10px] sm:text-xs text-muted-foreground">
+            <div className="text-[10px] sm:text-xs text-muted-foreground font-medium">
               Auto Parts
             </div>
           </div>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-0.5">
+        <nav className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => (
             <NavLink
               key={link.path}
               to={link.path}
+              end={link.path === "/"}
               className={({ isActive }) =>
-                `rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+                `relative rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
                 }`
               }
             >
-              {link.label}
+              {({ isActive }) => (
+                <>
+                  {link.label}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-primary" />
+                  )}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -162,7 +145,7 @@ export const PublicNavbar: React.FC = () => {
           >
             <ShoppingCart className="h-[18px] w-[18px]" />
             {cartCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 h-4 min-w-[16px] px-1 rounded-full bg-primary text-[10px] font-bold text-white flex items-center justify-center">
+              <span className="absolute -top-0.5 -right-0.5 h-4 min-w-[16px] px-1 rounded-full bg-primary text-[10px] font-bold text-white flex items-center justify-center animate-scale-in">
                 {cartCount}
               </span>
             )}
@@ -239,18 +222,15 @@ export const PublicNavbar: React.FC = () => {
       {mobileMenuOpen && typeof document !== "undefined"
         ? createPortal(
             <div className="md:hidden fixed inset-0 z-[100]">
-              {/* Overlay */}
               <button
                 className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
                 onClick={() => setMobileMenuOpen(false)}
                 aria-label="Close menu overlay"
               />
-
-              {/* Panel */}
               <div
                 id="mobile-nav"
                 ref={mobileMenuRef}
-                className="absolute right-0 top-0 h-full w-[85%] max-w-sm bg-white dark:bg-slate-900 shadow-2xl animate-slide-in-right overflow-y-auto"
+                className="absolute right-0 top-0 h-full w-[85%] max-w-sm bg-white dark:bg-slate-900 shadow-2xl animate-slide-in-right overflow-y-auto overscroll-contain"
                 role="dialog"
                 aria-modal="true"
                 aria-label="Mobile navigation"
@@ -273,6 +253,7 @@ export const PublicNavbar: React.FC = () => {
                     <NavLink
                       key={link.path}
                       to={link.path}
+                      end={link.path === "/"}
                       onClick={() => setMobileMenuOpen(false)}
                       className={({ isActive }) =>
                         `flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold transition-colors animate-fade-in-up ${
@@ -289,7 +270,6 @@ export const PublicNavbar: React.FC = () => {
                   ))}
                 </nav>
 
-                {/* Divider */}
                 <div className="mx-5 border-t border-slate-100 dark:border-slate-800" />
 
                 {/* Quick actions */}
@@ -312,13 +292,11 @@ export const PublicNavbar: React.FC = () => {
                     </Link>
                   </div>
 
-                  {/* Admin */}
                   {isAuthed && role && ["admin", "manager", "staff"].includes(role) && (
                     <Link
                       to="/admin"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 rounded-xl px-4 py-3 bg-primary/5 text-primary text-sm font-semibold hover:bg-primary/10 transition-colors animate-fade-in-up"
-                      style={{ animationDelay: '280ms', animationFillMode: 'backwards' }}
+                      className="flex items-center gap-3 rounded-xl px-4 py-3 bg-primary/5 text-primary text-sm font-semibold hover:bg-primary/10 transition-colors"
                     >
                       <LayoutDashboard className="h-5 w-5" />
                       <span>Admin Dashboard</span>
@@ -341,10 +319,7 @@ export const PublicNavbar: React.FC = () => {
                       </Link>
                       <button
                         className="w-full flex items-center justify-center h-11 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
-                        onClick={() => {
-                          signOut();
-                          setMobileMenuOpen(false);
-                        }}
+                        onClick={() => { signOut(); setMobileMenuOpen(false); }}
                       >
                         Sign Out
                       </button>

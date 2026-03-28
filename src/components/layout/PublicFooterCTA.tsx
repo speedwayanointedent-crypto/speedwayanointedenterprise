@@ -1,5 +1,6 @@
 import React from "react";
-import { Mail, Phone, Facebook, Instagram, Twitter, Linkedin, Globe, ArrowUpRight, MapPin, Clock } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Mail, Phone, Facebook, Instagram, Twitter, Linkedin, Globe, ArrowUpRight, MapPin, Clock, Sparkles, ChevronRight } from "lucide-react";
 import api from "../../lib/api";
 import { WHATSAPP_LINK } from "../../lib/whatsapp";
 
@@ -16,6 +17,28 @@ type FooterSettings = {
   whatsapp_url?: string | null;
 };
 
+const footerLinks = {
+  shop: [
+    { href: "/shop", label: "All Products" },
+    { href: "/shop", label: "Engine Parts" },
+    { href: "/shop", label: "Brake Systems" },
+    { href: "/shop", label: "Suspension" },
+    { href: "/shop", label: "Electrical" },
+  ],
+  company: [
+    { href: "/about", label: "About Us" },
+    { href: "/contact", label: "Contact" },
+    { href: "/reviews", label: "Reviews" },
+    { href: "/shop", label: "Catalog" },
+  ],
+  support: [
+    { href: "/contact", label: "Help Center" },
+    { href: "/orders", label: "Track Order" },
+    { href: "/contact", label: "Returns" },
+    { href: "/contact", label: "Fitment Guide" },
+  ],
+};
+
 export const PublicFooterCTA: React.FC = () => {
   const [settings, setSettings] = React.useState<FooterSettings>({});
 
@@ -24,19 +47,13 @@ export const PublicFooterCTA: React.FC = () => {
     async function loadSettings() {
       try {
         const res = await api.get("/settings");
-        if (isMounted) {
-          setSettings(res.data || {});
-        }
+        if (isMounted) setSettings(res.data || {});
       } catch {
-        if (isMounted) {
-          setSettings({});
-        }
+        if (isMounted) setSettings({});
       }
     }
     loadSettings();
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
   const supportPhone = settings.support_phone || "";
@@ -54,16 +71,22 @@ export const PublicFooterCTA: React.FC = () => {
   ].filter(Boolean) as { url: string; icon: React.ElementType; label: string }[];
 
   return (
-    <footer className="border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <footer className="border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden">
       {/* ── CTA Banner ──────────────────────────────────────── */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900">
-        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 py-10 sm:py-14 lg:py-16">
+      <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-5" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E")`,
+        }} />
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary/8 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-blue-600/5 rounded-full blur-[100px]" />
+
+        <div className="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 py-10 sm:py-14 lg:py-16">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-10">
             <div className="max-w-xl">
               <p className="text-xs font-semibold uppercase tracking-wider text-primary/80 mb-2 sm:mb-3">
                 Need help sourcing parts?
               </p>
-              <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white leading-snug">
+              <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white leading-snug font-display">
                 Talk to a parts specialist today
               </h3>
               <p className="mt-2 sm:mt-3 text-sm sm:text-base text-slate-400">
@@ -103,41 +126,31 @@ export const PublicFooterCTA: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Footer Bottom ────────────────────────────────────── */}
-      <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <div className="flex flex-col gap-6 sm:gap-8">
-          {/* Top row: brand + nav + socials */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            {/* Brand + address */}
-            <div>
-              <div className="text-base font-semibold text-slate-900 dark:text-white">
-                {businessName}
+      {/* ── Footer Columns ──────────────────────────────────── */}
+      <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 pt-10 sm:pt-14 pb-6 sm:pb-8">
+        <div className="grid gap-8 sm:gap-10 grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
+          {/* Brand column */}
+          <div className="col-span-2 md:col-span-4 lg:col-span-2">
+            <Link to="/" className="inline-flex items-center gap-2.5 mb-4">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-blue-600 text-white shadow-sm shadow-primary/25">
+                <Sparkles className="h-4 w-4" />
               </div>
-              <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                <MapPin className="w-3 h-3 flex-shrink-0" />
-                <span>{address}</span>
+              <div className="leading-none">
+                <div className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
+                  {businessName}
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                  Premium Auto Parts
+                </div>
               </div>
+            </Link>
+            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed mb-4">
+              Your trusted source for genuine auto parts in Ghana. Quality guaranteed, fast delivery, expert support.
+            </p>
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-4">
+              <MapPin className="w-3 h-3 flex-shrink-0" />
+              <span>{address}</span>
             </div>
-
-            {/* Nav links */}
-            <nav className="flex flex-wrap gap-x-5 gap-y-1">
-              {[
-                { href: "/shop", label: "Shop" },
-                { href: "/about", label: "About" },
-                { href: "/contact", label: "Contact" },
-                { href: "/reviews", label: "Reviews" },
-              ].map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors font-medium"
-                >
-                  {link.label}
-                </a>
-              ))}
-            </nav>
-
-            {/* Socials */}
             {socialLinks.length > 0 && (
               <div className="flex items-center gap-2">
                 {socialLinks.map(({ url, icon: Icon, label }) => (
@@ -156,14 +169,76 @@ export const PublicFooterCTA: React.FC = () => {
             )}
           </div>
 
-          {/* Bottom divider + copyright */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-4 sm:pt-0 border-t border-slate-100 dark:border-slate-800">
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              &copy; 2026 {businessName}. All rights reserved.
-            </p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              Built with precision in Ghana
-            </p>
+          {/* Shop links */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3 sm:mb-4">Shop</h4>
+            <ul className="space-y-2.5">
+              {footerLinks.shop.map((link) => (
+                <li key={link.label}>
+                  <Link
+                    to={link.href}
+                    className="text-sm text-slate-500 dark:text-slate-400 hover:text-primary transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Company links */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3 sm:mb-4">Company</h4>
+            <ul className="space-y-2.5">
+              {footerLinks.company.map((link) => (
+                <li key={link.label}>
+                  <Link
+                    to={link.href}
+                    className="text-sm text-slate-500 dark:text-slate-400 hover:text-primary transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Support links */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3 sm:mb-4">Support</h4>
+            <ul className="space-y-2.5">
+              {footerLinks.support.map((link) => (
+                <li key={link.label}>
+                  <Link
+                    to={link.href}
+                    className="text-sm text-slate-500 dark:text-slate-400 hover:text-primary transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            {supportPhone && (
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <a
+                  href={`tel:${supportPhone}`}
+                  className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                >
+                  <Phone className="w-3 h-3" />
+                  {supportPhone}
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div className="mt-8 sm:mt-10 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            &copy; 2026 {businessName}. All rights reserved.
+          </p>
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-slate-400 dark:text-slate-500">Built with precision in Ghana</span>
           </div>
         </div>
       </div>
