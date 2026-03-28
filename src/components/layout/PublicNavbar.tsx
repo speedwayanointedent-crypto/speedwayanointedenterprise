@@ -1,7 +1,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink } from "react-router-dom";
-import { Menu, Sun, Moon, ShoppingCart, User } from "lucide-react";
+import { Menu, Sun, Moon, ShoppingCart, User, LayoutDashboard } from "lucide-react";
 import { useTheme } from "../../lib/theme";
 import { getCartCount } from "../../lib/cart";
 
@@ -98,8 +98,8 @@ export const PublicNavbar: React.FC = () => {
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-white/95 dark:bg-slate-900/95 backdrop-blur shadow-md rounded-b-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6">
+    <header className="sticky top-0 z-40 border-b border-border/60 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 md:px-6 md:py-2.5">
         <Link to="/" className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <ShoppingCart className="h-5 w-5" />
@@ -154,6 +154,15 @@ export const PublicNavbar: React.FC = () => {
           </button>
           {isAuthed ? (
             <>
+              {role && ["admin", "manager", "staff"].includes(role) && (
+                <Link
+                  to="/admin"
+                  className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  Dashboard
+                </Link>
+              )}
               <Link
                 to="/account"
                 className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary"
@@ -237,6 +246,16 @@ export const PublicNavbar: React.FC = () => {
                   Cart ({cartCount})
                 </Link>
               </div>
+              {isAuthed && role && ["admin", "manager", "staff"].includes(role) ? (
+                <Link
+                  to="/admin"
+                  className="flex items-center gap-2 rounded-xl px-4 py-3 text-base font-semibold shadow-sm bg-primary/10 text-primary hover:bg-primary/20"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <LayoutDashboard className="h-5 w-5" />
+                  Admin Dashboard
+                </Link>
+              ) : null}
               {isAuthed ? (
                 <Link
                   to="/account"
