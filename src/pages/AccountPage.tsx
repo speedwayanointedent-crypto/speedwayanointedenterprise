@@ -1,21 +1,43 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useCallback, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  User,
+  MapPin,
+  Heart,
+  Bell,
+  ChevronRight,
+  Loader2,
+  LogOut,
+  Edit3,
+  Trash2,
+  Plus,
+  Package,
+  X,
+  Check,
+  Mail,
+  Phone,
+  Home,
+  Building,
+  Star
+} from "lucide-react";
 import api from "../lib/api";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
-import { PageHeader } from "../components/ui/PageHeader";
-import { Skeleton } from "../components/ui/Skeleton";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { Badge } from "../components/ui/Badge";
 import { EmptyState } from "../components/ui/EmptyState";
 import { useToast } from "../components/ui/Toast";
-import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
 import { PageLoading } from "../components/ui/LoadingSpinner";
+import classNames from "classnames";
 
 type Profile = {
   id: string;
   email: string;
   full_name: string;
   role: string;
+  avatar_url?: string | null;
 };
 
 type Address = {
@@ -45,16 +67,23 @@ type Notification = {
   created_at: string;
 };
 
+type TabType = 'profile' | 'addresses' | 'wishlist' | 'notifications';
+
 export const AccountPage: React.FC = () => {
   const navigate = useNavigate();
-  const [profile, setProfile] = React.useState<Profile | null>(null);
-  const [addresses, setAddresses] = React.useState<Address[]>([]);
-  const [wishlist, setWishlist] = React.useState<WishlistItem[]>([]);
-  const [notifications, setNotifications] = React.useState<Notification[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [submitting, setSubmitting] = React.useState(false);
-  const [profileForm, setProfileForm] = React.useState({ full_name: "", email: "" });
-  const [addressForm, setAddressForm] = React.useState({
+  const { push } = useToast();
+  
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>('profile');
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  
+  const [profileForm, setProfileForm] = useState({ full_name: "", email: "" });
+  const [addressForm, setAddressForm] = useState({
     label: "",
     recipient_name: "",
     phone: "",
@@ -65,18 +94,17 @@ export const AccountPage: React.FC = () => {
     postal_code: "",
     is_default: false
   });
-  const { push } = useToast();
 
-  const load = React.useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [profileRes, addressRes, wishlistRes, notificationsRes] =
-        await Promise.all([
-          api.get<Profile>("/users/me"),
-          api.get<Address[]>("/addresses"),
-          api.get<{ items: WishlistItem[] }>("/wishlist"),
-          api.get<Notification[]>("/notifications")
-        ]);
+      const [profileRes, addressRes, wishlistRes, notificationsRes] = await Promise.all([
+        api.get<Profile>("/users/me"),
+        api.get<Address[]>("/addresses"),
+        api.get<{ items: WishlistItem[] }>("/wishlist"),
+        api.get<Notification[]>("/notifications")
+      ]);
+      
       setProfile(profileRes.data);
       setProfileForm({
         full_name: profileRes.data.full_name || "",
@@ -87,15 +115,12 @@ export const AccountPage: React.FC = () => {
       setNotifications(notificationsRes.data || []);
     } catch {
       setProfile(null);
-      setAddresses([]);
-      setWishlist([]);
-      setNotifications([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     load();
   }, [load]);
 
@@ -105,7 +130,7 @@ export const AccountPage: React.FC = () => {
     try {
       const res = await api.patch<Profile>("/users/me", profileForm);
       setProfile(res.data);
-      push("Profile updated", "success");
+      push("Profile updated successfully", "success");
     } catch {
       push("Failed to update profile", "error");
     } finally {
@@ -130,11 +155,22 @@ export const AccountPage: React.FC = () => {
         postal_code: "",
         is_default: false
       });
-      push("Address saved", "success");
+      setShowAddressForm(false);
+      push("Address saved successfully", "success");
     } catch {
       push("Failed to save address", "error");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const removeAddress = async (id: string) => {
+    try {
+      await api.delete(`/addresses/${id}`);
+      setAddresses((prev) => prev.filter((a) => a.id !== id));
+      push("Address removed", "success");
+    } catch {
+      push("Failed to remove address", "error");
     }
   };
 
@@ -156,27 +192,45 @@ export const AccountPage: React.FC = () => {
       setNotifications((prev) =>
         prev.map((n) => (ids.includes(n.id) ? { ...n, read_at: new Date().toISOString() } : n))
       );
+      push("All notifications marked as read", "success");
     } catch {
-      push("Failed to mark read", "error");
+      push("Failed to mark as read", "error");
     }
   };
 
   const signOut = () => {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("user_role");
-    push("Signed out", "success");
+    push("Signed out successfully", "success");
     navigate("/");
   };
 
-  return (
-    <div className="page-shell">
-      <PublicNavbar />
-      <div className="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:pt-20 md:px-6">
-        <PageHeader title="My account" subtitle="Manage your profile, addresses, and wishlist." />
+  const unreadNotifications = notifications.filter((n) => !n.read_at).length;
 
-        {loading ? (
-          <PageLoading text="Loading account..." />
-        ) : !profile ? (
+  const tabs = [
+    { id: 'profile' as TabType, label: 'Profile', icon: User },
+    { id: 'addresses' as TabType, label: 'Addresses', icon: MapPin, count: addresses.length },
+    { id: 'wishlist' as TabType, label: 'Wishlist', icon: Heart, count: wishlist.length },
+    { id: 'notifications' as TabType, label: 'Notifications', icon: Bell, badge: unreadNotifications }
+  ];
+
+  if (loading) {
+    return (
+      <div className="page-shell">
+        <PublicNavbar />
+        <div className="mx-auto max-w-5xl px-4 pb-16 pt-24 sm:pt-32">
+          <PageLoading text="Loading your account..." />
+        </div>
+        <PublicFooterCTA />
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="page-shell">
+        <PublicNavbar />
+        <div className="mx-auto max-w-5xl px-4 pb-16 pt-24 sm:pt-32">
           <EmptyState
             title="Sign in required"
             description="Please sign in to access your account dashboard."
@@ -186,225 +240,459 @@ export const AccountPage: React.FC = () => {
               </Link>
             }
           />
-        ) : (
-          <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
-            <div className="space-y-6">
-              <div className="card p-5">
-                <h2 className="text-base font-semibold">Profile</h2>
-                <form onSubmit={updateProfile} className="mt-4 grid gap-3">
-                  <input
-                    className="form-input"
-                    placeholder="Full name"
-                    value={profileForm.full_name}
-                    onChange={(e) =>
-                      setProfileForm((prev) => ({ ...prev, full_name: e.target.value }))
-                    }
-                  />
-                  <input
-                    className="form-input"
-                    placeholder="Email"
-                    value={profileForm.email}
-                    onChange={(e) =>
-                      setProfileForm((prev) => ({ ...prev, email: e.target.value }))
-                    }
-                  />
-                  <button className="btn-primary h-10 text-sm" disabled={submitting}>
-                    {submitting ? <Loader2 className="btn-spinner mr-2 h-4 w-4" /> : null}
-                    <span>Save profile</span>
-                  </button>
-                </form>
-                <button
-                  type="button"
-                  className="btn-destructive mt-4 h-10 text-sm"
+        </div>
+        <PublicFooterCTA />
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-shell">
+      <PublicNavbar />
+      
+      <div className="mx-auto max-w-5xl px-4 pb-16 pt-8 sm:pt-12">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">My Account</h1>
+          <p className="text-muted-foreground mt-1">Manage your profile and preferences</p>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="lg:w-64 flex-shrink-0">
+            <Card padding="sm" className="sticky top-24">
+              <div className="flex items-center gap-4 p-4 border-b border-border">
+                <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-xl">
+                  {profile.full_name?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold truncate">{profile.full_name}</p>
+                  <p className="text-sm text-muted-foreground truncate">{profile.email}</p>
+                </div>
+              </div>
+              
+              <nav className="p-2">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={classNames(
+                        'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all',
+                        isActive
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span className="flex-1 text-left">{tab.label}</span>
+                      {tab.count !== undefined && tab.count > 0 && (
+                        <Badge variant="default" size="sm">{tab.count}</Badge>
+                      )}
+                      {tab.badge ? (
+                        <Badge variant="destructive" size="sm">{tab.badge}</Badge>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </nav>
+
+              <div className="p-4 border-t border-border">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={signOut}
                 >
+                  <LogOut className="h-4 w-4 mr-2" />
                   Sign out
-                </button>
+                </Button>
               </div>
+            </Card>
+          </div>
 
-              <div className="card p-5">
-                <h2 className="text-base font-semibold">Saved addresses</h2>
-                {addresses.length === 0 ? (
-                  <p className="mt-3 text-sm text-muted-foreground">No addresses yet.</p>
-                ) : (
-                  <div className="mt-3 grid gap-3">
-                    {addresses.map((addr) => (
-                      <div key={addr.id} className="rounded-xl border border-border p-4 text-sm">
-                        <div className="flex items-center justify-between">
-                          <div className="font-semibold">{addr.label || "Address"}</div>
-                          {addr.is_default ? (
-                            <span className="rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
-                              Default
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="mt-1 text-muted-foreground">
-                          {addr.recipient_name || profile.full_name}
-                        </div>
-                        <div className="mt-1 text-muted-foreground">
-                          {addr.address_line1}
-                          {addr.address_line2 ? `, ${addr.address_line2}` : ""}
-                        </div>
-                        <div className="mt-1 text-muted-foreground">
-                          {[addr.city, addr.region, addr.postal_code].filter(Boolean).join(", ")}
-                        </div>
-                        {addr.phone ? (
-                          <div className="mt-1 text-muted-foreground">{addr.phone}</div>
-                        ) : null}
-                      </div>
-                    ))}
+          <div className="flex-1 min-w-0">
+            {activeTab === 'profile' && (
+              <Card padding="lg" className="animate-fade-in">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-semibold">Profile Information</h2>
+                    <p className="text-sm text-muted-foreground mt-1">Update your personal details</p>
                   </div>
-                )}
-
-                <form onSubmit={addAddress} className="mt-4 grid gap-3">
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <input
-                      className="form-input"
-                      placeholder="Label"
-                      value={addressForm.label}
-                      onChange={(e) =>
-                        setAddressForm((prev) => ({ ...prev, label: e.target.value }))
-                      }
-                    />
-                    <input
-                      className="form-input"
-                      placeholder="Recipient name"
-                      value={addressForm.recipient_name}
-                      onChange={(e) =>
-                        setAddressForm((prev) => ({ ...prev, recipient_name: e.target.value }))
-                      }
-                    />
-                  </div>
-                  <input
-                    className="form-input"
-                    placeholder="Phone"
-                    value={addressForm.phone}
-                    onChange={(e) => setAddressForm((prev) => ({ ...prev, phone: e.target.value }))}
-                  />
-                  <input
-                    className="form-input"
-                    placeholder="Address line 1"
-                    required
-                    value={addressForm.address_line1}
-                    onChange={(e) =>
-                      setAddressForm((prev) => ({ ...prev, address_line1: e.target.value }))
-                    }
-                  />
-                  <input
-                    className="form-input"
-                    placeholder="Address line 2"
-                    value={addressForm.address_line2}
-                    onChange={(e) =>
-                      setAddressForm((prev) => ({ ...prev, address_line2: e.target.value }))
-                    }
-                  />
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <input
-                      className="form-input"
-                      placeholder="City"
-                      value={addressForm.city}
-                      onChange={(e) =>
-                        setAddressForm((prev) => ({ ...prev, city: e.target.value }))
-                      }
-                    />
-                    <input
-                      className="form-input"
-                      placeholder="Region"
-                      value={addressForm.region}
-                      onChange={(e) =>
-                        setAddressForm((prev) => ({ ...prev, region: e.target.value }))
-                      }
-                    />
-                    <input
-                      className="form-input"
-                      placeholder="Postal code"
-                      value={addressForm.postal_code}
-                      onChange={(e) =>
-                        setAddressForm((prev) => ({ ...prev, postal_code: e.target.value }))
-                      }
-                    />
-                  </div>
-                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={addressForm.is_default}
-                      onChange={(e) =>
-                        setAddressForm((prev) => ({ ...prev, is_default: e.target.checked }))
-                      }
-                    />
-                    Set as default
-                  </label>
-                  <button className="btn-primary h-10 text-sm" disabled={submitting}>
-                      {submitting ? <Loader2 className="btn-spinner mr-2 h-4 w-4" /> : null}
-                      <span>Add address</span>
-                    </button>
-                </form>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="card p-5">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-base font-semibold">Wishlist</h2>
-                  <Link to="/shop" className="text-xs text-muted-foreground hover:text-foreground">
-                    Browse shop
-                  </Link>
                 </div>
-                {wishlist.length === 0 ? (
-                  <p className="mt-3 text-sm text-muted-foreground">No wishlist items yet.</p>
-                ) : (
-                  <div className="mt-3 space-y-3">
-                    {wishlist.map((item) => (
-                      <div key={item.id} className="rounded-xl border border-border p-3 text-sm">
-                        <div className="font-semibold">{item.products?.name}</div>
-                        <div className="mt-1 text-muted-foreground">
-                          GHS {item.products?.price?.toLocaleString()}
-                        </div>
+
+                <form onSubmit={updateProfile} className="space-y-5">
+                  <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/50">
+                    <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-3xl shadow-lg">
+                      {profile.full_name?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-lg">{profile.full_name}</p>
+                      <p className="text-sm text-muted-foreground">{profile.email}</p>
+                      <Badge variant="default" className="mt-2 capitalize">{profile.role}</Badge>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Full Name</label>
+                      <Input
+                        value={profileForm.full_name}
+                        onChange={(e) => setProfileForm((p) => ({ ...p, full_name: e.target.value }))}
+                        placeholder="Enter your name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Email Address</label>
+                      <Input
+                        type="email"
+                        value={profileForm.email}
+                        onChange={(e) => setProfileForm((p) => ({ ...p, email: e.target.value }))}
+                        placeholder="Enter your email"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <Button type="submit" disabled={submitting}>
+                      {submitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4 mr-2" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </Card>
+            )}
+
+            {activeTab === 'addresses' && (
+              <div className="space-y-4 animate-fade-in">
+                <Card padding="lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-xl font-semibold">Saved Addresses</h2>
+                      <p className="text-sm text-muted-foreground mt-1">Manage your delivery addresses</p>
+                    </div>
+                    {!showAddressForm && (
+                      <Button onClick={() => setShowAddressForm(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Address
+                      </Button>
+                    )}
+                  </div>
+
+                  {showAddressForm && (
+                    <form onSubmit={addAddress} className="mb-6 p-5 rounded-xl border-2 border-primary/20 bg-primary/5 space-y-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold">New Address</h3>
                         <button
                           type="button"
-                          className="btn-outline mt-3 h-8 text-xs"
-                          onClick={() => removeWishlistItem(item.id)}
+                          onClick={() => setShowAddressForm(false)}
+                          className="text-muted-foreground hover:text-foreground"
                         >
-                          Remove
+                          <X className="h-5 w-5" />
                         </button>
+                      </div>
+                      
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Input
+                          placeholder="Label (e.g., Home, Office)"
+                          value={addressForm.label}
+                          onChange={(e) => setAddressForm((p) => ({ ...p, label: e.target.value }))}
+                        />
+                        <Input
+                          placeholder="Recipient name"
+                          value={addressForm.recipient_name}
+                          onChange={(e) => setAddressForm((p) => ({ ...p, recipient_name: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <Input
+                        placeholder="Phone number"
+                        value={addressForm.phone}
+                        onChange={(e) => setAddressForm((p) => ({ ...p, phone: e.target.value }))}
+                      />
+                      
+                      <Input
+                        placeholder="Address line 1"
+                        required
+                        value={addressForm.address_line1}
+                        onChange={(e) => setAddressForm((p) => ({ ...p, address_line1: e.target.value }))}
+                      />
+                      
+                      <Input
+                        placeholder="Address line 2 (optional)"
+                        value={addressForm.address_line2}
+                        onChange={(e) => setAddressForm((p) => ({ ...p, address_line2: e.target.value }))}
+                      />
+                      
+                      <div className="grid gap-4 sm:grid-cols-3">
+                        <Input
+                          placeholder="City"
+                          value={addressForm.city}
+                          onChange={(e) => setAddressForm((p) => ({ ...p, city: e.target.value }))}
+                        />
+                        <Input
+                          placeholder="Region"
+                          value={addressForm.region}
+                          onChange={(e) => setAddressForm((p) => ({ ...p, region: e.target.value }))}
+                        />
+                        <Input
+                          placeholder="Postal code"
+                          value={addressForm.postal_code}
+                          onChange={(e) => setAddressForm((p) => ({ ...p, postal_code: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={addressForm.is_default}
+                          onChange={(e) => setAddressForm((p) => ({ ...p, is_default: e.target.checked }))}
+                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                        />
+                        <span className="text-sm">Set as default address</span>
+                      </label>
+                      
+                      <div className="flex gap-2 pt-2">
+                        <Button type="submit" disabled={submitting}>
+                          {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                          Save Address
+                        </Button>
+                        <Button variant="outline" type="button" onClick={() => setShowAddressForm(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+
+                  {addresses.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                        <MapPin className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <p className="text-muted-foreground">No addresses saved yet</p>
+                      <Button variant="outline" className="mt-4" onClick={() => setShowAddressForm(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add your first address
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {addresses.map((addr) => (
+                        <div
+                          key={addr.id}
+                          className="group relative rounded-xl border border-border p-4 hover:border-primary/30 hover:shadow-md transition-all"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                {addr.label?.toLowerCase().includes('home') ? (
+                                  <Home className="h-4 w-4 text-primary" />
+                                ) : addr.label?.toLowerCase().includes('office') ? (
+                                  <Building className="h-4 w-4 text-primary" />
+                                ) : (
+                                  <MapPin className="h-4 w-4 text-primary" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-semibold">{addr.label || 'Address'}</p>
+                                {addr.is_default && <Badge variant="success" size="sm">Default</Badge>}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => removeAddress(addr.id)}
+                              className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                          
+                          <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                            <p>{addr.recipient_name || profile.full_name}</p>
+                            <p>{addr.address_line1}</p>
+                            {addr.address_line2 && <p>{addr.address_line2}</p>}
+                            <p>{[addr.city, addr.region, addr.postal_code].filter(Boolean).join(', ')}</p>
+                            {addr.phone && <p className="flex items-center gap-1.5">
+                              <Phone className="h-3 w-3" />
+                              {addr.phone}
+                            </p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              </div>
+            )}
+
+            {activeTab === 'wishlist' && (
+              <Card padding="lg" className="animate-fade-in">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-xl font-semibold">My Wishlist</h2>
+                    <p className="text-sm text-muted-foreground mt-1">{wishlist.length} saved items</p>
+                  </div>
+                  <Link to="/shop">
+                    <Button variant="outline">
+                      <Package className="h-4 w-4 mr-2" />
+                      Browse Products
+                    </Button>
+                  </Link>
+                </div>
+
+                {wishlist.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                      <Heart className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground">Your wishlist is empty</p>
+                    <Link to="/shop">
+                      <Button variant="outline" className="mt-4">
+                        <Package className="h-4 w-4 mr-2" />
+                        Start shopping
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {wishlist.map((item) => (
+                      <div
+                        key={item.id}
+                        className="group rounded-xl border border-border overflow-hidden hover:shadow-lg transition-all"
+                      >
+                        <Link to={`/products/${item.products?.id}`} className="block">
+                          <div className="aspect-square bg-muted/50">
+                            {item.products?.image_url ? (
+                              <img
+                                src={item.products.image_url}
+                                alt={item.products.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Package className="h-12 w-12 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                        </Link>
+                        <div className="p-4">
+                          <Link to={`/products/${item.products?.id}`}>
+                            <h3 className="font-medium line-clamp-2 hover:text-primary transition-colors">
+                              {item.products?.name}
+                            </h3>
+                          </Link>
+                          <p className="font-semibold text-lg mt-2">
+                            GHS {item.products?.price?.toLocaleString()}
+                          </p>
+                          <div className="flex gap-2 mt-3">
+                            <Link to={`/products/${item.products?.id}`} className="flex-1">
+                              <Button variant="primary" size="sm" className="w-full">
+                                View
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeWishlistItem(item.id)}
+                              className="text-destructive hover:bg-destructive/10"
+                            >
+                              <Heart className="h-4 w-4 fill-destructive" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
+              </Card>
+            )}
 
-              <div className="card p-5">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-base font-semibold">Notifications</h2>
-                  <button className="btn-outline h-8 text-xs" onClick={markAllRead}>
-                    Mark all read
-                  </button>
+            {activeTab === 'notifications' && (
+              <Card padding="lg" className="animate-fade-in">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-xl font-semibold">Notifications</h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {unreadNotifications > 0 ? `${unreadNotifications} unread` : 'All caught up'}
+                    </p>
+                  </div>
+                  {unreadNotifications > 0 && (
+                    <Button variant="outline" onClick={markAllRead}>
+                      <Check className="h-4 w-4 mr-2" />
+                      Mark all as read
+                    </Button>
+                  )}
                 </div>
+
                 {notifications.length === 0 ? (
-                  <p className="mt-3 text-sm text-muted-foreground">No notifications yet.</p>
+                  <div className="text-center py-12">
+                    <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                      <Bell className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground">No notifications yet</p>
+                  </div>
                 ) : (
-                  <div className="mt-3 space-y-3">
+                  <div className="space-y-3">
                     {notifications.map((n) => (
                       <div
                         key={n.id}
-                        className={`rounded-xl border border-border p-3 text-sm ${
-                          n.read_at ? "bg-background" : "bg-secondary/60"
-                        }`}
+                        className={classNames(
+                          'rounded-xl border p-4 transition-all',
+                          n.read_at
+                            ? 'border-border bg-card'
+                            : 'border-primary/20 bg-primary/5'
+                        )}
                       >
-                        <div className="font-semibold">{n.title}</div>
-                        {n.body ? <div className="mt-1 text-muted-foreground">{n.body}</div> : null}
-                        <div className="mt-2 text-xs text-muted-foreground">
-                          {new Date(n.created_at).toLocaleString()}
+                        <div className="flex items-start gap-3">
+                          <div className={classNames(
+                            'h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0',
+                            n.read_at ? 'bg-muted' : 'bg-primary/10'
+                          )}>
+                            <Bell className={classNames(
+                              'h-5 w-5',
+                              n.read_at ? 'text-muted-foreground' : 'text-primary'
+                            )} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-medium">{n.title}</p>
+                              {!n.read_at && (
+                                <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
+                              )}
+                            </div>
+                            {n.body && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                {n.body}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {new Date(n.created_at).toLocaleDateString(undefined, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
-            </div>
+              </Card>
+            )}
           </div>
-        )}
+        </div>
       </div>
+      
       <PublicFooterCTA />
     </div>
   );

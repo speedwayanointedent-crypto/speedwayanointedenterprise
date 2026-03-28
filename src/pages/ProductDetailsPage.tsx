@@ -1,39 +1,24 @@
 import React from "react";
-import { useParams, Link } from "react-router-dom";
-import { ShieldCheck, Truck, CheckCircle2, Heart, ShoppingCart, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { ShieldCheck, Truck, CheckCircle2, Heart, ShoppingCart, ChevronLeft, ChevronRight, X, Star, Minus, Plus, Package } from "lucide-react";
 import api from "../lib/api";
-import { Skeleton } from "../components/ui/Skeleton";
 import { useToast } from "../components/ui/Toast";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { addToCart } from "../lib/cart";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
-import { PageLoading } from "../components/ui/LoadingSpinner";
 
 type Product = {
-  id: string;
-  name: string;
-  description?: string | null;
-  price: number;
-  quantity: number;
-  image_url?: string | null;
-  category_id?: string | null;
-  brand_id?: string | null;
-  model_id?: string | null;
-  year_id?: string | null;
-  categories?: { name: string };
-  brands?: { name: string };
+  id: string; name: string; description?: string | null; price: number; quantity: number;
+  image_url?: string | null; category_id?: string | null; brand_id?: string | null;
+  model_id?: string | null; year_id?: string | null;
+  categories?: { name: string }; brands?: { name: string };
   models?: { name: string; image_url?: string | null; gallery?: string[] };
   years?: { id: string; label: string };
 };
 
-type Review = {
-  id: number;
-  rating: number;
-  title?: string | null;
-  body: string;
-  created_at: string;
-  users?: { full_name?: string | null };
-};
+type Review = { id: number; rating: number; title?: string | null; body: string; created_at: string; users?: { full_name?: string | null } };
+
+const fallbackImage = "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?q=80&w=1200";
 
 export const ProductDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -41,17 +26,15 @@ export const ProductDetailsPage: React.FC = () => {
   const [loading, setLoading] = React.useState(true);
   const [recommended, setRecommended] = React.useState<Product[]>([]);
   const [recommendedLoading, setRecommendedLoading] = React.useState(true);
+  const [reviews, setReviews] = React.useState<Review[]>([]);
+  const [reviewLoading, setReviewLoading] = React.useState(true);
+  const [galleryLightbox, setGalleryLightbox] = React.useState<{ index: number; images: string[] } | null>(null);
+  const [reviewForm, setReviewForm] = React.useState({ rating: 5, title: "", body: "" });
   const [wishlistBusy, setWishlistBusy] = React.useState(false);
   const [subscribeBusy, setSubscribeBusy] = React.useState(false);
-  const [reviews, setReviews] = React.useState<Review[]>([]);
-  const [galleryLightbox, setGalleryLightbox] = React.useState<{ index: number; images: string[] } | null>(null);
-  const [reviewForm, setReviewForm] = React.useState({
-    rating: 5,
-    title: "",
-    body: ""
-  });
-  const [reviewLoading, setReviewLoading] = React.useState(true);
+  const [qty, setQty] = React.useState(1);
   const { push } = useToast();
+  const navigate = useNavigate();
   const isAuthed = Boolean(localStorage.getItem("auth_token"));
 
   React.useEffect(() => {
@@ -59,49 +42,22 @@ export const ProductDetailsPage: React.FC = () => {
       try {
         const res = await api.get<Product>(`/products/${id}`);
         setProduct(res.data);
-
-        setRecommendedLoading(true);
-        setReviewLoading(true);
-        try {
-          const listRes = await api.get<Product[]>("/products");
-          const all = Array.isArray(listRes.data) ? listRes.data : [];
-          const filtered = all.filter((item) => item.id !== res.data.id);
-          const related = filtered.filter((item) => {
-            const sameCategory =
-              res.data.category_id && item.category_id
-                ? res.data.category_id === item.category_id
-                : res.data.categories?.name &&
-                  item.categories?.name &&
-                  res.data.categories.name === item.categories.name;
-            const sameBrand =
-              res.data.brand_id && item.brand_id
-                ? res.data.brand_id === item.brand_id
-                : res.data.brands?.name &&
-                  item.brands?.name &&
-                  res.data.brands.name === item.brands.name;
-            return sameCategory || sameBrand;
-          });
-          const fallback = filtered.filter((item) => !related.includes(item));
-          setRecommended([...related, ...fallback].slice(0, 3));
-        } catch {
-          setRecommended([]);
-        } finally {
-          setRecommendedLoading(false);
-        }
-        try {
-          const reviewRes = await api.get<Review[]>(`/reviews/product/${res.data.id}`);
-          setReviews(reviewRes.data || []);
-        } catch {
-          setReviews([]);
-        } finally {
-          setReviewLoading(false);
-        }
+        
+        const [recRes, revRes] = await Promise.all([
+          api.get<{ data: Product[] }>("/products?limit=10").catch(() => ({ data: { data: [] } })),
+          api.get<Review[]>(`/reviews/product/${res.data.id}`).catch(() => ({ data: [] }))
+        ]);
+        
+        const all = recRes.data?.data || [];
+        const filtered = all.filter((p: Product) => p.id !== res.data.id).slice(0, 4);
+        setRecommended(filtered);
+        setReviews(revRes.data || []);
       } catch {
         setProduct(null);
-        setRecommended([]);
-        setReviews([]);
       } finally {
         setLoading(false);
+        setRecommendedLoading(false);
+        setReviewLoading(false);
       }
     }
     if (id) load();
@@ -109,454 +65,255 @@ export const ProductDetailsPage: React.FC = () => {
 
   const addItemToCart = () => {
     if (!product) return;
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.model_id ? (product.models?.image_url || "") : (product.image_url || "")
-    });
-    push("Added to cart", "success");
+    const img = product.model_id ? (product.models?.image_url || "") : (product.image_url || "");
+    for (let i = 0; i < qty; i++) {
+      addToCart({ id: product.id, name: product.name, price: product.price, image: img });
+    }
+    push(`${qty} item${qty > 1 ? 's' : ''} added to cart`, "success");
   };
 
   const addToWishlist = async () => {
     if (!product) return;
-    if (!isAuthed) {
-      push("Please sign in to save to wishlist", "error");
-      return;
-    }
+    if (!isAuthed) { push("Please sign in to save to wishlist", "error"); return; }
     try {
       setWishlistBusy(true);
       await api.post("/wishlist/items", { product_id: product.id });
       push("Added to wishlist", "success");
-    } catch {
-      push("Already in wishlist or failed to save", "error");
-    } finally {
-      setWishlistBusy(false);
-    }
+    } catch { push("Failed to add to wishlist", "error"); }
+    finally { setWishlistBusy(false); }
   };
 
   const notifyWhenInStock = async () => {
     if (!product) return;
-    if (!isAuthed) {
-      push("Please sign in to get alerts", "error");
-      return;
-    }
+    if (!isAuthed) { push("Please sign in to get alerts", "error"); return; }
     try {
       setSubscribeBusy(true);
       await api.post("/stock-subscriptions", { product_id: product.id });
       push("We'll notify you when it's back", "success");
-    } catch {
-      push("Alert already set or failed", "error");
-    } finally {
-      setSubscribeBusy(false);
-    }
+    } catch { push("Alert already set", "error"); }
+    finally { setSubscribeBusy(false); }
   };
 
   const submitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!product) return;
-    if (!isAuthed) {
-      push("Please sign in to leave a review", "error");
-      return;
-    }
+    if (!product || !isAuthed) { push("Please sign in to leave a review", "error"); return; }
     try {
-      const res = await api.post<Review>("/reviews", {
-        product_id: product.id,
-        rating: reviewForm.rating,
-        title: reviewForm.title || null,
-        body: reviewForm.body
-      });
-      setReviews((prev) => [res.data, ...prev]);
+      const res = await api.post<Review>("/reviews", { product_id: product.id, rating: reviewForm.rating, title: reviewForm.title || null, body: reviewForm.body });
+      setReviews(prev => [res.data, ...prev]);
       setReviewForm({ rating: 5, title: "", body: "" });
       push("Thanks for your review!", "success");
-    } catch {
-      push("Failed to submit review", "error");
-    }
+    } catch { push("Failed to submit review", "error"); }
   };
 
-  const modelGalleryImages = product?.models?.gallery || [];
-
-  const handleOpenGallery = (startIndex: number = 0) => {
-    setGalleryLightbox({ index: startIndex, images: modelGalleryImages });
-  };
-
-  const handleCloseGallery = () => {
-    setGalleryLightbox(null);
-  };
-
-  const handlePrevImage = () => {
-    if (!galleryLightbox) return;
-    const newIndex = galleryLightbox.index === 0 ? galleryLightbox.images.length - 1 : galleryLightbox.index - 1;
-    setGalleryLightbox({ ...galleryLightbox, index: newIndex });
-  };
-
-  const handleNextImage = () => {
-    if (!galleryLightbox) return;
-    const newIndex = galleryLightbox.index === galleryLightbox.images.length - 1 ? 0 : galleryLightbox.index + 1;
-    setGalleryLightbox({ ...galleryLightbox, index: newIndex });
-  };
+  const productImage = product?.model_id ? product.models?.image_url : product?.image_url;
 
   return (
-    <div className="page-shell">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900">
       <PublicNavbar />
-      <div className="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:pt-20 md:px-6">
-        <Link to="/shop" className="text-xs text-muted-foreground hover:text-foreground">
-          &larr; Back to shop
-        </Link>
+      <div className="mx-auto max-w-7xl px-4 pb-12 pt-6 sm:pt-8">
+        <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-6">
+          <ChevronLeft className="w-4 h-4" /> Back
+        </button>
 
         {loading ? (
-          <PageLoading text="Loading product..." />
+          <div className="flex min-h-[60vh] items-center justify-center">
+            <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
+          </div>
         ) : !product ? (
-          <div className="mt-6 rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-md">
-            Product not found.
+          <div className="flex min-h-[60vh] items-center justify-center">
+            <div className="text-center">
+              <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
+                <Package className="w-10 h-10 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Product not found</h3>
+              <Link to="/shop" className="mt-4 inline-block px-6 py-2 bg-primary text-white rounded-lg font-medium">Browse Shop</Link>
+            </div>
           </div>
         ) : (
-          <div className="mt-6 grid gap-8 lg:grid-cols-2">
-            <div className="space-y-4">
-              <div className="overflow-hidden rounded-xl border border-border bg-card shadow-md">
-                {product.model_id ? (
-                  product.models?.image_url ? (
-                    <img
-                      src={product.models.image_url}
-                      alt={`${product.name} vehicle`}
-                      className="h-56 w-full object-cover sm:h-72 lg:h-80"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-56 items-center justify-center bg-secondary text-sm text-muted-foreground sm:h-72 lg:h-80">
-                      No vehicle image yet - Add image to model in admin
-                    </div>
-                  )
-                ) : product.image_url ? (
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    className="h-56 w-full object-cover sm:h-72 lg:h-80"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="flex h-56 items-center justify-center bg-secondary text-sm text-muted-foreground sm:h-72 lg:h-80">
-                    No image
+          <>
+            <div className="grid gap-8 lg:grid-cols-2">
+              <div className="space-y-4">
+                <div className="relative rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-xl border border-gray-100 dark:border-gray-700">
+                  <div className="aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-800">
+                    {productImage ? (
+                      <img src={productImage} alt={product.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <Package className="w-20 h-20 text-gray-300 dark:text-gray-600" />
+                      </div>
+                    )}
                   </div>
-                )}
-                <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
-                  {product.model_id ? (product.years?.label || 'Vehicle') : 'Product'} photo
-                </div>
-              </div>
-
-              {product.models?.gallery && product.models.gallery.length > 0 && (
-                <button
-                  onClick={() => handleOpenGallery()}
-                  className="btn-primary w-full py-3"
-                >
-                  View {product.years?.label || 'Model'} Gallery ({product.models.gallery.length} photos)
-                </button>
-              )}
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-5 shadow-md sm:p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h1 className="text-2xl font-semibold text-foreground">
-                    {product.name}
-                  </h1>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {product.description || "Premium spare part ready to ship."}
-                  </p>
-                </div>
-                <button className="icon-btn" onClick={addToWishlist} disabled={wishlistBusy}>
-                  <Heart className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="mt-6 flex items-center gap-3">
-                <p className="text-3xl font-semibold text-foreground">
-                  GHS {product.price.toLocaleString()}
-                </p>
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    product.quantity > 0
-                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
-                      : "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200"
-                  }`}
-                >
-                  {product.quantity > 0 ? "In stock" : "Out of stock"}
-                </span>
-              </div>
-
-              <div className="mt-6 grid gap-3 text-sm text-muted-foreground">
-                {[
-                  "Verified fitment for popular models",
-                  "Fast delivery and pickup options",
-                  "Quality checked before dispatch"
-                ].map((item) => (
-                  <div key={item} className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    {item}
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground">
-                <div className="flex flex-wrap gap-2">
-                  <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold">
-                    {product.categories?.name || "Category"}
-                  </span>
-                  <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold">
-                    {product.brands?.name || "Brand"}
-                  </span>
-                  {product.models?.name ? (
-                    <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold">
-                      {product.models.name}
-                    </span>
-                  ) : null}
-                  {product.years?.label ? (
-                    <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold">
-                      {product.years.label}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <button
-                  className="btn-primary h-11"
-                  disabled={product.quantity <= 0}
-                  onClick={addItemToCart}
-                >
-                  Add to cart
-                </button>
-                {product.quantity > 0 ? (
-                  <button className="btn-outline h-11">Buy now</button>
-                ) : (
-                  <button
-                    className="btn-outline h-11"
-                    onClick={notifyWhenInStock}
-                    disabled={subscribeBusy}
-                  >
-                    Notify me
-                  </button>
-                )}
-              </div>
-
-              <div className="mt-6 rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-3">
-                  <Truck className="h-5 w-5 text-muted-foreground" />
-                  Same-day dispatch for orders placed before 3pm.
-                </div>
-                <div className="mt-2 flex items-center gap-3">
-                  <ShieldCheck className="h-5 w-5 text-muted-foreground" />
-                  Secure payments with instant order confirmation.
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <section className="mt-10">
-          <div className="section-header">
-            <div>
-              <h2 className="section-title">Recommended for you</h2>
-              <p className="section-subtitle">More parts that match your vehicle.</p>
-            </div>
-            <Link to="/shop" className="text-sm text-muted-foreground hover:text-foreground">
-              View all
-            </Link>
-          </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {recommendedLoading ? (
-              Array.from({ length: 3 }).map((_, idx) => (
-                <Skeleton key={idx} className="h-56" />
-              ))
-            ) : recommended.length === 0 ? (
-              <div className="col-span-full rounded-xl border border-dashed border-border bg-background p-6 text-sm text-muted-foreground">
-                No recommendations yet. Browse the shop to discover more parts.
-              </div>
-            ) : (
-              recommended.map((item) => (
-                <div key={item.id} className="card card-hover p-4">
-                  {item.model_id ? (item.models?.image_url ? (
-                    <img
-                      src={item.models.image_url}
-                      alt={item.name}
-                      className="h-32 w-full rounded-lg object-cover sm:h-36"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-32 w-full items-center justify-center rounded-lg bg-muted sm:h-36">
-                      <span className="text-sm text-muted-foreground">No image</span>
-                    </div>
-                  )) : item.image_url ? (
-                    <img
-                      src={item.image_url}
-                      alt={item.name}
-                      className="h-32 w-full rounded-lg object-cover sm:h-36"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-32 w-full items-center justify-center rounded-lg bg-muted sm:h-36">
-                      <span className="text-sm text-muted-foreground">No image</span>
+                  {product.quantity <= 5 && product.quantity > 0 && (
+                    <div className="absolute left-4 top-4">
+                      <span className="px-4 py-2 rounded-full bg-orange-500 text-white text-sm font-bold shadow-lg">Only {product.quantity} left</span>
                     </div>
                   )}
-                  <div className="mt-3">
-                    <div className="text-xs text-muted-foreground">
-                      {item.categories?.name || "Auto parts"}
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-6 sm:p-8">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {product.categories?.name && <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">{product.categories.name}</span>}
+                      {product.brands?.name && <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium">{product.brands.name}</span>}
+                      {product.models?.name && <span className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium">{product.models.name}</span>}
                     </div>
-                    <div className="mt-1 text-sm font-semibold text-foreground">
-                      {item.name}
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight">{product.name}</h1>
+                  </div>
+                  <button onClick={addToWishlist} disabled={wishlistBusy} className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                    <Heart className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                  </button>
+                </div>
+
+                <p className="mt-4 text-gray-600 dark:text-gray-300">{product.description || "Premium spare part ready to ship."}</p>
+
+                <div className="mt-6 flex items-center gap-4">
+                  <p className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-200 bg-clip-text text-transparent">GHS {product.price.toLocaleString()}</p>
+                  <span className={`px-4 py-2 rounded-full text-sm font-bold ${product.quantity > 0 ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"}`}>
+                    {product.quantity > 0 ? "In Stock" : "Out of Stock"}
+                  </span>
+                </div>
+
+                {product.quantity > 0 && (
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Quantity</label>
+                    <div className="inline-flex items-center gap-3 bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
+                      <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-10 h-10 rounded-lg bg-white dark:bg-gray-600 shadow flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-500"><Minus className="w-4 h-4" /></button>
+                      <span className="w-12 text-center font-bold text-lg text-gray-900 dark:text-white">{qty}</span>
+                      <button onClick={() => setQty(Math.min(product.quantity, qty + 1))} className="w-10 h-10 rounded-lg bg-white dark:bg-gray-600 shadow flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-500"><Plus className="w-4 h-4" /></button>
                     </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-sm font-semibold">
-                        GHS {item.price.toLocaleString()}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {item.quantity > 0 ? "In stock" : "Unavailable"}
-                      </span>
+                    <span className="ml-4 text-sm text-gray-500 dark:text-gray-400">Max: {product.quantity}</span>
+                  </div>
+                )}
+
+                <div className="mt-6 space-y-3">
+                  {[
+                    { icon: CheckCircle2, text: "Verified fitment for your vehicle" },
+                    { icon: Truck, text: "Fast delivery across Ghana" },
+                    { icon: ShieldCheck, text: "Quality checked before dispatch" }
+                  ].map(({ icon: Icon, text }) => (
+                    <div key={text} className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
+                      <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center"><Icon className="w-4 h-4 text-green-600 dark:text-green-400" /></div>
+                      {text}
                     </div>
-                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                      <button
-                        type="button"
-                        className="btn-outline flex-1 text-center"
-                        onClick={() => {
-                          addToCart({
-                            id: item.id,
-                            name: item.name,
-                            price: item.price,
-                            image: item.model_id ? (item.models?.image_url || "") : (item.image_url || "")
-                          });
-                          push("Added to cart", "success");
-                        }}
-                      >
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        Add
-                      </button>
-                      <Link to={`/product/${item.id}`} className="btn-primary flex-1 text-center">
-                        View
-                      </Link>
-                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-8 flex gap-3">
+                  {product.quantity > 0 ? (
+                    <button onClick={addItemToCart} className="flex-1 h-14 rounded-xl bg-gradient-to-r from-gray-900 to-gray-800 dark:from-white dark:to-gray-100 text-white dark:text-gray-900 font-bold shadow-lg hover:shadow-xl transition-all active:scale-[0.98]">
+                      <span className="flex items-center justify-center gap-2"><ShoppingCart className="w-5 h-5" /> Add to Cart</span>
+                    </button>
+                  ) : (
+                    <button onClick={notifyWhenInStock} disabled={subscribeBusy} className="flex-1 h-14 rounded-xl bg-orange-500 text-white font-bold shadow-lg hover:shadow-xl transition-all">
+                      {subscribeBusy ? "Subscribing..." : "Notify When Available"}
+                    </button>
+                  )}
+                  <button onClick={() => navigate("/checkout")} className="flex-1 h-14 rounded-xl bg-primary text-white font-bold shadow-lg hover:shadow-xl transition-all active:scale-[0.98]">
+                    Buy Now
+                  </button>
+                </div>
+
+                <div className="mt-6 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
+                    <Truck className="w-5 h-5 text-primary" />
+                    <span>Same-day dispatch for orders before 3pm</span>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        </section>
-
-        <section className="mt-10">
-          <div className="section-header">
-            <div>
-              <h2 className="section-title">Customer reviews</h2>
-              <p className="section-subtitle">Share your experience with this product.</p>
+              </div>
             </div>
-          </div>
 
-          <div className="mt-4 grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-            <div className="card p-4">
-              {reviewLoading ? (
-                <Skeleton className="h-40" />
-              ) : reviews.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No reviews yet.</p>
-              ) : (
-                <div className="space-y-4">
-                  {reviews.map((review) => (
-                    <div key={review.id} className="rounded-xl border border-border p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm font-semibold">
-                          {review.users?.full_name || "Customer"}
+            {recommended.length > 0 && (
+              <div className="mt-16">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">You May Also Like</h2>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                  {recommended.map((item) => {
+                    const img = item.model_id ? item.models?.image_url : item.image_url;
+                    return (
+                      <div key={item.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden transition-all hover:-translate-y-1">
+                        <div className="aspect-[4/3] bg-gray-100 dark:bg-gray-700">
+                          {img ? <img src={img} alt={item.name} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full"><Package className="w-12 h-12 text-gray-300" /></div>}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(review.created_at).toLocaleDateString()}
+                        <div className="p-4">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{item.categories?.name}</p>
+                          <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2">{item.name}</h3>
+                          <div className="mt-2 flex items-center justify-between">
+                            <p className="font-bold text-lg text-gray-900 dark:text-white">GHS {item.price.toLocaleString()}</p>
+                            <span className={`text-xs font-medium ${item.quantity > 0 ? "text-green-600" : "text-red-500"}`}>{item.quantity > 0 ? "In Stock" : "Out"}</span>
+                          </div>
+                          <button onClick={() => { addToCart({ id: item.id, name: item.name, price: item.price, image: img || "" }); push("Added to cart", "success"); }} className="mt-3 w-full py-2 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-medium text-sm hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors">Add to Cart</button>
                         </div>
                       </div>
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        Rating: {review.rating}/5
-                      </div>
-                      {review.title ? (
-                        <div className="mt-2 text-sm font-semibold">{review.title}</div>
-                      ) : null}
-                      <p className="mt-1 text-sm text-muted-foreground">{review.body}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            <div className="card p-4">
-              <h3 className="text-sm font-semibold">Leave a review</h3>
-              <form onSubmit={submitReview} className="mt-4 space-y-3">
-                <select
-                  className="form-input"
-                  value={reviewForm.rating}
-                  onChange={(e) =>
-                    setReviewForm((prev) => ({ ...prev, rating: Number(e.target.value) }))
-                  }
-                >
-                  {[5, 4, 3, 2, 1].map((value) => (
-                    <option key={value} value={value}>
-                      {value} stars
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className="form-input"
-                  placeholder="Title (optional)"
-                  value={reviewForm.title}
-                  onChange={(e) => setReviewForm((prev) => ({ ...prev, title: e.target.value }))}
-                />
-                <textarea
-                  className="form-input min-h-[120px]"
-                  placeholder="Write your review"
-                  value={reviewForm.body}
-                  onChange={(e) => setReviewForm((prev) => ({ ...prev, body: e.target.value }))}
-                />
-                <button className="btn-primary h-10 text-sm">Submit review</button>
-              </form>
+            <div className="mt-16">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Customer Reviews</h2>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
+                  {reviewLoading ? (
+                    <div className="space-y-4">{[1,2,3].map(i => <div key={i} className="h-20 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse" />)}</div>
+                  ) : reviews.length === 0 ? (
+                    <p className="text-gray-500 dark:text-gray-400 text-center py-8">No reviews yet. Be the first!</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {reviews.map(r => (
+                        <div key={r.id} className="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-700">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-gray-900 dark:text-white">{r.users?.full_name || "Customer"}</span>
+                            <span className="text-xs text-gray-500">{new Date(r.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex items-center gap-1 mb-2">
+                            {Array.from({ length: 5 }).map((_, i) => <Star key={i} className={`w-4 h-4 ${i < r.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`} />)}
+                          </div>
+                          {r.title && <p className="font-medium text-gray-800 dark:text-gray-200">{r.title}</p>}
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{r.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Write a Review</h3>
+                  <form onSubmit={submitReview} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rating</label>
+                      <div className="flex items-center gap-2">
+                        {[5,4,3,2,1].map(v => (
+                          <button key={v} type="button" onClick={() => setReviewForm(prev => ({ ...prev, rating: v }))} className="p-1">
+                            <Star className={`w-8 h-8 ${v <= reviewForm.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <input value={reviewForm.title} onChange={e => setReviewForm(prev => ({ ...prev, title: e.target.value }))} placeholder="Review title (optional)" className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                    <textarea value={reviewForm.body} onChange={e => setReviewForm(prev => ({ ...prev, body: e.target.value }))} placeholder="Write your review..." rows={4} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                    <button type="submit" className="w-full py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition-opacity">Submit Review</button>
+                  </form>
+                </div>
+              </div>
             </div>
-          </div>
-        </section>
+          </>
+        )}
       </div>
-
       <PublicFooterCTA />
 
       {galleryLightbox && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95" onClick={handleCloseGallery}>
-          <button
-            className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
-            onClick={handleCloseGallery}
-          >
-            <X className="h-6 w-6" />
-          </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95" onClick={() => setGalleryLightbox(null)}>
+          <button className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-3 text-white hover:bg-white/20" onClick={() => setGalleryLightbox(null)}><X className="w-6 h-6" /></button>
           {galleryLightbox.images.length > 1 && (
             <>
-              <button
-                className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20"
-                onClick={(e) => { e.stopPropagation(); handlePrevImage(); }}
-              >
-                <ChevronLeft className="h-10 w-10" />
-              </button>
-              <button
-                className="absolute right-20 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20"
-                onClick={(e) => { e.stopPropagation(); handleNextImage(); }}
-              >
-                <ChevronRight className="h-10 w-10" />
-              </button>
+              <button className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20" onClick={e => { e.stopPropagation(); setGalleryLightbox(li => li ? { ...li, index: li.index === 0 ? li.images.length - 1 : li.index - 1 } : null); }}><ChevronLeft className="w-10 h-10" /></button>
+              <button className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-4 text-white hover:bg-white/20" onClick={e => { e.stopPropagation(); setGalleryLightbox(li => li ? { ...li, index: li.index === li.images.length - 1 ? 0 : li.index + 1 } : null); }}><ChevronRight className="w-10 h-10" /></button>
             </>
           )}
-          <img
-            src={galleryLightbox.images[galleryLightbox.index]}
-            alt={`Gallery ${galleryLightbox.index + 1}`}
-            className="max-h-[85vh] max-w-[90vw] object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-3 rounded-full bg-black/60 px-5 py-2 text-white">
-            <button onClick={(e) => { e.stopPropagation(); handlePrevImage(); }} className="hover:text-gray-300">
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <span className="text-sm font-medium">
-              {galleryLightbox.index + 1} <span className="opacity-60">/ {galleryLightbox.images.length}</span>
-            </span>
-            <button onClick={(e) => { e.stopPropagation(); handleNextImage(); }} className="hover:text-gray-300">
-              <ChevronRight className="h-5 w-5" />
-            </button>
+          <img src={galleryLightbox.images[galleryLightbox.index]} alt={`Gallery ${galleryLightbox.index + 1}`} className="max-h-[85vh] max-w-[90vw] object-contain" onClick={e => e.stopPropagation()} />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 rounded-full bg-black/60 px-6 py-3 text-white">
+            <span className="text-sm font-medium">{galleryLightbox.index + 1} / {galleryLightbox.images.length}</span>
           </div>
         </div>
       )}

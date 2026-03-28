@@ -73,9 +73,9 @@ export const AboutPage: React.FC = () => {
             </div>
             <div className="rounded-xl border border-border bg-card p-4 shadow-md">
               <img
-                src="https://images.unsplash.com/photo-1489515217757-5fd1be406fef?q=80&w=1200&auto=format&fit=crop"
-                alt="Auto parts delivery"
-                className="h-52 w-full rounded-lg object-cover sm:h-56"
+                src="https://media.istockphoto.com/id/1412245366/photo/auto-shop-selling-car-rims-stand-for-sale-of-alloy-wheels-discounts-at-auto-parts-store.webp?a=1&b=1&s=612x612&w=0&k=20&c=yy1VqPTCpYsRwAVkjB1b7mKB4-rRzX0-lhy_FfvsZFs="
+                alt="Auto parts and car components"
+                className="h-52 w-full rounded-lg object-cover sm:h-72"
               />
               <div className="mt-4 rounded-lg border border-border bg-background p-3 text-sm text-muted-foreground">
                 Warehouses and showrooms stocked with verified OEM and aftermarket

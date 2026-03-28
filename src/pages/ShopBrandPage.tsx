@@ -167,7 +167,7 @@ export const ShopBrandPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900">
       <PublicNavbar />
-      <main className="mx-auto max-w-7xl px-4 pb-20 pt-24 sm:pt-28">
+      <main className="mx-auto max-w-7xl px-4 pb-12 pt-6 sm:pt-8">
         {loading ? (
           <PageLoading text="Loading products..." />
         ) : error ? (

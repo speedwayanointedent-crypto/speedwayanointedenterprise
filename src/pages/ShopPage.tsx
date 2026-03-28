@@ -1,31 +1,21 @@
 import React from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Loader2 } from "lucide-react";
+import { Search, ArrowRight, Shield, Truck, Star, Package } from "lucide-react";
 import api from "../lib/api";
-import { Skeleton } from "../components/ui/Skeleton";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { WhatsAppButton } from "../components/ui/WhatsAppButton";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
-import { PageHeader } from "../components/ui/PageHeader";
-import { PageLoading } from "../components/ui/LoadingSpinner";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
 
-type CategoryWithCount = {
-  id: string;
-  name: string;
-  image_url?: string | null;
-};
+type Category = { id: string; name: string; image_url?: string | null; product_count?: number };
 
-const fallbackImage =
-  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop";
-
-function getCategoryImage(category: CategoryWithCount): string {
-  return category.image_url || fallbackImage;
-}
+const fallbackImage = "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop";
 
 export const ShopPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [categories, setCategories] = React.useState<CategoryWithCount[]>([]);
+  const [categories, setCategories] = React.useState<Category[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState(searchParams.get("q") || "");
@@ -33,15 +23,10 @@ export const ShopPage: React.FC = () => {
   React.useEffect(() => {
     async function loadCategories() {
       try {
-        let res = await api.get<{ id: string; name: string; image_url?: string }[]>("/categories");
-        if (res.data && res.data.length > 0) {
-          setCategories(res.data);
-        } else {
-          setCategories([]);
-        }
+        const res = await api.get<Category[]>("/categories");
+        setCategories(res.data || []);
         setError(null);
-      } catch (err) {
-        console.error("Failed to load categories:", err);
+      } catch {
         setError("Failed to load categories");
       } finally {
         setLoading(false);
@@ -50,86 +35,113 @@ export const ShopPage: React.FC = () => {
     loadCategories();
   }, []);
 
-  React.useEffect(() => {
-    setSearchQuery(searchParams.get("q") || "");
-  }, [searchParams]);
-
   const filteredCategories = React.useMemo(() => {
     if (!searchQuery.trim()) return categories;
-    const query = searchQuery.toLowerCase();
-    return categories.filter(cat => cat.name.toLowerCase().includes(query));
+    return categories.filter(cat => cat.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [categories, searchQuery]);
 
-  const handleCategoryClick = (cat: CategoryWithCount) => {
+  const handleCategoryClick = (cat: Category) => {
     navigate(`/shop/category/${cat.id}`);
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    navigate(`/shop?q=${encodeURIComponent(searchQuery)}`);
-  };
-
   return (
-    <div className="page-shell">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900">
       <PublicNavbar />
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-16 sm:pt-20 md:px-6">
-        <section className="section-band rounded-2xl p-4 sm:p-6">
-          <div className="card p-4 sm:p-6">
-            <PageHeader
-              title="Shop"
-              subtitle="Browse our catalogue of genuine spare parts by category."
-              actions={<WhatsAppButton label="WhatsApp support" className="h-10 px-5 text-sm" />}
-            />
-            <form onSubmit={handleSearch} className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              <Search className="h-4 w-4" />
-              <input
-                className="w-full bg-transparent outline-none"
-                placeholder="Search categories..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </form>
-          </div>
-        </section>
+      <main className="mx-auto max-w-7xl px-4 pb-12 pt-4 sm:pt-6">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 dark:text-white tracking-tight">Shop by Category</h1>
+          <p className="mt-4 text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">Browse our catalogue of genuine spare parts by category. Find exactly what you need for your vehicle.</p>
+        </div>
 
-        <section className="mt-6">
-          {error && (
-            <div className="mb-4 rounded-lg bg-yellow-900/50 border border-yellow-700 p-3 text-sm text-yellow-200">
-              {error}
+        <div className="flex items-center gap-4 max-w-2xl mx-auto mb-12">
+          <div className="relative flex-1">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search categories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-14 pl-14 pr-5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+            />
+          </div>
+          <WhatsAppButton label="Help" className="h-14 px-6 shadow-lg shadow-green-500/20" />
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto"></div>
+              <p className="mt-4 text-slate-500 dark:text-slate-400">Loading categories...</p>
             </div>
-          )}
-          {loading ? (
-            <PageLoading text="Loading categories..." />
-          ) : filteredCategories.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border bg-background p-8 text-center">
-              <div className="text-base font-semibold text-foreground">No categories found</div>
-              <p className="mt-2 text-sm text-muted-foreground">Try adjusting your search.</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-20">
+            <div className="w-20 h-20 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">!</span>
             </div>
-          ) : (
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">{error}</h3>
+            <Button variant="primary" onClick={() => window.location.reload()} className="mt-4">
+              Retry
+            </Button>
+          </div>
+        ) : filteredCategories.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+              <Search className="w-10 h-10 text-slate-400" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">No categories found</h3>
+            <p className="mt-2 text-slate-500 dark:text-slate-400">Try adjusting your search.</p>
+          </div>
+        ) : (
+          <>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filteredCategories.map((cat) => (
+              {filteredCategories.map((cat, index) => (
                 <button
                   key={cat.id}
                   onClick={() => handleCategoryClick(cat)}
-                  className="card card-hover overflow-hidden p-0 text-left transition-all hover:shadow-lg hover:shadow-primary/10"
+                  className="group relative bg-white dark:bg-slate-800 rounded-2xl shadow-sm hover:shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden transition-all duration-500 hover:-translate-y-2 animate-fade-in-up"
+                  style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <div className="relative h-56 w-full">
+                  <div className="aspect-[4/3] relative overflow-hidden bg-slate-100 dark:bg-slate-700">
                     <img
-                      src={getCategoryImage(cat)}
-                      alt={cat.name.trim()}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
+                      src={cat.image_url || fallbackImage}
+                      alt={cat.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <h3 className="text-xl font-semibold text-white">{cat.name.trim()}</h3>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <span className="px-6 py-3 rounded-full bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-white font-semibold shadow-xl flex items-center gap-2">
+                        Browse <ArrowRight className="w-4 h-4" />
+                      </span>
                     </div>
+                  </div>
+                  <div className="p-5">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">{cat.name}</h3>
+                    {cat.product_count !== undefined && (
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{cat.product_count} products</p>
+                    )}
                   </div>
                 </button>
               ))}
             </div>
-          )}
-        </section>
+
+            <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { icon: Shield, label: "Verified Fitment", color: "primary" },
+                { icon: Truck, label: "Fast Delivery", color: "success" },
+                { icon: Star, label: "Top Quality", color: "warning" },
+                { icon: Shield, label: "Secure Payment", color: "primary" }
+              ].map(({ icon: Icon, label, color }) => (
+                <div key={label} className="flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                  <div className={`w-12 h-12 rounded-xl bg-${color}-100 dark:bg-${color}-900/30 flex items-center justify-center`}>
+                    <Icon className={`w-6 h-6 text-${color}-600 dark:text-${color}-400`} />
+                  </div>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{label}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </main>
       <PublicFooterCTA />
     </div>
