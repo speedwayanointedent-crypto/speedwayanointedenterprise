@@ -91,7 +91,7 @@ export const ShopBrandPage: React.FC = () => {
 
         const grouped = new Map<string, Product[]>();
         products.forEach(p => {
-          const modelId = p.model_id || "universal";
+          const modelId = p.model_id || "__nomodel";
           if (!grouped.has(modelId)) {
             grouped.set(modelId, []);
           }
@@ -100,9 +100,9 @@ export const ShopBrandPage: React.FC = () => {
 
         const result: GroupedProduct[] = [];
         grouped.forEach((prods, modelId) => {
-          if (modelId === "universal") {
-            result.unshift({
-              model: { id: "universal", name: "Universal Parts", brand_id: brandId, image_url: null },
+          if (modelId === "__nomodel") {
+            result.push({
+              model: { id: "__nomodel", name: "", brand_id: brandId, image_url: null },
               products: prods
             });
           } else if (modelsMap.has(modelId)) {

@@ -273,16 +273,18 @@ export const ShopCategoryPage: React.FC = () => {
 
                         {brandGroup.models.map((modelGroup) => (
                           <div key={modelGroup.model_id} className="mb-10">
-                            <div className="flex items-center gap-3 mb-6">
-                              {modelGroup.model_image ? (
-                                <img src={modelGroup.model_image} alt={modelGroup.model_name} className="w-10 h-10 rounded-xl object-cover shadow-md" />
-                              ) : (
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
-                                  <Package className="w-5 h-5 text-gray-400" />
-                                </div>
-                              )}
-                              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{modelGroup.model_name}</h3>
-                            </div>
+                            {modelGroup.model_name && (
+                              <div className="flex items-center gap-3 mb-6">
+                                {modelGroup.model_image ? (
+                                  <img src={modelGroup.model_image} alt={modelGroup.model_name} className="w-10 h-10 rounded-xl object-cover shadow-md" />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
+                                    <Package className="w-5 h-5 text-gray-400" />
+                                  </div>
+                                )}
+                                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{modelGroup.model_name}</h3>
+                              </div>
+                            )}
                             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                               {modelGroup.products.map((product) => {
                                 const imageUrl = product.image_url || modelGroup.model_image;
