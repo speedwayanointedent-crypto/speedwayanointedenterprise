@@ -1,5 +1,5 @@
 import React from "react";
-import { Mail, Phone, Facebook, Instagram, Twitter, Linkedin, Globe } from "lucide-react";
+import { Mail, Phone, Facebook, Instagram, Twitter, Linkedin, Globe, ArrowUpRight, MapPin, Clock } from "lucide-react";
 import api from "../../lib/api";
 import { WHATSAPP_LINK } from "../../lib/whatsapp";
 
@@ -45,122 +45,128 @@ export const PublicFooterCTA: React.FC = () => {
   const businessName = settings.business_name || "Speedway Anointed Ent";
   const address = settings.address || "Accra, Ghana";
 
+  const socialLinks = [
+    settings.facebook_url && { url: settings.facebook_url, icon: Facebook, label: "Facebook" },
+    settings.instagram_url && { url: settings.instagram_url, icon: Instagram, label: "Instagram" },
+    settings.x_url && { url: settings.x_url, icon: Twitter, label: "X" },
+    settings.linkedin_url && { url: settings.linkedin_url, icon: Linkedin, label: "LinkedIn" },
+    settings.tiktok_url && { url: settings.tiktok_url, icon: Globe, label: "TikTok" },
+  ].filter(Boolean) as { url: string; icon: React.ElementType; label: string }[];
+
   return (
-    <section className="border-t border-border bg-gray-100 text-gray-700 dark:bg-slate-900 dark:text-gray-200">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Need help sourcing parts?
-          </p>
-          <h3 className="mt-2 text-2xl font-semibold text-foreground">
-            Talk to a parts specialist today
-          </h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Call, WhatsApp, or email us for fitment checks and bulk orders.
-          </p>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          {supportPhone ? (
-            <a href={`tel:${supportPhone}`} className="btn-outline h-10 w-full px-4 text-sm sm:w-auto">
-              <Phone className="mr-2 h-4 w-4" />
-              Call us
-            </a>
-          ) : null}
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="btn-whatsapp h-10 w-full px-4 text-sm sm:w-auto"
-          >
-            WhatsApp
-          </a>
-          {supportEmail ? (
-            <a href={`mailto:${supportEmail}`} className="btn-outline h-10 w-full px-4 text-sm sm:w-auto">
-              <Mail className="mr-2 h-4 w-4" />
-              Email
-            </a>
-          ) : null}
-        </div>
-      </div>
-      <div className="border-t border-border">
-        <div className="mx-auto flex flex-col items-start justify-between gap-4 px-4 py-4 text-xs text-gray-600 sm:flex-row sm:items-center sm:px-6">
-          <div>
-            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              {businessName}
+    <footer className="border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+      {/* ── CTA Banner ──────────────────────────────────────── */}
+      <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900">
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 py-10 sm:py-14 lg:py-16">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-10">
+            <div className="max-w-xl">
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary/80 mb-2 sm:mb-3">
+                Need help sourcing parts?
+              </p>
+              <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white leading-snug">
+                Talk to a parts specialist today
+              </h3>
+              <p className="mt-2 sm:mt-3 text-sm sm:text-base text-slate-400">
+                Call, WhatsApp, or email us for fitment checks and bulk orders.
+              </p>
             </div>
-            <div className="mt-1">{address}</div>
+            <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 flex-shrink-0">
+              {supportPhone ? (
+                <a
+                  href={`tel:${supportPhone}`}
+                  className="inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-5 sm:px-6 rounded-xl border border-white/20 text-white text-sm font-semibold hover:bg-white/10 active:scale-[0.98] transition-all"
+                >
+                  <Phone className="w-4 h-4" />
+                  Call us
+                </a>
+              ) : null}
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-5 sm:px-6 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-lg shadow-emerald-500/20"
+              >
+                WhatsApp
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </a>
+              {supportEmail ? (
+                <a
+                  href={`mailto:${supportEmail}`}
+                  className="inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-5 sm:px-6 rounded-xl border border-white/20 text-white text-sm font-semibold hover:bg-white/10 active:scale-[0.98] transition-all"
+                >
+                  <Mail className="w-4 h-4" />
+                  Email
+                </a>
+              ) : null}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-4">
-            <a href="/shop" className="hover:text-indigo-600 transition-colors">
-              Shop
-            </a>
-            <a href="/about" className="hover:text-indigo-600 transition-colors">
-              About
-            </a>
-            <a href="/contact" className="hover:text-indigo-600 transition-colors">
-              Contact
-            </a>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            {settings.facebook_url ? (
-              <a
-                href={settings.facebook_url}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1 hover:text-indigo-600 transition-colors"
-              >
-                <Facebook className="h-3 w-3" />
-                Facebook
-              </a>
-            ) : null}
-            {settings.instagram_url ? (
-              <a
-                href={settings.instagram_url}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1 hover:text-indigo-600 transition-colors"
-              >
-                <Instagram className="h-3 w-3" />
-                Instagram
-              </a>
-            ) : null}
-            {settings.x_url ? (
-              <a
-                href={settings.x_url}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1 hover:text-indigo-600 transition-colors"
-              >
-                <Twitter className="h-3 w-3" />
-                X
-              </a>
-            ) : null}
-            {settings.linkedin_url ? (
-              <a
-                href={settings.linkedin_url}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1 hover:text-indigo-600 transition-colors"
-              >
-                <Linkedin className="h-3 w-3" />
-                LinkedIn
-              </a>
-            ) : null}
-            {settings.tiktok_url ? (
-              <a
-                href={settings.tiktok_url}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1 hover:text-indigo-600 transition-colors"
-              >
-                <Globe className="h-3 w-3" />
-                TikTok
-              </a>
-            ) : null}
-          </div>
-          <div>(c) 2026 {businessName}.</div>
         </div>
       </div>
-    </section>
+
+      {/* ── Footer Bottom ────────────────────────────────────── */}
+      <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="flex flex-col gap-6 sm:gap-8">
+          {/* Top row: brand + nav + socials */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* Brand + address */}
+            <div>
+              <div className="text-base font-semibold text-slate-900 dark:text-white">
+                {businessName}
+              </div>
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <MapPin className="w-3 h-3 flex-shrink-0" />
+                <span>{address}</span>
+              </div>
+            </div>
+
+            {/* Nav links */}
+            <nav className="flex flex-wrap gap-x-5 gap-y-1">
+              {[
+                { href: "/shop", label: "Shop" },
+                { href: "/about", label: "About" },
+                { href: "/contact", label: "Contact" },
+                { href: "/reviews", label: "Reviews" },
+              ].map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors font-medium"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+
+            {/* Socials */}
+            {socialLinks.length > 0 && (
+              <div className="flex items-center gap-2">
+                {socialLinks.map(({ url, icon: Icon, label }) => (
+                  <a
+                    key={label}
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={label}
+                    className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors"
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom divider + copyright */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-4 sm:pt-0 border-t border-slate-100 dark:border-slate-800">
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              &copy; 2026 {businessName}. All rights reserved.
+            </p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              Built with precision in Ghana
+            </p>
+          </div>
+        </div>
+      </div>
+    </footer>
   );
 };
