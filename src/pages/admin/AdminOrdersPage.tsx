@@ -1,12 +1,14 @@
 import React from "react";
-import { Eye, Search } from "lucide-react";
+import { Eye, Search, Package, RefreshCw } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { PageLoading } from "../../components/ui/LoadingSpinner";
+import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { Badge } from "../../components/ui/Badge";
 
 type Order = {
   id: number;
@@ -26,34 +28,44 @@ type OrderReturn = {
   users?: { full_name?: string; email?: string };
 };
 
-const statusStyles: Record<string, string> = {
-  pending: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  completed: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  cancelled: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
-  processing: "bg-blue-500/15 text-blue-700 dark:text-blue-300"
+const statusConfig: Record<string, { variant: 'default' | 'success' | 'warning' | 'destructive'; label: string }> = {
+  pending: { variant: 'warning', label: 'Pending' },
+  processing: { variant: 'primary', label: 'Processing' },
+  completed: { variant: 'success', label: 'Completed' },
+  cancelled: { variant: 'destructive', label: 'Cancelled' }
 };
 
 export const AdminOrdersPage: React.FC = () => {
   const [orders, setOrders] = React.useState<Order[]>([]);
+  const [returns, setReturns] = React.useState<OrderReturn[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [open, setOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<Order | null>(null);
   const [query, setQuery] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
-  const [returns, setReturns] = React.useState<OrderReturn[]>([]);
   const { push } = useToast();
 
   const load = React.useCallback(async () => {
     setLoading(true);
+    setError(null);
+    
     try {
-      const [res, returnsRes] = await Promise.all([
-        api.get<Order[]>("/orders"),
-        api.get<OrderReturn[]>("/orders/returns")
-      ]);
-      setOrders(res.data);
-      setReturns(returnsRes.data || []);
+      const ordersRes = await api.get<any>("/orders");
+      const ordersData = Array.isArray(ordersRes.data) ? ordersRes.data : [];
+      setOrders(ordersData);
+      
+      try {
+        const returnsRes = await api.get<any>("/orders/returns");
+        setReturns(Array.isArray(returnsRes.data) ? returnsRes.data : []);
+      } catch {
+        setReturns([]);
+      }
+      
       setLastUpdated(new Date());
-    } catch {
+    } catch (err: any) {
+      console.error("Failed to load orders:", err);
+      setError(err?.message || "Failed to load orders");
       setOrders([]);
       setReturns([]);
     } finally {
@@ -70,8 +82,8 @@ export const AdminOrdersPage: React.FC = () => {
       await api.patch(`/orders/${id}/status`, { status });
       push("Order status updated", "success");
       load();
-    } catch {
-      push("Failed to update order", "error");
+    } catch (err: any) {
+      push(err?.message || "Failed to update order", "error");
     }
   };
 
@@ -80,17 +92,25 @@ export const AdminOrdersPage: React.FC = () => {
       await api.patch(`/orders/returns/${id}`, { status });
       push("Return updated", "success");
       load();
-    } catch {
-      push("Failed to update return", "error");
+    } catch (err: any) {
+      push(err?.message || "Failed to update return", "error");
     }
   };
 
-  const filtered = orders.filter((o) => {
-    const target = `${o.id} ${o.users?.full_name || ""} ${
-      o.users?.email || ""
-    }`.toLowerCase();
-    return target.includes(query.toLowerCase());
-  });
+  const filtered = React.useMemo(() => {
+    if (!query.trim()) return orders;
+    const q = query.toLowerCase();
+    return orders.filter((o) => 
+      String(o.id).includes(q) ||
+      o.users?.full_name?.toLowerCase().includes(q) ||
+      o.users?.email?.toLowerCase().includes(q)
+    );
+  }, [orders, query]);
+
+  const getStatusBadge = (status: string) => {
+    const config = statusConfig[status] || { variant: 'default' as const, label: status };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
 
   return (
     <div className="space-y-6 text-foreground">
@@ -98,192 +118,167 @@ export const AdminOrdersPage: React.FC = () => {
         title="Orders"
         subtitle="Manage customer orders and fulfillment status."
         meta={
-          <>
+          <span className="text-muted-foreground">
             {orders.length} total
             {lastUpdated ? ` · Updated ${lastUpdated.toLocaleTimeString()}` : ""}
-          </>
+          </span>
+        }
+        actions={
+          <Button variant="outline" size="sm" onClick={load}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
         }
       />
 
-      <div className="card p-4">
-        <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-          <Search className="h-4 w-4" />
+      {error && (
+        <Card className="border-destructive/50 bg-destructive/5 p-4">
+          <p className="text-destructive text-sm">{error}</p>
+          <Button variant="outline" size="sm" onClick={load} className="mt-2">
+            Try Again
+          </Button>
+        </Card>
+      )}
+
+      <Card padding="md">
+        <div className="relative mb-4">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
-            className="w-full bg-transparent outline-none"
-            placeholder="Search order or customer..."
+            className="input pl-11"
+            placeholder="Search by order ID, customer name or email..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        {query ? (
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span className="rounded-full border border-border bg-background px-2.5 py-1">
-              Search: {query}
-            </span>
-          </div>
-        ) : null}
 
         {loading ? (
-          <PageLoading text="Loading orders..." />
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-xl" />
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="mt-6">
-            <EmptyState
-              title="No orders found"
-              description="Orders will appear here as customers checkout."
-            />
-          </div>
+          <EmptyState
+            title="No orders found"
+            description={query ? "Try adjusting your search." : "Orders will appear here as customers checkout."}
+          />
         ) : (
-          <div className="mt-6 overflow-x-auto">
-            <table className="table text-sm">
-              <thead>
-                <tr>
-                  <th>Order</th>
-                  <th>Customer</th>
-                  <th className="text-right">Total</th>
-                  <th className="text-right">Status</th>
-                  <th className="text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((o) => (
-                  <tr key={o.id}>
-                    <td>
-                      <div className="font-medium">
-                        #{o.id.toString().padStart(4, "0")}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(o.created_at).toLocaleString()}
-                      </div>
-                    </td>
-                    <td>
-                      <div>{o.users?.full_name || "—"}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {o.users?.email}
-                      </div>
-                    </td>
-                    <td className="text-right font-medium">
-                      GHS {o.total.toLocaleString()}
-                    </td>
-                    <td className="text-right">
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          statusStyles[o.status] || "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {o.status}
-                      </span>
-                    </td>
-                    <td className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          className="btn-outline h-8 w-8 p-0"
-                          onClick={() => {
-                            setSelected(o);
-                            setOpen(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <select
-                          className="rounded-md border border-border bg-card px-2 py-1 text-xs"
-                          value={o.status}
-                          onChange={(e) => updateStatus(o.id, e.target.value)}
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="processing">Processing</option>
-                          <option value="completed">Completed</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-2">
+            {filtered.map((o) => (
+              <div
+                key={o.id}
+                className="flex items-center justify-between rounded-xl border border-border/60 bg-background p-4 transition-all hover:border-border hover:shadow-soft"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                    <Package className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">#{o.id.toString().padStart(4, "0")}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {o.users?.full_name || "Guest"} · {o.users?.email || "No email"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(o.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="font-bold">GHS {Number(o.total || 0).toLocaleString()}</p>
+                    {getStatusBadge(o.status)}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelected(o);
+                        setOpen(true);
+                      }}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <select
+                      className="input h-9 w-28 text-xs"
+                      value={o.status}
+                      onChange={(e) => updateStatus(o.id, e.target.value)}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="processing">Processing</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
-      </div>
+      </Card>
 
-      <div className="card p-4">
-        <h2 className="text-base font-semibold">Returns & refunds</h2>
+      <Card padding="md">
+        <h2 className="text-lg font-semibold mb-4">Returns & Refunds</h2>
         {returns.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">No return requests.</p>
+          <p className="text-sm text-muted-foreground">No return requests.</p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="table text-sm">
-              <thead>
-                <tr>
-                  <th>Order</th>
-                  <th>Customer</th>
-                  <th>Reason</th>
-                  <th className="text-right">Amount</th>
-                  <th className="text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {returns.map((r) => (
-                  <tr key={r.id}>
-                    <td>#{r.orders?.id?.toString().padStart(4, "0")}</td>
-                    <td>
-                      <div>{r.users?.full_name || "—"}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {r.users?.email}
-                      </div>
-                    </td>
-                    <td className="text-xs text-muted-foreground">
-                      {r.reason || "—"}
-                    </td>
-                    <td className="text-right">
-                      GHS {Number(r.amount || r.orders?.total || 0).toLocaleString()}
-                    </td>
-                    <td className="text-right">
-                      <select
-                        className="rounded-md border border-border bg-card px-2 py-1 text-xs"
-                        value={r.status}
-                        onChange={(e) => updateReturnStatus(r.id, e.target.value)}
-                      >
-                        <option value="requested">Requested</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
-                        <option value="refunded">Refunded</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-2">
+            {returns.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between rounded-xl border border-border/60 bg-background p-4"
+              >
+                <div>
+                  <p className="font-semibold">#{r.orders?.id?.toString().padStart(4, "0")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {r.users?.full_name || "Guest"} · {r.reason || "No reason"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <p className="font-bold">GHS {Number(r.amount || r.orders?.total || 0).toLocaleString()}</p>
+                  <select
+                    className="input h-9 w-28 text-xs"
+                    value={r.status}
+                    onChange={(e) => updateReturnStatus(r.id, e.target.value)}
+                  >
+                    <option value="requested">Requested</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="refunded">Refunded</option>
+                  </select>
+                </div>
+              </div>
+            ))}
           </div>
         )}
-      </div>
+      </Card>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Order details">
-        {selected ? (
-          <div className="space-y-3 text-sm text-muted-foreground">
+      <Modal open={open} onClose={() => setOpen(false)} title="Order Details">
+        {selected && (
+          <div className="space-y-4">
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Order ID
-              </p>
-              <p className="text-base font-semibold">#{selected.id}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Order ID</p>
+              <p className="text-lg font-semibold">#{selected.id.toString().padStart(4, "0")}</p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Customer
-              </p>
-              <p className="font-semibold">{selected.users?.full_name || "—"}</p>
-              <p className="text-xs text-muted-foreground">
-                {selected.users?.email}
-              </p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Customer</p>
+              <p className="font-semibold">{selected.users?.full_name || "Guest"}</p>
+              <p className="text-sm text-muted-foreground">{selected.users?.email || "No email"}</p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Total
-              </p>
-              <p className="font-semibold">
-                GHS {selected.total.toLocaleString()}
-              </p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Total</p>
+              <p className="text-xl font-bold">GHS {Number(selected.total || 0).toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Status</p>
+              {getStatusBadge(selected.status)}
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Date</p>
+              <p className="text-sm">{new Date(selected.created_at).toLocaleString()}</p>
             </div>
           </div>
-        ) : null}
+        )}
       </Modal>
     </div>
   );

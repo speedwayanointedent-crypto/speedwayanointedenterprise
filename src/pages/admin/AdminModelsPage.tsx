@@ -43,11 +43,15 @@ export const AdminModelsPage: React.FC = () => {
         api.get<Model[]>("/models"),
         api.get<Brand[]>("/brands")
       ]);
-      setItems(modelsRes.data);
-      setBrands(brandsRes.data);
+      const modelsData = Array.isArray(modelsRes.data) ? modelsRes.data : (modelsRes.data?.data || []);
+      const brandsData = Array.isArray(brandsRes.data) ? brandsRes.data : (brandsRes.data?.data || []);
+      setItems(modelsData);
+      setBrands(brandsData);
       setLastUpdated(new Date());
-    } catch {
+    } catch (err) {
+      console.error("Failed to load models:", err);
       setItems([]);
+      setBrands([]);
     } finally {
       setLoading(false);
     }
@@ -154,9 +158,14 @@ export const AdminModelsPage: React.FC = () => {
     setGallery(gallery.filter(g => g !== url));
   };
 
-  const filtered = items.filter((c) =>
-    c.name.toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = React.useMemo(() => {
+    if (!query.trim()) return items;
+    const search = query.toLowerCase();
+    return items.filter((c) =>
+      c.name.toLowerCase().includes(search) ||
+      c.brands?.name?.toLowerCase().includes(search)
+    );
+  }, [items, query]);
 
   const groupedModels = React.useMemo(() => {
     const groups: Record<string, Model[]> = {};
@@ -183,10 +192,10 @@ export const AdminModelsPage: React.FC = () => {
       />
 
       <div className="card p-4">
-        <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-          <Search className="h-4 w-4" />
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
-            className="w-full bg-transparent outline-none"
+            className="input pl-11"
             placeholder="Search models..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}

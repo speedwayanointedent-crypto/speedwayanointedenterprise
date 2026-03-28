@@ -1,273 +1,129 @@
-import React from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
-  ArrowRight,
-  Calendar,
-  CreditCard,
-  Loader2,
-  Minus,
-  Package,
-  Plus,
-  RefreshCcw,
-  Search,
-  ShoppingBag,
   ShoppingCart,
+  Package,
+  History,
+  RefreshCw,
+  Plus,
+  Trash2,
+  Search,
+  Calendar,
+  AlertTriangle,
+  Keyboard,
   Sparkles,
-  Trash2
-} from "lucide-react";
-import api from "../../lib/api";
-import { EmptyState } from "../../components/ui/EmptyState";
-import { Modal } from "../../components/ui/Modal";
-import { PageHeader } from "../../components/ui/PageHeader";
-import { PageLoading } from "../../components/ui/LoadingSpinner";
-import { useToast } from "../../components/ui/Toast";
+  Check,
+  Loader2,
+  CreditCard,
+  Banknote,
+  Receipt
+} from 'lucide-react';
+import classNames from 'classnames';
+import api from '../../lib/api';
+import { salesApi, formatSaleForCompletion } from '../../lib/salesApi';
+import { fetchAllProducts } from '../../lib/productsApi';
+import { useToast } from '../../components/ui/Toast';
+import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { PageLoading } from '../../components/ui/LoadingSpinner';
+import { useSearch } from '../../lib/useSearch';
+import {
+  ProductSearch,
+  ManualProductForm,
+  CartItemList,
+  QuickStats
+} from '../../components/pos';
+import type { Product, CartItem, SaleRecord, SaleStats } from '../../types/sale';
+import { formatCurrency } from '../../types/sale';
 
-type SaleRecord = {
+type TabMode = 'inventory' | 'manual';
+
+type SaleRecordAPI = {
   id: string;
   product_id?: string | null;
   product_name: string;
   quantity: number;
-  unit_price: number;
+  price: number;
   total: number;
   created_at?: string;
   note?: string | null;
 };
 
-type Product = {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image_url?: string | null;
-  categories?: { name: string };
-  brands?: { name: string };
-  models?: { name: string; image_url?: string | null };
-};
-
-type CartItem = {
-  id: string;
-  product_id?: string | null;
-  product_name: string;
-  quantity: number;
-  unit_price: number;
-  availableStock: number;
-  image_url?: string | null;
-  category?: string;
-  brand?: string;
-  isManual?: boolean;
-};
-
-type ProductsResponse = {
-  data?: Product[];
-  pagination?: { total: number; totalPages: number; page: number };
-};
-
-type CategoryOption = {
-  id: string;
-  name: string;
-};
-
-const PRODUCTS_LIMIT = 60;
-
-const formatCurrency = (value: number) =>
-  `GHS ${Number(value || 0).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })}`;
-
-const getStockTone = (quantity: number) => {
-  if (quantity <= 0) return "bg-red-100 text-red-700";
-  if (quantity <= 5) return "bg-amber-100 text-amber-700";
-  return "bg-emerald-100 text-emerald-700";
-};
-
-const getFriendlyDate = (value?: string) => {
-  if (!value) return "";
-  return new Date(value).toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
-};
-
 export const AdminSalesPage: React.FC = () => {
-  const [sales, setSales] = React.useState<SaleRecord[]>([]);
-  const [products, setProducts] = React.useState<Product[]>([]);
-  const [categories, setCategories] = React.useState<CategoryOption[]>([]);
-  const [loadingSales, setLoadingSales] = React.useState(true);
-  const [loadingProducts, setLoadingProducts] = React.useState(true);
-  const [refreshing, setRefreshing] = React.useState(false);
-  const [saving, setSaving] = React.useState(false);
-  const [saleModalOpen, setSaleModalOpen] = React.useState(false);
-  const [cartItems, setCartItems] = React.useState<CartItem[]>([]);
-  const [catalogQuery, setCatalogQuery] = React.useState("");
-  const [salesQuery, setSalesQuery] = React.useState("");
-  const [selectedDate, setSelectedDate] = React.useState(
-    new Date().toISOString().slice(0, 10)
-  );
-  const [selectedCategory, setSelectedCategory] = React.useState("all");
-  const [note, setNote] = React.useState("");
-  const [manualName, setManualName] = React.useState("");
-  const [manualPrice, setManualPrice] = React.useState("");
-  const [manualQuantity, setManualQuantity] = React.useState("1");
-  const deferredCatalogQuery = React.useDeferredValue(catalogQuery);
+  const [activeTab, setActiveTab] = useState<TabMode>('inventory');
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [sales, setSales] = useState<SaleRecord[]>([]);
+  const [allProducts, setAllProducts] = useState<Map<string, Product>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [note, setNote] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [viewMode, setViewMode] = useState<'pos' | 'history'>('pos');
   const { push } = useToast();
 
-  const loadSales = React.useCallback(async () => {
-    setLoadingSales(true);
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await api.get<any[]>("/sales");
-      const rows = Array.isArray(res.data) ? res.data : [];
-      const mapped = rows.map((sale) => ({
+      const [salesRes, productsData] = await Promise.all([
+        api.get<SaleRecordAPI[]>('/sales'),
+        fetchAllProducts()
+      ]);
+
+      const salesData = Array.isArray(salesRes.data) ? salesRes.data : [];
+      const mappedSales: SaleRecord[] = salesData.map((sale) => ({
         id: String(sale.id),
         product_id: sale.product_id || null,
-        product_name: sale.product_name || sale.products?.name || "Unknown Product",
+        product_name: sale.product_name || 'Unknown Product',
         quantity: Number(sale.quantity || 0),
-        unit_price: Number(sale.price || 0),
+        price: Number(sale.price || 0),
         total: Number(sale.total || 0),
         created_at: sale.created_at,
         note: sale.note || null
       }));
-      setSales(mapped);
-    } catch {
-      setSales([]);
-      push("Failed to load sales", "error");
+      setSales(mappedSales);
+
+      setAllProducts(new Map(productsData.map((p) => [p.id, p])));
+    } catch (err) {
+      console.error('Failed to load data:', err);
+      push('Failed to load data', 'error');
     } finally {
-      setLoadingSales(false);
+      setLoading(false);
     }
   }, [push]);
 
-  const loadProducts = React.useCallback(
-    async (search = "") => {
-      setLoadingProducts(true);
-      try {
-        const res = await api.get<ProductsResponse | Product[]>("/products", {
-          params: { limit: PRODUCTS_LIMIT, q: search || undefined }
-        });
-        const rows = Array.isArray(res.data)
-          ? res.data
-          : Array.isArray(res.data?.data)
-          ? res.data.data
-          : [];
-        setProducts(rows);
-      } catch {
-        setProducts([]);
-        push("Failed to load products", "error");
-      } finally {
-        setLoadingProducts(false);
-      }
-    },
-    [push]
-  );
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  const loadCategories = React.useCallback(async () => {
-    try {
-      const res = await api.get<CategoryOption[]>("/categories");
-      setCategories(Array.isArray(res.data) ? res.data : []);
-    } catch {
-      setCategories([]);
-    }
-  }, []);
+  const stats: SaleStats = useMemo(() => {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const todaySales = sales.filter((s) => s.created_at?.slice(0, 10) === todayKey);
+    const todayRevenue = todaySales.reduce((sum, s) => sum + s.total, 0);
+    const todayItems = todaySales.reduce((sum, s) => sum + s.quantity, 0);
+    const todayTransactions = todaySales.length;
+    const avgTicket = todayTransactions ? todayRevenue / todayTransactions : 0;
 
-  const refreshPage = React.useCallback(async () => {
-    setRefreshing(true);
-    await Promise.all([loadSales(), loadProducts(deferredCatalogQuery.trim())]);
-    setRefreshing(false);
-  }, [deferredCatalogQuery, loadProducts, loadSales]);
-
-  React.useEffect(() => {
-    loadSales();
-  }, [loadSales]);
-
-  React.useEffect(() => {
-    loadProducts(deferredCatalogQuery.trim());
-  }, [deferredCatalogQuery, loadProducts]);
-
-  React.useEffect(() => {
-    loadCategories();
-  }, [loadCategories]);
-
-  const productLookup = React.useMemo(() => {
-    return new Map(products.map((product) => [product.id, product]));
-  }, [products]);
+    return { todayRevenue, todayItems, todayTransactions, avgTicket };
+  }, [sales]);
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cartItems.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
 
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const todaySales = sales.filter((sale) => sale.created_at?.slice(0, 10) === todayKey);
-  const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.total, 0);
-  const todayItems = todaySales.reduce((sum, sale) => sum + sale.quantity, 0);
-  const todayTransactions = todaySales.length;
-  const avgTicket = todayTransactions ? todayRevenue / todayTransactions : 0;
-
-  const visibleProducts = React.useMemo(() => {
-    const search = deferredCatalogQuery.trim().toLowerCase();
-    return products.filter((product) => {
-      const matchesCategory =
-        selectedCategory === "all" || product.categories?.name === selectedCategory;
-      if (!matchesCategory) return false;
-      if (!search) return true;
-      const haystack = [
-        product.name,
-        product.categories?.name,
-        product.brands?.name,
-        product.models?.name
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(search);
-    });
-  }, [deferredCatalogQuery, products, selectedCategory]);
-
-  const filteredSales = React.useMemo(() => {
-    const search = salesQuery.trim().toLowerCase();
-    return sales.filter((sale) => {
-      if (!search) return true;
-      return sale.product_name.toLowerCase().includes(search);
-    });
-  }, [sales, salesQuery]);
-
-  const groupedSales = React.useMemo(() => {
-    const grouped = new Map<string, { total: number; count: number; items: number }>();
-    filteredSales.forEach((sale) => {
-      if (!sale.created_at) return;
-      const key = sale.created_at.slice(0, 10);
-      const current = grouped.get(key) || { total: 0, count: 0, items: 0 };
-      grouped.set(key, {
-        total: current.total + sale.total,
-        count: current.count + 1,
-        items: current.items + sale.quantity
-      });
-    });
-    return Array.from(grouped.entries())
-      .map(([date, value]) => ({ date, ...value }))
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }, [filteredSales]);
-
-  const salesForSelectedDate = React.useMemo(() => {
-    return filteredSales.filter((sale) => sale.created_at?.slice(0, 10) === selectedDate);
-  }, [filteredSales, selectedDate]);
-
-  React.useEffect(() => {
-    if (!groupedSales.some((entry) => entry.date === selectedDate) && groupedSales[0]?.date) {
-      setSelectedDate(groupedSales[0].date);
-    }
-  }, [groupedSales, selectedDate]);
-
-  const addProductToCart = (product: Product) => {
+  const addProductToCart = useCallback((product: Product) => {
     if (product.quantity <= 0) {
-      push(`${product.name} is out of stock`, "error");
+      push(`${product.name} is out of stock`, 'error');
       return;
     }
 
     setCartItems((current) => {
-      const existing = current.find((item) => item.product_id === product.id && !item.isManual);
+      const existing = current.find(
+        (item) => item.product_id === product.id && !item.isManual
+      );
       if (existing) {
         if (existing.quantity >= product.quantity) {
-          push(`Only ${product.quantity} unit(s) available for ${product.name}`, "error");
+          push(`Only ${product.quantity} available for ${product.name}`, 'error');
           return current;
         }
         return current.map((item) =>
@@ -289,48 +145,35 @@ export const AdminSalesPage: React.FC = () => {
           image_url: product.models?.image_url || product.image_url || null,
           category: product.categories?.name,
           brand: product.brands?.name,
-          isManual: false
+          model: product.models?.name,
+          year: product.years?.label,
+          isManual: false,
+          isNew: true
         }
       ];
     });
-  };
 
-  const addManualItemToCart = () => {
-    const trimmedName = manualName.trim();
-    const quantity = Number(manualQuantity);
-    const price = Number(manualPrice);
+    push(`${product.name} added to cart`, 'success');
+  }, [push]);
 
-    if (!trimmedName) {
-      push("Enter a product name for the manual sale", "error");
-      return;
-    }
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      push("Enter a valid quantity", "error");
-      return;
-    }
-    if (!Number.isFinite(price) || price <= 0) {
-      push("Enter a valid price", "error");
-      return;
-    }
-
+  const addManualItemToCart = useCallback((item: { name: string; price: number; quantity: number }) => {
     setCartItems((current) => [
       ...current,
       {
         id: crypto.randomUUID(),
         product_id: null,
-        product_name: trimmedName,
-        quantity,
-        unit_price: price,
+        product_name: item.name,
+        quantity: item.quantity,
+        unit_price: item.price,
         availableStock: Number.MAX_SAFE_INTEGER,
-        isManual: true
+        isManual: true,
+        isNew: true
       }
     ]);
-    setManualName("");
-    setManualPrice("");
-    setManualQuantity("1");
-  };
+    push(`${item.name} added to cart`, 'success');
+  }, [push]);
 
-  const updateCartQuantity = (itemId: string, nextQuantity: number) => {
+  const updateCartQuantity = useCallback((itemId: string, nextQuantity: number) => {
     setCartItems((current) => {
       if (nextQuantity <= 0) {
         return current.filter((item) => item.id !== itemId);
@@ -341,860 +184,491 @@ export const AdminSalesPage: React.FC = () => {
         if (item.isManual || !item.product_id) {
           return { ...item, quantity: nextQuantity };
         }
-        const available = productLookup.get(item.product_id)?.quantity ?? item.availableStock;
+        const available = allProducts.get(item.product_id)?.quantity ?? item.availableStock;
         if (nextQuantity > available) {
-          push(`Only ${available} unit(s) available for ${item.product_name}`, "error");
+          push(`Only ${available} available for ${item.product_name}`, 'error');
           return { ...item, availableStock: available };
         }
         return { ...item, quantity: nextQuantity, availableStock: available };
       });
     });
-  };
+  }, [allProducts, push]);
 
-  const updateCartPrice = (itemId: string, nextPrice: string) => {
-    const parsed = Number(nextPrice);
-    if (Number.isNaN(parsed) || parsed < 0) return;
+  const updateCartPrice = useCallback((itemId: string, nextPrice: number) => {
     setCartItems((current) =>
       current.map((item) =>
-        item.id === itemId ? { ...item, unit_price: parsed } : item
+        item.id === itemId ? { ...item, unit_price: nextPrice } : item
       )
     );
-  };
+  }, []);
 
-  const removeCartItem = (itemId: string) => {
-    setCartItems((current) => current.filter((item) => item.id !== itemId));
-  };
+  const removeCartItem = useCallback((itemId: string) => {
+    const item = cartItems.find((i) => i.id === itemId);
+    setCartItems((current) => current.filter((i) => i.id !== itemId));
+    if (item) {
+      push(`${item.product_name} removed`, 'info');
+    }
+  }, [cartItems, push]);
 
-  const clearSaleBuilder = () => {
+  const clearCart = useCallback(() => {
     setCartItems([]);
-    setNote("");
-    setManualName("");
-    setManualPrice("");
-    setManualQuantity("1");
-  };
+    setNote('');
+    setDiscount(0);
+    push('Cart cleared', 'info');
+  }, [push]);
 
-  const completeSale = async () => {
+  const completeSale = useCallback(async () => {
     if (cartItems.length === 0) {
-      push("Add at least one product before checkout", "error");
+      push('Add at least one product before checkout', 'error');
       return;
     }
 
     for (const item of cartItems) {
-      const liveProduct = item.product_id ? productLookup.get(item.product_id) : null;
-      const available = liveProduct?.quantity ?? item.availableStock;
-      if (!item.isManual && item.product_id && item.quantity > available) {
-        push(`Only ${available} unit(s) available for ${item.product_name}`, "error");
+      if (item.unit_price <= 0) {
+        push(`Enter a valid price for ${item.product_name}`, 'error');
         return;
       }
-      if (item.unit_price <= 0) {
-        push(`Enter a valid price for ${item.product_name}`, "error");
-        return;
+      if (!item.isManual && item.product_id) {
+        const available = allProducts.get(item.product_id)?.quantity ?? 0;
+        if (item.quantity > available) {
+          push(`Only ${available} available for ${item.product_name}`, 'error');
+          return;
+        }
       }
     }
 
     setSaving(true);
     try {
-      for (const item of cartItems) {
-        await api.post("/sales", {
-          product_id: item.product_id || null,
-          product_name: item.isManual ? item.product_name : null,
-          quantity: item.quantity,
-          price: item.unit_price,
-          note: note.trim() || null
-        });
-      }
+      const saleItems = cartItems.map((item) => formatSaleForCompletion({
+        product_id: item.product_id,
+        product_name: item.isManual ? item.product_name : null,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        note
+      }));
 
+      await salesApi.createBatchSales(saleItems);
+
+      const totalAmount = cartItems.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) - discount;
       push(
-        `Sale completed for ${cartCount} item(s). Total ${formatCurrency(subtotal)}`,
-        "success"
+        `Sale completed! ${cartCount} item(s) for ${formatCurrency(totalAmount)}`,
+        'success'
       );
-      clearSaleBuilder();
-      setSaleModalOpen(false);
-      await Promise.all([loadSales(), loadProducts(deferredCatalogQuery.trim())]);
+      clearCart();
+      await loadData();
     } catch (error: any) {
-      push(error?.response?.data?.error || "Failed to complete sale", "error");
+      push(error?.response?.data?.error || 'Failed to complete sale', 'error');
     } finally {
       setSaving(false);
     }
-  };
+  }, [cartItems, allProducts, cartCount, discount, note, clearCart, loadData, push]);
 
-  const selectedDateRevenue = salesForSelectedDate.reduce((sum, sale) => sum + sale.total, 0);
+  const salesSearchFields = useMemo(() => [
+    'product_name',
+    'id'
+  ] as (keyof SaleRecord | string)[], []);
 
-  const topProducts = React.useMemo(() => {
-    const bucket = new Map<string, { name: string; quantity: number; total: number }>();
-    sales.forEach((sale) => {
-      const key = sale.product_id || `manual:${sale.product_name}`;
-      const current = bucket.get(key) || {
-        name: sale.product_name,
-        quantity: 0,
-        total: 0
-      };
-      bucket.set(key, {
-        name: current.name,
-        quantity: current.quantity + sale.quantity,
-        total: current.total + sale.total
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    items: searchedSales,
+    clearSearch: clearSalesSearch
+  } = useSearch<SaleRecord>(sales, {
+    fields: salesSearchFields,
+    debounceMs: 200,
+    keepResultsOnEmpty: true
+  });
+
+  const filteredByDate = useMemo(() => {
+    if (!selectedDate) return searchedSales;
+    return searchedSales.filter((s) => s.created_at?.slice(0, 10) === selectedDate);
+  }, [searchedSales, selectedDate]);
+
+  const groupedSales = useMemo(() => {
+    const grouped = new Map<string, { total: number; count: number; items: number }>();
+    filteredByDate.forEach((sale) => {
+      if (!sale.created_at) return;
+      const key = sale.created_at.slice(0, 10);
+      const current = grouped.get(key) || { total: 0, count: 0, items: 0 };
+      grouped.set(key, {
+        total: current.total + sale.total,
+        count: current.count + 1,
+        items: current.items + sale.quantity
       });
     });
-    return Array.from(bucket.values())
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 5);
-  }, [sales]);
+    return Array.from(grouped.entries())
+      .map(([date, value]) => ({ date, ...value }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [filteredByDate]);
+
+  const getFriendlyDate = (value?: string) => {
+    if (!value) return '';
+    return new Date(value).toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return <PageLoading text="Loading sales..." />;
+  }
 
   return (
-    <div className="space-y-6 text-foreground">
-      <PageHeader
-        title="Sales"
-        subtitle="Run in-store sales with a faster product picker, a live cart, and cleaner checkout."
-        meta={`${sales.length} sales recorded`}
-        actions={
-          <>
-            <button
-              className="btn-outline h-10 gap-2 px-4 text-sm"
-              onClick={refreshPage}
-              disabled={refreshing}
-            >
-              {refreshing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCcw className="h-4 w-4" />
-              )}
-              Refresh
-            </button>
-            <button
-              className="btn-primary h-10 gap-2 px-4 text-sm"
-              onClick={() => setSaleModalOpen(true)}
-            >
-              <Plus className="h-4 w-4" />
-              Add Sale
-            </button>
-          </>
-        }
-      />
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="card overflow-hidden p-0">
-          <div className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Today Revenue
-                </p>
-                <p className="mt-2 text-2xl font-bold">{formatCurrency(todayRevenue)}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{todayTransactions} transactions today</p>
-              </div>
-              <div className="rounded-2xl bg-primary/10 p-3 text-primary">
-                <CreditCard className="h-5 w-5" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Items Sold
-              </p>
-              <p className="mt-2 text-2xl font-bold">{todayItems}</p>
-              <p className="mt-1 text-sm text-muted-foreground">Across all in-store sales today</p>
-            </div>
-            <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
-              <ShoppingBag className="h-5 w-5" />
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Average Ticket
-              </p>
-              <p className="mt-2 text-2xl font-bold">{formatCurrency(avgTicket)}</p>
-              <p className="mt-1 text-sm text-muted-foreground">Average value per sale line today</p>
-            </div>
-            <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
-              <Sparkles className="h-5 w-5" />
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Current Cart
-              </p>
-              <p className="mt-2 text-2xl font-bold">{cartCount} item(s)</p>
-              <p className="mt-1 text-sm text-muted-foreground">{formatCurrency(subtotal)} ready to checkout</p>
-            </div>
-            <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
-              <ShoppingCart className="h-5 w-5" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
-        <section className="space-y-6">
-          <div className="card p-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">Product Catalog</h2>
-                <p className="text-sm text-muted-foreground">
-                  Search, filter, and add products to the cart in one click.
-                </p>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Showing <span className="font-semibold text-foreground">{visibleProducts.length}</span> products
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-col gap-3 lg:flex-row">
-              <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-background px-3 py-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <input
-                  className="w-full bg-transparent outline-none"
-                  placeholder="Search by product, brand, model, or category..."
-                  value={catalogQuery}
-                  onChange={(event) => setCatalogQuery(event.target.value)}
-                />
-              </div>
-              <select
-                className="form-input h-11 min-w-[220px]"
-                value={selectedCategory}
-                onChange={(event) => setSelectedCategory(event.target.value)}
-              >
-                <option value="all">All categories</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.name}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {loadingProducts ? (
-              <div className="py-12">
-                <PageLoading text="Loading products..." />
-              </div>
-            ) : visibleProducts.length === 0 ? (
-              <div className="mt-6">
-                <EmptyState
-                  title="No products found"
-                  description="Try another search or category to find products to sell."
-                  action={
-                    <button className="btn-outline h-10 px-4" onClick={refreshPage}>
-                      Refresh products
-                    </button>
-                  }
-                />
-              </div>
-            ) : (
-              <div className="mt-6 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
-                {visibleProducts.map((product) => {
-                  const imageSrc = product.models?.image_url || product.image_url;
-                  const cartItem = cartItems.find((item) => item.product_id === product.id);
-                  return (
-                    <div
-                      key={product.id}
-                      className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-                    >
-                      <div className="relative h-40 bg-muted/40">
-                        {imageSrc ? (
-                          <img
-                            src={imageSrc}
-                            alt={product.name}
-                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-muted-foreground">
-                            <Package className="h-8 w-8" />
-                          </div>
-                        )}
-                        <div className="absolute left-3 top-3">
-                          <span
-                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getStockTone(
-                              product.quantity
-                            )}`}
-                          >
-                            {product.quantity <= 0
-                              ? "Out of stock"
-                              : `${product.quantity} in stock`}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4 p-4">
-                        <div className="space-y-1">
-                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                            {product.categories?.name ? (
-                              <span className="rounded-full bg-muted px-2.5 py-1">
-                                {product.categories.name}
-                              </span>
-                            ) : null}
-                            {product.brands?.name ? (
-                              <span className="rounded-full bg-muted px-2.5 py-1">
-                                {product.brands.name}
-                              </span>
-                            ) : null}
-                          </div>
-                          <h3 className="line-clamp-2 text-base font-semibold">{product.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {product.models?.name || "Ready for immediate sale"}
-                          </p>
-                        </div>
-
-                        <div className="flex items-end justify-between">
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-muted-foreground">Price</p>
-                            <p className="text-xl font-bold">{formatCurrency(product.price)}</p>
-                          </div>
-                          {cartItem ? (
-                            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                              {cartItem.quantity} in cart
-                            </span>
-                          ) : null}
-                        </div>
-
-                        <button
-                          className="btn-primary h-11 w-full gap-2"
-                          onClick={() => addProductToCart(product)}
-                          disabled={product.quantity <= 0}
-                        >
-                          <Plus className="h-4 w-4" />
-                          {product.quantity <= 0 ? "Unavailable" : "Add Product"}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Point of Sale</h1>
+          <p className="text-muted-foreground mt-1">
+            Fast, intuitive sales processing for your store
+            {allProducts.size > 0 && (
+              <span className="ml-2 text-xs">({allProducts.size} products loaded)</span>
             )}
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-            <div className="card p-4">
-              <div className="mb-4 flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                <div>
-                  <h2 className="font-semibold">Sales by Day</h2>
-                  <p className="text-sm text-muted-foreground">Quick revenue view for recent selling days.</p>
-                </div>
-              </div>
-
-              {loadingSales ? (
-                <PageLoading text="Loading sales..." />
-              ) : groupedSales.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">No sales recorded yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {groupedSales.slice(0, 8).map((day) => (
-                    <button
-                      key={day.date}
-                      onClick={() => setSelectedDate(day.date)}
-                      className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition-colors ${
-                        selectedDate === day.date
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:bg-muted/40"
-                      }`}
-                    >
-                      <div>
-                        <p className="font-medium">{day.date}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {day.count} sales lines | {day.items} items
-                        </p>
-                      </div>
-                      <p className="font-semibold">{formatCurrency(day.total)}</p>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="card p-4">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="font-semibold">Top Products</h2>
-                  <p className="text-sm text-muted-foreground">Best performers from recorded sales.</p>
-                </div>
-              </div>
-
-              {topProducts.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">No product sales data yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {topProducts.map((product, index) => (
-                    <div
-                      key={`${product.name}-${index}`}
-                      className="flex items-center justify-between rounded-xl border border-border/60 p-3"
-                    >
-                      <div>
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-xs text-muted-foreground">{product.quantity} item(s) sold</p>
-                      </div>
-                      <p className="font-semibold">{formatCurrency(product.total)}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        <aside className="space-y-6">
-          <div className="card p-4 xl:sticky xl:top-6">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">Sale Builder</h2>
-                <p className="text-sm text-muted-foreground">
-                  Review the cart, adjust quantities, and complete checkout.
-                </p>
-              </div>
-              {cartItems.length > 0 ? (
-                <button className="btn-outline h-9 px-3 text-xs" onClick={clearSaleBuilder}>
-                  Clear
-                </button>
-              ) : null}
-            </div>
-
-            {cartItems.length === 0 ? (
-              <div className="mt-6">
-                <EmptyState
-                  title="Cart is empty"
-                  description="Select products from the catalog to start building a sale."
-                />
-              </div>
-            ) : (
-              <>
-                <div className="mt-6 space-y-3">
-                  {cartItems.map((item) => {
-                    const lineTotal = item.quantity * item.unit_price;
-                    return (
-                      <div key={item.id} className="rounded-2xl border border-border bg-background p-3">
-                        <div className="flex items-start gap-3">
-                          <div className="h-16 w-16 overflow-hidden rounded-xl bg-muted/50">
-                            {item.image_url ? (
-                              <img
-                                src={item.image_url}
-                                alt={item.product_name}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-full items-center justify-center text-muted-foreground">
-                                <Package className="h-5 w-5" />
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="min-w-0 flex-1 space-y-3">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <p className="line-clamp-2 font-medium">{item.product_name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {item.isManual
-                                    ? "Manual sale item"
-                                    : [item.category, item.brand].filter(Boolean).join(" | ") || "Store product"}
-                                </p>
-                              </div>
-                              <button
-                                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
-                                onClick={() => removeCartItem(item.id)}
-                                aria-label={`Remove ${item.product_name}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-
-                            <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
-                              <div>
-                                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                  Quantity
-                                </p>
-                                <div className="inline-flex items-center rounded-xl border border-border bg-card">
-                                  <button
-                                    className="px-3 py-2 text-muted-foreground hover:text-foreground"
-                                    onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
-                                  >
-                                    <Minus className="h-4 w-4" />
-                                  </button>
-                                  <span className="min-w-[2.5rem] text-center text-sm font-semibold">
-                                    {item.quantity}
-                                  </span>
-                                  <button
-                                    className="px-3 py-2 text-muted-foreground hover:text-foreground"
-                                    onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </button>
-                                </div>
-                                {!item.isManual ? (
-                                  <p className="mt-1 text-[11px] text-muted-foreground">
-                                    {item.availableStock} available
-                                  </p>
-                                ) : (
-                                  <p className="mt-1 text-[11px] text-muted-foreground">
-                                    Not linked to inventory
-                                  </p>
-                                )}
-                              </div>
-
-                              <div>
-                                <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                  Unit price
-                                </label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  className="form-input h-10 w-full"
-                                  value={item.unit_price}
-                                  onChange={(event) =>
-                                    updateCartPrice(item.id, event.target.value)
-                                  }
-                                />
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between border-t border-border/70 pt-3">
-                              <span className="text-sm text-muted-foreground">Line total</span>
-                              <span className="text-base font-semibold">{formatCurrency(lineTotal)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="mt-6 space-y-4 rounded-2xl border border-border bg-muted/30 p-4">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Sale note</label>
-                    <textarea
-                      className="form-input min-h-[96px] w-full resize-none"
-                      placeholder="Optional note for the sale receipt or staff reference"
-                      value={note}
-                      onChange={(event) => setNote(event.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-3 border-t border-border pt-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Items</span>
-                      <span className="font-medium">{cartCount}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-medium">{formatCurrency(subtotal)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-lg font-bold">
-                      <span>Total</span>
-                      <span>{formatCurrency(subtotal)}</span>
-                    </div>
-                  </div>
-
-                  <button
-                    className="btn-primary h-12 w-full gap-2"
-                    onClick={completeSale}
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Processing sale...
-                      </>
-                    ) : (
-                      <>
-                        Complete sale
-                        <ArrowRight className="h-4 w-4" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="card p-4">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="font-semibold">Sales Activity</h2>
-                <p className="text-sm text-muted-foreground">
-                  Browse recorded sales and inspect a selected day.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <input
-                className="w-full bg-transparent outline-none"
-                placeholder="Search sales history..."
-                value={salesQuery}
-                onChange={(event) => setSalesQuery(event.target.value)}
-              />
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-border bg-muted/20 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Selected day
-              </p>
-              <p className="mt-1 text-lg font-semibold">{selectedDate || "No date selected"}</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {salesForSelectedDate.length} sales lines | {formatCurrency(selectedDateRevenue)}
-              </p>
-            </div>
-
-            {loadingSales ? (
-              <div className="py-10">
-                <PageLoading text="Loading sales..." />
-              </div>
-            ) : filteredSales.length === 0 ? (
-              <div className="mt-6">
-                <EmptyState
-                  title="No sales found"
-                  description="Record a sale or adjust your search to see more results."
-                />
-              </div>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {salesForSelectedDate.slice(0, 10).map((sale) => (
-                  <div key={sale.id} className="rounded-2xl border border-border p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{sale.product_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {getFriendlyDate(sale.created_at)}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Qty {sale.quantity} | {formatCurrency(sale.unit_price)} each
-                        </p>
-                        {sale.note ? (
-                          <p className="mt-2 text-xs text-muted-foreground">Note: {sale.note}</p>
-                        ) : null}
-                      </div>
-                      <p className="text-right text-base font-semibold">{formatCurrency(sale.total)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </aside>
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Button
+            variant={viewMode === 'pos' ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('pos')}
+            icon={<ShoppingCart className="h-4 w-4" />}
+          >
+            POS
+          </Button>
+          <Button
+            variant={viewMode === 'history' ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('history')}
+            icon={<History className="h-4 w-4" />}
+          >
+            History
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadData}
+            icon={<RefreshCw className="h-4 w-4" />}
+          >
+            Refresh
+          </Button>
+        </div>
       </div>
 
-      <Modal
-        open={saleModalOpen}
-        onClose={() => setSaleModalOpen(false)}
-        title="Add Sale"
-        size="lg"
-      >
-        <div className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Select From Products
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Pick an item already in inventory, or add a manual sale below.
-                </p>
-              </div>
+      {viewMode === 'pos' ? (
+        <>
+          <QuickStats {...stats} />
 
-              <div className="flex flex-col gap-3 lg:flex-row">
-                <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-background px-3 py-2">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <input
-                    className="w-full bg-transparent outline-none"
-                    placeholder="Search products..."
-                    value={catalogQuery}
-                    onChange={(event) => setCatalogQuery(event.target.value)}
-                  />
-                </div>
-                <select
-                  className="form-input h-11 min-w-[200px]"
-                  value={selectedCategory}
-                  onChange={(event) => setSelectedCategory(event.target.value)}
-                >
-                  <option value="all">All categories</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.name}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="max-h-[26rem] space-y-3 overflow-y-auto pr-1">
-                {loadingProducts ? (
-                  <PageLoading text="Loading products..." />
-                ) : visibleProducts.length === 0 ? (
-                  <EmptyState
-                    title="No products found"
-                    description="Try another search or category, or use the manual sale form."
-                  />
-                ) : (
-                  visibleProducts.slice(0, 20).map((product) => (
-                    <div
-                      key={product.id}
-                      className="flex items-center justify-between rounded-2xl border border-border p-3"
+          <div className="grid gap-6 lg:grid-cols-[1fr,420px]">
+            <Card padding="md" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex rounded-lg border border-border overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('inventory')}
+                      className={classNames(
+                        'px-4 py-2 text-sm font-medium transition-colors',
+                        activeTab === 'inventory'
+                          ? 'bg-primary text-white'
+                          : 'bg-background text-muted-foreground hover:bg-muted'
+                      )}
                     >
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{product.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {[product.categories?.name, product.brands?.name].filter(Boolean).join(" | ") || "Store product"}
-                        </p>
-                        <p className="mt-1 text-sm font-semibold">{formatCurrency(product.price)}</p>
-                      </div>
-                      <div className="ml-4 flex items-center gap-3">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getStockTone(
-                            product.quantity
-                          )}`}
-                        >
-                          {product.quantity <= 0 ? "Out" : `${product.quantity} in stock`}
-                        </span>
-                        <button
-                          className="btn-primary h-10 px-4 text-sm"
-                          onClick={() => addProductToCart(product)}
-                          disabled={product.quantity <= 0}
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                      <Package className="h-4 w-4 inline-block mr-2" />
+                      From Inventory
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('manual')}
+                      className={classNames(
+                        'px-4 py-2 text-sm font-medium transition-colors',
+                        activeTab === 'manual'
+                          ? 'bg-primary text-white'
+                          : 'bg-background text-muted-foreground hover:bg-muted'
+                      )}
+                    >
+                      <Plus className="h-4 w-4 inline-block mr-2" />
+                      Manual Entry
+                    </button>
+                  </div>
+                </div>
+
+                {cartCount > 0 && (
+                  <Badge variant="primary" className="px-3 py-1">
+                    {cartCount} item(s) in cart
+                  </Badge>
                 )}
               </div>
-            </div>
+
+              {activeTab === 'inventory' ? (
+                <ProductSearch
+                  onProductSelect={addProductToCart}
+                  maxResults={20}
+                />
+              ) : (
+                <ManualProductForm onAdd={addManualItemToCart} />
+              )}
+            </Card>
 
             <div className="space-y-4">
-              <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Manual Sale
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Use this when the product is not yet in the database. Manual sales do not affect inventory.
-                </p>
-
-                <div className="mt-4 space-y-3">
-                  <input
-                    className="form-input w-full"
-                    placeholder="Type product name"
-                    value={manualName}
-                    onChange={(event) => setManualName(event.target.value)}
-                  />
-                  <div className="grid grid-cols-2 gap-3">
-                    <input
-                      type="number"
-                      min="1"
-                      className="form-input w-full"
-                      placeholder="Qty"
-                      value={manualQuantity}
-                      onChange={(event) => setManualQuantity(event.target.value)}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="form-input w-full"
-                      placeholder="Price"
-                      value={manualPrice}
-                      onChange={(event) => setManualPrice(event.target.value)}
-                    />
+              <Card padding="md" className="xl:sticky xl:top-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="h-5 w-5 text-primary" />
+                    <h2 className="font-semibold">Current Sale</h2>
+                    {cartCount > 0 && (
+                      <Badge variant="primary" size="sm">{cartCount}</Badge>
+                    )}
                   </div>
-                  <button className="btn-outline h-11 w-full" onClick={addManualItemToCart}>
-                    Add Manual Item
-                  </button>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-border p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold">Cart</h3>
-                    <p className="text-sm text-muted-foreground">{cartCount} item(s)</p>
-                  </div>
-                  {cartItems.length > 0 ? (
-                    <button className="btn-outline h-9 px-3 text-xs" onClick={clearSaleBuilder}>
+                  {cartItems.length > 0 && (
+                    <button
+                      onClick={clearCart}
+                      className="text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
+                    >
+                      <Trash2 className="h-3 w-3" />
                       Clear
                     </button>
-                  ) : null}
+                  )}
                 </div>
 
                 {cartItems.length === 0 ? (
-                  <div className="mt-4">
+                  <div className="py-12">
                     <EmptyState
-                      title="No items added yet"
-                      description="Add products or type a manual sale item."
+                      title="Cart is empty"
+                      description="Search products or use manual entry to start a sale."
                     />
                   </div>
                 ) : (
-                  <div className="mt-4 space-y-3">
-                    {cartItems.map((item) => (
-                      <div key={item.id} className="rounded-xl border border-border bg-background p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate font-medium">{item.product_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {item.isManual ? "Manual sale item" : "Inventory product"}
-                            </p>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              Qty {item.quantity} | {formatCurrency(item.unit_price)} each
-                            </p>
-                          </div>
-                          <button
-                            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
-                            onClick={() => removeCartItem(item.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-
-                    <textarea
-                      className="form-input min-h-[90px] w-full resize-none"
-                      placeholder="Optional note for this sale"
-                      value={note}
-                      onChange={(event) => setNote(event.target.value)}
+                  <>
+                    <CartItemList
+                      items={cartItems}
+                      onQuantityChange={updateCartQuantity}
+                      onPriceChange={updateCartPrice}
+                      onRemove={removeCartItem}
+                      maxHeight="max-h-[280px]"
                     />
+                  </>
+                )}
+              </Card>
 
-                    <div className="rounded-xl border border-border bg-muted/20 p-4">
+              {cartItems.length > 0 && (
+                <Card padding="md" className="border-2 border-success/20 bg-gradient-to-b from-success/5 to-transparent">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Receipt className="h-5 w-5 text-success" />
+                      <h3 className="font-semibold">Checkout</h3>
+                    </div>
+
+                    <div className="space-y-3">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Items</span>
-                        <span className="font-medium">{cartCount}</span>
+                        <span className="text-muted-foreground">Subtotal ({cartCount} items)</span>
+                        <span className="font-medium">{formatCurrency(subtotal)}</span>
                       </div>
-                      <div className="mt-2 flex items-center justify-between text-lg font-bold">
-                        <span>Total</span>
-                        <span>{formatCurrency(subtotal)}</span>
+
+                      {discount > 0 && (
+                        <div className="flex items-center justify-between text-sm text-success">
+                          <span>Discount</span>
+                          <span className="font-medium">-{formatCurrency(discount)}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-3 border-t border-border">
+                        <span className="text-lg font-bold">Total</span>
+                        <span className="text-2xl font-bold text-success">
+                          {formatCurrency(subtotal - discount)}
+                        </span>
                       </div>
                     </div>
 
-                    <button
-                      className="btn-primary h-12 w-full gap-2"
-                      onClick={completeSale}
-                      disabled={saving}
-                    >
-                      {saving ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Processing sale...
-                        </>
-                      ) : (
-                        <>
-                          Create Sale
-                          <ArrowRight className="h-4 w-4" />
-                        </>
-                      )}
-                    </button>
+                    <div className="space-y-2">
+                      <button
+                        onClick={completeSale}
+                        disabled={saving}
+                        className={classNames(
+                          'relative w-full h-16 rounded-2xl font-bold text-lg transition-all duration-200 overflow-hidden',
+                          'focus:outline-none focus:ring-4 focus:ring-success/30',
+                          saving && 'cursor-wait',
+                          !saving && 'hover:scale-[1.01] active:scale-[0.99]'
+                        )}
+                      >
+                        {saving ? (
+                          <div className="absolute inset-0 bg-gradient-to-r from-success via-emerald-500 to-success animate-pulse flex items-center justify-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-white" />
+                            <span className="ml-3 text-white font-semibold">Processing...</span>
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 bg-gradient-to-r from-success via-emerald-500 to-emerald-600 hover:from-emerald-500 hover:via-success hover:to-success">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+                            <div className="h-full flex items-center justify-center gap-3">
+                              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm">
+                                <Sparkles className="h-5 w-5 text-white" />
+                              </div>
+                              <span className="text-white font-bold tracking-wide">Complete Sale</span>
+                            </div>
+                          </div>
+                        )}
+                      </button>
+
+                      <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                        <Keyboard className="h-3 w-3" />
+                        <span>Press</span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px] border border-border/50">Ctrl</kbd>
+                        <span>+</span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px] border border-border/50">Enter</kbd>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-2">
+                      <div className="rounded-lg border border-border bg-card p-3 flex items-center gap-2">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
+                          <CreditCard className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Payment</p>
+                          <p className="text-sm font-medium">Cash / Card</p>
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-card p-3 flex items-center gap-2">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-success/10">
+                          <Banknote className="h-4 w-4 text-success" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Change</p>
+                          <p className="text-sm font-medium">Auto-calc</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
+                </Card>
+              )}
+
+              {cartItems.length > 0 && (
+                <div className="rounded-xl border border-dashed border-warning/50 bg-warning/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-warning">Pending checkout</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Complete this sale to update inventory and record the transaction.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
+        </>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[300px,1fr]">
+          <Card padding="md">
+            <div className="mb-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                Sales by Day
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Click a date to view sales
+              </p>
+            </div>
+
+            {groupedSales.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                No sales recorded yet
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                {groupedSales.map((day) => (
+                  <button
+                    key={day.date}
+                    onClick={() => setSelectedDate(day.date)}
+                    className={classNames(
+                      'w-full rounded-xl border p-3 text-left transition-all',
+                      selectedDate === day.date
+                        ? 'border-primary bg-primary/5 shadow-sm'
+                        : 'border-border hover:bg-muted/40'
+                    )}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-sm">{day.date}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {day.count} sales • {day.items} items
+                        </p>
+                      </div>
+                      <p className="font-semibold text-sm">{formatCurrency(day.total)}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card padding="md">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-semibold flex items-center gap-2">
+                  <History className="h-4 w-4 text-primary" />
+                  Sales for {selectedDate}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {filteredByDate.length} transactions
+                </p>
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search sales..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="input pl-10 h-10 w-48 text-sm"
+                />
+              </div>
+            </div>
+
+            {filteredByDate.length === 0 ? (
+              <EmptyState
+                title="No sales found"
+                description={searchQuery ? 'Try a different search term' : 'No sales recorded for this date'}
+              />
+            ) : (
+              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                {filteredByDate.map((sale) => (
+                  <div
+                    key={sale.id}
+                    className="flex items-center justify-between rounded-xl border border-border p-4 hover:border-primary/20 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{sale.product_name}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-xs text-muted-foreground">
+                          {getFriendlyDate(sale.created_at)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Qty: {sale.quantity} × {formatCurrency(sale.price ?? 0)}
+                        </span>
+                      </div>
+                      {sale.note && (
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                          Note: {sale.note}
+                        </p>
+                      )}
+                    </div>
+                    <p className="font-semibold ml-4 flex-shrink-0">
+                      {formatCurrency(sale.total)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
-      </Modal>
+      )}
     </div>
   );
 };
+
+export default AdminSalesPage;

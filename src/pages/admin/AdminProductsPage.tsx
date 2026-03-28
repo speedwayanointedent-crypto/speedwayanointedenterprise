@@ -1,5 +1,5 @@
-import React from "react";
-import { Plus, Search, Image, Trash2, Pencil, ChevronLeft, ChevronRight, Filter, X, Loader2 } from "lucide-react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { Plus, Search, Trash2, Pencil, ChevronLeft, ChevronRight, Filter, X, Loader2, Upload, Download, Package } from "lucide-react";
 import api from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
@@ -9,101 +9,121 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { StickyActionBar } from "../../components/ui/StickyActionBar";
 import { PageLoading } from "../../components/ui/LoadingSpinner";
 import { ImageUploader } from "../../components/ui/ImageUploader";
-
-type Product = {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  status: string;
-  image_url?: string | null;
-  description?: string | null;
-  category_id?: string | null;
-  brand_id?: string | null;
-  model_id?: string | null;
-  year_id?: string | null;
-  categories?: { name: string };
-  brands?: { name: string };
-  models?: { name: string; image_url?: string | null };
-  years?: { id: string; label: string };
-};
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { Input, Select, Textarea } from "../../components/ui/Input";
+import { Badge } from "../../components/ui/Badge";
+import { fetchAllProducts } from "../../lib/productsApi";
+import { useSearch } from "../../lib/useSearch";
+import type { Product } from "../../types/sale";
 
 type Option = { id: string; name?: string; label?: string; brand_id?: string; years?: string[] };
 
-const PRODUCTS_PER_PAGE = 24;
-
 export const AdminProductsPage: React.FC = () => {
-  const [products, setProducts] = React.useState<Product[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [submitting, setSubmitting] = React.useState(false);
-  const [open, setOpen] = React.useState(false);
-  const [editOpen, setEditOpen] = React.useState(false);
-  const [editing, setEditing] = React.useState<Product | null>(null);
-  const [name, setName] = React.useState("");
-  const [price, setPrice] = React.useState("");
-  const [quantity, setQuantity] = React.useState("");
-  const [categoryId, setCategoryId] = React.useState("");
-  const [brandId, setBrandId] = React.useState("");
-  const [modelId, setModelId] = React.useState("");
-  const [yearId, setYearId] = React.useState("");
-  const [description, setDescription] = React.useState("");
-  const [imageUrl, setImageUrl] = React.useState("");
-  const [query, setQuery] = React.useState("");
-  const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
-  const [categories, setCategories] = React.useState<Option[]>([]);
-  const [brands, setBrands] = React.useState<Option[]>([]);
-  const [models, setModels] = React.useState<Option[]>([]);
-  const [years, setYears] = React.useState<Option[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<Product | null>(null);
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [brandId, setBrandId] = useState("");
+  const [modelId, setModelId] = useState("");
+  const [yearId, setYearId] = useState("");
+  const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [categories, setCategories] = useState<Option[]>([]);
+  const [brands, setBrands] = useState<Option[]>([]);
+  const [models, setModels] = useState<Option[]>([]);
+  const [years, setYears] = useState<Option[]>([]);
   const { push } = useToast();
-  const [addCategoryOpen, setAddCategoryOpen] = React.useState(false);
-  const [addBrandOpen, setAddBrandOpen] = React.useState(false);
-  const [addModelOpen, setAddModelOpen] = React.useState(false);
-  const [addYearOpen, setAddYearOpen] = React.useState(false);
-  const [newCategory, setNewCategory] = React.useState("");
-  const [newBrand, setNewBrand] = React.useState("");
-  const [newModel, setNewModel] = React.useState("");
-  const [newModelBrandId, setNewModelBrandId] = React.useState("");
-  const [newYear, setNewYear] = React.useState("");
-  const [exporting, setExporting] = React.useState(false);
-  const [importing, setImporting] = React.useState(false);
-  const importInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
+  const [addBrandOpen, setAddBrandOpen] = useState(false);
+  const [addModelOpen, setAddModelOpen] = useState(false);
+  const [addYearOpen, setAddYearOpen] = useState(false);
+  const [newCategory, setNewCategory] = useState("");
+  const [newBrand, setNewBrand] = useState("");
+  const [newModel, setNewModel] = useState("");
+  const [newModelBrandId, setNewModelBrandId] = useState("");
+  const [newYear, setNewYear] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   
-  // Filters
-  const [filterCategory, setFilterCategory] = React.useState("");
-  const [filterBrand, setFilterBrand] = React.useState("");
-  const [filterModel, setFilterModel] = React.useState("");
-  const [showFilters, setShowFilters] = React.useState(false);
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterBrand, setFilterBrand] = useState("");
+  const [filterModel, setFilterModel] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<Option | null>(null);
   
-  // Pagination
-  const [page, setPage] = React.useState(1);
-  const [totalPages, setTotalPages] = React.useState(1);
-  const [totalProducts, setTotalProducts] = React.useState(0);
+  const [page, setPage] = useState(1);
+  const PRODUCTS_PER_PAGE = 24;
 
-  const loadProducts = React.useCallback(async (pageNum: number = 1) => {
+  const visibleFilterModels = useMemo(() => {
+    if (!filterBrand) return models;
+    return models.filter(m => m.brand_id === filterBrand);
+  }, [models, filterBrand]);
+
+  const availableYears = useMemo(() => {
+    if (!selectedModel) return years;
+    return years.filter(y => selectedModel.years?.includes(y.label || ''));
+  }, [years, selectedModel]);
+
+  const searchFields = useMemo(() => [
+    'name',
+    'categories.name',
+    'brands.name',
+    'models.name'
+  ] as (keyof Product | string)[], []);
+
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    items: searchedProducts,
+    clearSearch
+  } = useSearch<Product>(allProducts, {
+    fields: searchFields,
+    debounceMs: 200,
+    keepResultsOnEmpty: true
+  });
+
+  const filteredByCategoryBrandModel = useMemo(() => {
+    let result = searchedProducts;
+    
+    if (filterCategory) {
+      result = result.filter(p => p.category_id === filterCategory);
+    }
+    if (filterBrand) {
+      result = result.filter(p => p.brand_id === filterBrand);
+    }
+    if (filterModel) {
+      result = result.filter(p => p.model_id === filterModel);
+    }
+    
+    return result;
+  }, [searchedProducts, filterCategory, filterBrand, filterModel]);
+
+  const totalPages = Math.ceil(filteredByCategoryBrandModel.length / PRODUCTS_PER_PAGE);
+
+  const loadProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string> = {
-        page: String(pageNum),
-        limit: String(PRODUCTS_PER_PAGE)
-      };
-      if (filterCategory) params.category_id = filterCategory;
-      if (filterBrand) params.brand_id = filterBrand;
-      if (filterModel) params.model_id = filterModel;
-      if (query) params.q = query;
-
-      const res = await api.get<{ data: Product[]; pagination: { page: number; totalPages: number; total: number } }>("/products", { params });
-      setProducts(res.data.data || []);
-      setTotalPages(res.data.pagination.totalPages || 1);
-      setTotalProducts(res.data.pagination.total || 0);
-      setPage(pageNum);
-    } catch {
-      setProducts([]);
+      const products = await fetchAllProducts();
+      setAllProducts(products);
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error("Failed to load products:", err);
+      setAllProducts([]);
     } finally {
       setLoading(false);
     }
-  }, [filterCategory, filterBrand, filterModel, query]);
+  }, []);
 
-  const load = React.useCallback(async () => {
+  const load = useCallback(async () => {
     try {
       const [catRes, brandRes, modelRes, yearRes] = await Promise.all([
         api.get<Option[]>("/categories"),
@@ -115,19 +135,24 @@ export const AdminProductsPage: React.FC = () => {
       setBrands(brandRes.data || []);
       setModels(modelRes.data || []);
       setYears(yearRes.data || []);
-      setLastUpdated(new Date());
-    } catch {
-      console.error("Failed to load filters");
+    } catch (err) {
+      console.error("Failed to load options:", err);
     }
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    loadProducts();
     load();
-  }, [load]);
+  }, [loadProducts, load]);
 
-  React.useEffect(() => {
-    loadProducts(1);
-  }, [filterCategory, filterBrand, filterModel, loadProducts]);
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, filterCategory, filterBrand, filterModel]);
+
+  const paginatedProducts = useMemo(() => {
+    const start = (page - 1) * PRODUCTS_PER_PAGE;
+    return filteredByCategoryBrandModel.slice(start, start + PRODUCTS_PER_PAGE);
+  }, [filteredByCategoryBrandModel, page]);
 
   const exportCsv = async () => {
     try {
@@ -154,7 +179,7 @@ export const AdminProductsPage: React.FC = () => {
       const text = await file.text();
       await api.post("/products/import", { csv: text });
       push("Products imported", "success");
-      loadProducts(page);
+      loadProducts();
     } catch {
       push("Failed to import products", "error");
     } finally {
@@ -195,10 +220,10 @@ export const AdminProductsPage: React.FC = () => {
       };
 
       await api.post("/products", payload);
-      push("Product created", "success");
+      push("Product created successfully", "success");
       setOpen(false);
       resetForm();
-      loadProducts(page);
+      loadProducts();
     } catch {
       push("Failed to create product", "error");
     } finally {
@@ -223,13 +248,65 @@ export const AdminProductsPage: React.FC = () => {
     setName(product.name);
     setPrice(String(product.price));
     setQuantity(String(product.quantity));
-    setCategoryId((product as any).category_id || "");
-    setBrandId((product as any).brand_id || "");
-    setModelId((product as any).model_id || "");
-    setYearId((product as any).year_id || "");
+    setCategoryId(product.category_id || "");
+    setBrandId(product.brand_id || "");
+    setModelId(product.model_id || "");
+    setYearId(product.year_id || "");
     setDescription(product.description || "");
     setImageUrl(product.image_url || "");
     setEditOpen(true);
+  };
+
+  const createCategory = async () => {
+    if (!newCategory.trim()) return;
+    try {
+      const res = await api.post("/categories", { name: newCategory });
+      setCategories([...categories, res.data]);
+      setNewCategory("");
+      setAddCategoryOpen(false);
+      push("Category created", "success");
+    } catch {
+      push("Failed to create category", "error");
+    }
+  };
+
+  const createBrand = async () => {
+    if (!newBrand.trim()) return;
+    try {
+      const res = await api.post("/brands", { name: newBrand });
+      setBrands([...brands, res.data]);
+      setNewBrand("");
+      setAddBrandOpen(false);
+      push("Brand created", "success");
+    } catch {
+      push("Failed to create brand", "error");
+    }
+  };
+
+  const createModel = async () => {
+    if (!newModel.trim() || !newModelBrandId) return;
+    try {
+      const res = await api.post("/models", { name: newModel, brand_id: newModelBrandId });
+      setModels([...models, res.data]);
+      setNewModel("");
+      setAddModelOpen(false);
+      push("Model created", "success");
+    } catch {
+      push("Failed to create model", "error");
+    }
+  };
+
+  const createYear = async () => {
+    if (!newYear.trim()) return;
+    try {
+      const res = await api.post("/years", { label: newYear });
+      setYears([...years, res.data]);
+      setNewYear("");
+      setAddYearOpen(false);
+      push("Year created", "success");
+    } catch {
+      push("Failed to create year", "error");
+    }
   };
 
   const onUpdate = async (e: React.FormEvent) => {
@@ -263,12 +340,11 @@ export const AdminProductsPage: React.FC = () => {
       };
 
       await api.put(`/products/${editing.id}`, payload);
-
-      push("Product updated", "success");
+      push("Product updated successfully", "success");
       setEditOpen(false);
       setEditing(null);
       resetForm();
-      loadProducts(page);
+      loadProducts();
     } catch {
       push("Failed to update product", "error");
     } finally {
@@ -283,7 +359,7 @@ export const AdminProductsPage: React.FC = () => {
     try {
       await api.delete(`/products/${id}`);
       push("Product deleted", "success");
-      loadProducts(page);
+      loadProducts();
     } catch {
       push("Failed to delete product", "error");
     } finally {
@@ -292,85 +368,27 @@ export const AdminProductsPage: React.FC = () => {
   };
 
   const clearFilters = () => {
+    clearSearch();
     setFilterCategory("");
     setFilterBrand("");
     setFilterModel("");
-    setQuery("");
     setPage(1);
   };
 
-  const createCategory = async () => {
-    try {
-      await api.post("/categories", { name: newCategory });
-      setNewCategory("");
-      setAddCategoryOpen(false);
-      load();
-      push("Category added", "success");
-    } catch {
-      push("Failed to add category", "error");
-    }
+  const hasActiveFilters = filterCategory || filterBrand || filterModel || searchQuery;
+
+  const getStockBadge = (quantity: number) => {
+    if (quantity === 0) return <Badge variant="destructive">Out of Stock</Badge>;
+    if (quantity <= 5) return <Badge variant="warning">Low Stock</Badge>;
+    return <Badge variant="success">In Stock</Badge>;
   };
-
-  const createBrand = async () => {
-    try {
-      await api.post("/brands", { name: newBrand });
-      setNewBrand("");
-      setAddBrandOpen(false);
-      load();
-      push("Brand added", "success");
-    } catch {
-      push("Failed to add brand", "error");
-    }
-  };
-
-  const createModel = async () => {
-    if (!newModelBrandId) {
-      push("Please select a brand", "error");
-      return;
-    }
-    try {
-      await api.post("/models", { name: newModel, brand_id: newModelBrandId, years: [] });
-      setNewModel("");
-      setNewModelBrandId("");
-      setAddModelOpen(false);
-      load();
-      push("Model added", "success");
-    } catch {
-      push("Failed to add model", "error");
-    }
-  };
-
-  const createYear = async () => {
-    try {
-      await api.post("/years", { label: newYear });
-      setNewYear("");
-      setAddYearOpen(false);
-      load();
-      push("Year added", "success");
-    } catch {
-      push("Failed to add year", "error");
-    }
-  };
-
-  const selectedModel = models.find(m => m.id === modelId);
-  const availableYears = selectedModel?.years?.length
-    ? selectedModel.years.map(y => ({ id: y, label: y }))
-    : years;
-
-  const visibleFilterModels = filterBrand ? models.filter(m => m.brand_id === filterBrand) : [];
-
-  const hasActiveFilters = filterCategory || filterBrand || filterModel || query;
 
   return (
     <div className="space-y-6 text-foreground">
       <PageHeader
         title="Products"
-        subtitle={`${totalProducts} total products`}
-        meta={
-          <>
-            {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : ""}
-          </>
-        }
+        subtitle={`${filteredByCategoryBrandModel.length} products found`}
+        meta={lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : undefined}
         actions={
           <div className="flex flex-wrap gap-2">
             <input
@@ -380,203 +398,210 @@ export const AdminProductsPage: React.FC = () => {
               className="hidden"
               onChange={(e) => importCsv(e.target.files?.[0] || null)}
             />
-            <button
-              className="btn-outline h-10 text-sm"
-              onClick={() => importInputRef.current?.click()}
-              disabled={importing}
-            >
-              Import CSV
-            </button>
-            <button className="btn-outline h-10 text-sm" onClick={exportCsv} disabled={exporting}>
-              Export CSV
-            </button>
-            <button className="btn-primary h-10 text-sm" onClick={() => setOpen(true)}>
+            <Button variant="outline" size="sm" onClick={() => importInputRef.current?.click()} disabled={importing}>
+              {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+              Import
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportCsv} disabled={exporting}>
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+            <Button variant="primary" size="sm" onClick={() => setOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Add product
-            </button>
+              Add Product
+            </Button>
           </div>
         }
       />
 
-      <div className="card p-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`btn-outline h-10 px-3 text-sm ${showFilters ? 'bg-primary text-primary-foreground' : ''}`}
-            >
-              <Filter className="mr-1 h-4 w-4" />
-              Filters
-              {hasActiveFilters && (
-                <span className="ml-1 rounded-full bg-primary-foreground px-1.5 py-0.5 text-xs text-primary">
-                  {[filterCategory, filterBrand, filterModel, query].filter(Boolean).length}
-                </span>
-              )}
-            </button>
-            <div className="relative flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              <Search className="h-4 w-4" />
+      <Card padding="md">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-1 items-center gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
-                className="w-full bg-transparent outline-none"
-                placeholder="Search products..."
-                value={query}
-                onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-                onKeyDown={(e) => e.key === "Enter" && loadProducts(1)}
+                className="input pl-11"
+                placeholder="Search by name, category, brand..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-              {query && (
-                <button onClick={() => { setQuery(""); loadProducts(1); }} className="hover:text-foreground">
+              {searchQuery && (
+                <button 
+                  onClick={() => clearSearch()} 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
                   <X className="h-4 w-4" />
                 </button>
               )}
             </div>
           </div>
-          <div className="text-sm text-muted-foreground">
-            Showing <span className="font-semibold text-foreground">{products.length}</span> of{" "}
-            <span className="font-semibold text-foreground">{totalProducts}</span> products
-          </div>
+          <Button 
+            variant={showFilters || hasActiveFilters ? "primary" : "outline"} 
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+            {(filterCategory || filterBrand || filterModel || searchQuery) && (
+              <span className="ml-2 rounded-full bg-white/20 px-1.5 py-0.5 text-xs">
+                {[filterCategory, filterBrand, filterModel, searchQuery].filter(Boolean).length}
+              </span>
+            )}
+          </Button>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          Showing <span className="font-semibold text-foreground">{paginatedProducts.length}</span> of{" "}
+          <span className="font-semibold text-foreground">{filteredByCategoryBrandModel.length}</span> products
         </div>
 
         {showFilters && (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <select
-              className="form-input h-10"
-              value={filterCategory}
-              onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
-            >
-              <option value="">All categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="form-input h-10"
-              value={filterBrand}
-              onChange={(e) => { setFilterBrand(e.target.value); setFilterModel(""); setPage(1); }}
-            >
-              <option value="">All brands</option>
-              {brands.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="form-input h-10"
-              value={filterModel}
-              onChange={(e) => { setFilterModel(e.target.value); setPage(1); }}
-              disabled={!filterBrand}
-            >
-              <option value="">All models</option>
-              {visibleFilterModels.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-            {hasActiveFilters && (
-              <button
-                className="btn-outline h-10 text-sm"
-                onClick={clearFilters}
-              >
-                Clear all filters
-              </button>
-            )}
+          <div className="mt-4 pt-4 border-t border-border animate-fade-in-down">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                options={[
+                  { value: "", label: "All categories" },
+                  ...categories.map(c => ({ value: c.id, label: c.name || '' }))
+                ]}
+              />
+              <Select
+                value={filterBrand}
+                onChange={(e) => { setFilterBrand(e.target.value); setFilterModel(""); }}
+                options={[
+                  { value: "", label: "All brands" },
+                  ...brands.map(b => ({ value: b.id, label: b.name || '' }))
+                ]}
+              />
+              <Select
+                value={filterModel}
+                onChange={(e) => setFilterModel(e.target.value)}
+                options={[
+                  { value: "", label: "All models" },
+                  ...visibleFilterModels.map(m => ({ value: m.id, label: m.name || '' }))
+                ]}
+                disabled={!filterBrand}
+              />
+              {hasActiveFilters && (
+                <Button variant="outline" onClick={clearFilters}>
+                  Clear all filters
+                </Button>
+              )}
+            </div>
           </div>
         )}
-      </div>
+      </Card>
 
       {loading ? (
-        <PageLoading text="Loading products..." />
-      ) : products.length === 0 ? (
-        <div className="card p-8">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-72 rounded-2xl" />
+          ))}
+        </div>
+      ) : filteredByCategoryBrandModel.length === 0 ? (
+        <Card className="p-12">
           <EmptyState
             title="No products found"
-            description={hasActiveFilters ? "Try adjusting your filters." : "Add your first product to get started."}
+            description={hasActiveFilters ? "Try adjusting your filters or search." : "Add your first product to get started."}
             action={
-              <button className="btn-primary h-10 text-sm" onClick={() => setOpen(true)}>
-                Add product
-              </button>
+              <Button variant="primary" onClick={() => setOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
             }
           />
-        </div>
+        </Card>
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {products.map((p) => {
+            {paginatedProducts.map((p, index) => {
               const imgSrc = p.model_id ? p.models?.image_url : p.image_url;
               return (
-                <div key={p.id} className="card p-4">
-                  {imgSrc ? (
-                    <img
-                      src={imgSrc}
-                      alt={p.name}
-                      className="h-40 w-full rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-40 w-full items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                      No image
-                    </div>
-                  )}
-                  <div className="mt-3">
-                    <div className="text-xs text-muted-foreground">
-                      {p.categories?.name || "Uncategorized"}
-                      {p.brands?.name && ` • ${p.brands.name}`}
-                      {p.models?.name && ` • ${p.models.name}`}
-                      {p.years?.label && ` • ${p.years.label}`}
-                    </div>
-                    <div className="mt-1 line-clamp-2 text-sm font-semibold text-foreground">
-                      {p.name}
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-sm font-semibold">
-                        GHS {p.price.toLocaleString()}
-                      </span>
-                      <span className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
-                        {p.status}
-                      </span>
-                    </div>
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      Qty: {p.quantity}
-                    </div>
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        className="btn-outline h-9 flex-1"
-                        onClick={() => onOpenEdit(p)}
-                      >
-                        <Pencil className="mr-1 h-4 w-4" />
-                        Edit
-                      </button>
-                      <button
-                        className="btn-destructive h-9 flex-1"
-                        onClick={() => onDelete(p.id)}
-                      >
-                        <Trash2 className="mr-1 h-4 w-4" />
-                        Delete
-                      </button>
+                <Card 
+                  key={p.id} 
+                  hover 
+                  className="overflow-hidden animate-fade-in-up"
+                  style={{ animationDelay: `${index * 30}ms` }}
+                >
+                  <div className="aspect-[4/3] bg-muted relative overflow-hidden">
+                    {imgSrc ? (
+                      <img
+                        src={imgSrc}
+                        alt={p.name}
+                        className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-muted-foreground">
+                        <div className="text-center">
+                          <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                            <Package className="h-6 w-6" />
+                          </div>
+                          <p className="text-xs">No image</p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="absolute top-3 right-3">
+                      {getStockBadge(p.quantity)}
                     </div>
                   </div>
-                </div>
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-muted-foreground truncate">
+                          {p.categories?.name || "Uncategorized"}
+                          {p.brands?.name && ` • ${p.brands.name}`}
+                        </p>
+                        <h3 className="font-semibold text-sm line-clamp-2 mt-1">{p.name}</h3>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="text-lg font-bold">GHS {p.price.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">Qty: {p.quantity}</p>
+                      </div>
+                      <Badge variant="muted">{p.status}</Badge>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => onOpenEdit(p)}
+                      >
+                        <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => onDelete(p.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
               );
             })}
           </div>
 
           {totalPages > 1 && (
-            <div className="mt-6 flex flex-col items-center justify-between gap-4 border-t border-border pt-4 sm:flex-row">
+            <Card className="flex flex-col items-center justify-between gap-4 p-4 sm:flex-row">
               <div className="text-sm text-muted-foreground">
                 Page <span className="font-medium text-foreground">{page}</span> of{" "}
                 <span className="font-medium text-foreground">{totalPages}</span>
               </div>
               
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => loadProducts(page - 1)}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="flex items-center gap-1 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4 mr-1" />
                   Previous
-                </button>
+                </Button>
                 
                 <div className="flex items-center gap-1">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -591,354 +616,294 @@ export const AdminProductsPage: React.FC = () => {
                       pageNum = page - 2 + i;
                     }
                     return (
-                      <button
+                      <Button
                         key={pageNum}
-                        onClick={() => loadProducts(pageNum)}
-                        className={`h-9 w-9 rounded-lg text-sm font-medium ${
-                          page === pageNum
-                            ? "bg-primary text-white"
-                            : "border border-border bg-background hover:bg-muted"
-                        }`}
+                        variant={page === pageNum ? "primary" : "ghost"}
+                        size="sm"
+                        onClick={() => setPage(pageNum)}
+                        className="w-9"
                       >
                         {pageNum}
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
                 
-                <button
-                  onClick={() => loadProducts(page + 1)}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="flex items-center gap-1 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
               </div>
-            </div>
+            </Card>
           )}
         </>
       )}
 
-      <Modal open={open} onClose={() => { setOpen(false); resetForm(); }} title="Add product">
-        <form onSubmit={onCreate} className="space-y-4">
-          <div className="relative">
-            <Image className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <input
-              required
-              className="w-full rounded-lg border border-border bg-card px-10 py-3 text-sm text-foreground outline-none"
-              placeholder="Product name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <select
-              required
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+      <Modal open={open} onClose={() => { setOpen(false); resetForm(); }} title="Add New Product" size="lg">
+        <form onSubmit={onCreate} className="space-y-5">
+          <Input
+            label="Product Name"
+            placeholder="Enter product name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Select
+              label="Category"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-            >
-              <option value="">Select category</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className="btn-outline h-12 text-xs"
-              onClick={() => setAddCategoryOpen(true)}
-            >
-              Add new category
-            </button>
-            <select
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+              options={[
+                { value: "", label: "Select category" },
+                ...categories.map(c => ({ value: c.id, label: c.name }))
+              ]}
+            />
+            <Button type="button" variant="outline" onClick={() => setAddCategoryOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Category
+            </Button>
+            
+            <Select
+              label="Brand (Optional)"
               value={brandId}
-              onChange={(e) => {
-                setBrandId(e.target.value);
-                setModelId("");
-              }}
-            >
-              <option value="">Select brand (optional for universal products)</option>
-              {brands.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className="btn-outline h-12 text-xs"
-              onClick={() => setAddBrandOpen(true)}
-            >
-              Add new brand
-            </button>
-            <select
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+              onChange={(e) => { setBrandId(e.target.value); setModelId(""); }}
+              options={[
+                { value: "", label: "Select brand" },
+                ...brands.map(b => ({ value: b.id, label: b.name }))
+              ]}
+            />
+            <Button type="button" variant="outline" onClick={() => setAddBrandOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Brand
+            </Button>
+            
+            <Select
+              label="Model (Optional)"
               value={modelId}
               onChange={(e) => { setModelId(e.target.value); setYearId(""); }}
-            >
-              <option value="">Select model (optional)</option>
-              {models
-                .filter((m) => !brandId || m.brand_id === brandId)
-                .map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-            </select>
-            <button
-              type="button"
-              className="btn-outline h-12 text-xs"
-              onClick={() => setAddModelOpen(true)}
-            >
-              Add new model
-            </button>
-            <select
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+              options={[
+                { value: "", label: "Select model" },
+                ...models.filter((m) => !brandId || m.brand_id === brandId).map(m => ({ value: m.id, label: m.name || '' }))
+              ]}
+            />
+            <Button type="button" variant="outline" onClick={() => setAddModelOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Model
+            </Button>
+            
+            <Select
+              label="Year (Optional)"
               value={yearId}
               onChange={(e) => setYearId(e.target.value)}
-            >
-              <option value="">Select year (optional)</option>
-              {availableYears.map((y) => (
-                <option key={y.id} value={y.id}>
-                  {y.label}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: "Select year" },
+                ...availableYears.map(y => ({ value: y.id, label: y.label }))
+              ]}
+            />
             {!selectedModel?.years?.length && (
-              <button
-                type="button"
-                className="btn-outline h-12 text-xs"
-                onClick={() => setAddYearOpen(true)}
-              >
-                Add new year
-              </button>
+              <Button type="button" variant="outline" onClick={() => setAddYearOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Year
+              </Button>
             )}
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <input
-              required
+          
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="Price"
               type="number"
               step="0.01"
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
-              placeholder="Price"
+              placeholder="0.00"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-            />
-            <input
               required
+            />
+            <Input
+              label="Quantity"
               type="number"
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
-              placeholder="Quantity"
+              placeholder="0"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
+              required
             />
           </div>
-          <textarea
-            className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
-            placeholder="Description"
+          
+          <Textarea
+            label="Description"
+            placeholder="Enter product description..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+          
           <ImageUploader
             value={imageUrl}
             onChange={setImageUrl}
             endpoint="/products/upload"
-            label={modelId ? "Image (optional)" : "Image (required for universal products)"}
+            label="Product Image"
           />
+          
           <StickyActionBar>
-            <button className="btn-primary h-11 w-full" disabled={submitting}>
-              {submitting ? (
-                <span className="flex items-center justify-center">
-                  <Loader2 className="btn-spinner mr-2 h-4 w-4" />
-                  Saving...
-                </span>
-              ) : "Create"}
-            </button>
+            <Button type="submit" variant="primary" loading={submitting} className="w-full">
+              Create Product
+            </Button>
           </StickyActionBar>
         </form>
       </Modal>
 
-      <Modal open={editOpen} onClose={() => { setEditOpen(false); setEditing(null); resetForm(); }} title="Edit product">
-        <form onSubmit={onUpdate} className="space-y-4">
-          <div className="relative">
-            <Image className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <input
-              required
-              className="w-full rounded-lg border border-border bg-card px-10 py-3 text-sm text-foreground outline-none"
-              placeholder="Product name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <select
-              required
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+      <Modal open={editOpen} onClose={() => { setEditOpen(false); setEditing(null); resetForm(); }} title="Edit Product" size="lg">
+        <form onSubmit={onUpdate} className="space-y-5">
+          <Input
+            label="Product Name"
+            placeholder="Enter product name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Select
+              label="Category"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-            >
-              <option value="">Select category</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+              options={[
+                { value: "", label: "Select category" },
+                ...categories.map(c => ({ value: c.id, label: c.name }))
+              ]}
+            />
+            <Select
+              label="Brand"
               value={brandId}
-              onChange={(e) => {
-                setBrandId(e.target.value);
-                setModelId("");
-              }}
-            >
-              <option value="">Select brand (optional for universal products)</option>
-              {brands.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+              onChange={(e) => { setBrandId(e.target.value); setModelId(""); }}
+              options={[
+                { value: "", label: "Select brand" },
+                ...brands.map(b => ({ value: b.id, label: b.name }))
+              ]}
+            />
+            <Select
+              label="Model"
               value={modelId}
               onChange={(e) => { setModelId(e.target.value); setYearId(""); }}
-            >
-              <option value="">Select model (optional)</option>
-              {models
-                .filter((m) => !brandId || m.brand_id === brandId)
-                .map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-            </select>
-            <select
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+              options={[
+                { value: "", label: "Select model" },
+                ...models.filter((m) => !brandId || m.brand_id === brandId).map(m => ({ value: m.id, label: m.name || '' }))
+              ]}
+            />
+            <Select
+              label="Year"
               value={yearId}
               onChange={(e) => setYearId(e.target.value)}
-            >
-              <option value="">Select year (optional)</option>
-              {availableYears.map((y) => (
-                <option key={y.id} value={y.id}>
-                  {y.label}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: "Select year" },
+                ...availableYears.map(y => ({ value: y.id, label: y.label }))
+              ]}
+            />
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <input
-              required
+          
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="Price"
               type="number"
               step="0.01"
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
-              placeholder="Price"
+              placeholder="0.00"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-            />
-            <input
               required
+            />
+            <Input
+              label="Quantity"
               type="number"
-              className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
-              placeholder="Quantity"
+              placeholder="0"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
+              required
             />
           </div>
-          <textarea
-            className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
-            placeholder="Description"
+          
+          <Textarea
+            label="Description"
+            placeholder="Enter product description..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+          
           <ImageUploader
             value={imageUrl}
             onChange={setImageUrl}
             endpoint="/products/upload"
-            label={modelId ? "Image (optional)" : "Image (required for universal products)"}
+            label="Product Image"
           />
+          
           <StickyActionBar>
-            <button className="btn-primary h-11 w-full" disabled={submitting}>
-              {submitting ? (
-                <span className="flex items-center justify-center">
-                  <Loader2 className="btn-spinner mr-2 h-4 w-4" />
-                  Saving...
-                </span>
-              ) : "Save changes"}
-            </button>
+            <Button type="submit" variant="primary" loading={submitting} className="w-full">
+              Save Changes
+            </Button>
           </StickyActionBar>
         </form>
       </Modal>
 
-      <Modal open={addCategoryOpen} onClose={() => setAddCategoryOpen(false)} title="Add category">
-        <div className="space-y-3">
-          <input
-            className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+      <Modal open={addCategoryOpen} onClose={() => setAddCategoryOpen(false)} title="Add Category">
+        <div className="space-y-4">
+          <Input
             placeholder="Category name"
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
           />
-          <button className="btn-primary h-11 w-full" onClick={createCategory}>
-            Save category
-          </button>
+          <Button variant="primary" onClick={createCategory} className="w-full">
+            Save Category
+          </Button>
         </div>
       </Modal>
 
-      <Modal open={addBrandOpen} onClose={() => setAddBrandOpen(false)} title="Add brand">
-        <div className="space-y-3">
-          <input
-            className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+      <Modal open={addBrandOpen} onClose={() => setAddBrandOpen(false)} title="Add Brand">
+        <div className="space-y-4">
+          <Input
             placeholder="Brand name"
             value={newBrand}
             onChange={(e) => setNewBrand(e.target.value)}
           />
-          <button className="btn-primary h-11 w-full" onClick={createBrand}>
-            Save brand
-          </button>
+          <Button variant="primary" onClick={createBrand} className="w-full">
+            Save Brand
+          </Button>
         </div>
       </Modal>
 
-      <Modal open={addModelOpen} onClose={() => setAddModelOpen(false)} title="Add model">
-        <div className="space-y-3">
-          <input
-            className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+      <Modal open={addModelOpen} onClose={() => setAddModelOpen(false)} title="Add Model">
+        <div className="space-y-4">
+          <Input
             placeholder="Model name"
             value={newModel}
             onChange={(e) => setNewModel(e.target.value)}
           />
-          <select
-            className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+          <Select
             value={newModelBrandId}
             onChange={(e) => setNewModelBrandId(e.target.value)}
-          >
-            <option value="">Select brand</option>
-            {brands.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-          <button className="btn-primary h-11 w-full" onClick={createModel}>
-            Save model
-          </button>
+            options={[
+              { value: "", label: "Select brand" },
+              ...brands.map(b => ({ value: b.id, label: b.name }))
+            ]}
+          />
+          <Button variant="primary" onClick={createModel} className="w-full">
+            Save Model
+          </Button>
         </div>
       </Modal>
 
-      <Modal open={addYearOpen} onClose={() => setAddYearOpen(false)} title="Add year">
-        <div className="space-y-3">
-          <input
-            className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground outline-none"
+      <Modal open={addYearOpen} onClose={() => setAddYearOpen(false)} title="Add Year">
+        <div className="space-y-4">
+          <Input
             placeholder="Year (e.g. 2022)"
             value={newYear}
             onChange={(e) => setNewYear(e.target.value)}
           />
-          <button className="btn-primary h-11 w-full" onClick={createYear}>
-            Save year
-          </button>
+          <Button variant="primary" onClick={createYear} className="w-full">
+            Save Year
+          </Button>
         </div>
       </Modal>
     </div>

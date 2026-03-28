@@ -130,10 +130,10 @@ export const AdminCategoriesPage: React.FC = () => {
       />
 
       <div className="card p-4">
-        <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-          <Search className="h-4 w-4" />
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
-            className="w-full bg-transparent outline-none"
+            className="input pl-11"
             placeholder="Search categories..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
