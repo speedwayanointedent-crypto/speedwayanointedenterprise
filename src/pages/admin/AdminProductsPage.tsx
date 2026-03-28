@@ -9,6 +9,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { StickyActionBar } from "../../components/ui/StickyActionBar";
 import { PageLoading } from "../../components/ui/LoadingSpinner";
 import { ImageUploader } from "../../components/ui/ImageUploader";
+import { GalleryUploader, type GalleryItem } from "../../components/ui/GalleryUploader";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Input, Select, Textarea } from "../../components/ui/Input";
@@ -35,6 +36,7 @@ export const AdminProductsPage: React.FC = () => {
   const [yearId, setYearId] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [categories, setCategories] = useState<Option[]>([]);
   const [brands, setBrands] = useState<Option[]>([]);
@@ -216,6 +218,7 @@ export const AdminProductsPage: React.FC = () => {
         year_id: finalYearId || null,
         description,
         image_url: imageUrl || null,
+        gallery: gallery,
         status: "active"
       };
 
@@ -241,6 +244,7 @@ export const AdminProductsPage: React.FC = () => {
     setYearId("");
     setDescription("");
     setImageUrl("");
+    setGallery([]);
   };
 
   const onOpenEdit = (product: Product) => {
@@ -254,6 +258,7 @@ export const AdminProductsPage: React.FC = () => {
     setYearId(product.year_id || "");
     setDescription(product.description || "");
     setImageUrl(product.image_url || "");
+    setGallery(product.gallery || []);
     setEditOpen(true);
   };
 
@@ -336,6 +341,7 @@ export const AdminProductsPage: React.FC = () => {
         year_id: finalYearId || null,
         description,
         image_url: imageUrl || null,
+        gallery: gallery,
         status: editing.status || "active"
       };
 
@@ -759,6 +765,12 @@ export const AdminProductsPage: React.FC = () => {
             label="Product Image"
           />
           
+          <GalleryUploader
+            value={gallery}
+            onChange={setGallery}
+            label="Product Gallery (Images & Videos)"
+          />
+          
           <StickyActionBar>
             <Button type="submit" variant="primary" loading={submitting} className="w-full">
               Create Product
@@ -848,6 +860,12 @@ export const AdminProductsPage: React.FC = () => {
             onChange={setImageUrl}
             endpoint="/products/upload"
             label="Product Image"
+          />
+          
+          <GalleryUploader
+            value={gallery}
+            onChange={setGallery}
+            label="Product Gallery (Images & Videos)"
           />
           
           <StickyActionBar>
