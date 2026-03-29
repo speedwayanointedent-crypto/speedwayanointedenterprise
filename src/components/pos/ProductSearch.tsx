@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Search, Package, Loader2, X, AlertCircle } from 'lucide-react';
 import classNames from 'classnames';
 import api from '../../lib/api';
+import { getApiErrorMessage } from '../../lib/api';
 import { fetchAllProducts } from '../../lib/productsApi';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -76,10 +77,10 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({
         if (products.length === 0) {
           setError('No products found. Check your connection or try refreshing.');
         }
-      } catch (err: any) {
+      } catch (err) {
         if (cancelled) return;
         console.error('[ProductSearch] Load failed:', err);
-        setError(err?.response?.data?.error || 'Failed to load products');
+        setError(getApiErrorMessage(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
