@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { Upload, X, Loader2, ImageIcon } from "lucide-react";
 import api from "../../lib/api";
+import { getApiErrorMessage } from "../../lib/api";
 
 interface ImageUploaderProps {
   value?: string;
@@ -41,6 +42,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       return;
     }
 
+    if (uploading) return;
     setUploading(true);
     setError(null);
 
@@ -50,8 +52,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     try {
       const res = await api.post(endpoint, formData);
       onChange(res.data.url);
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Upload failed");
+    } catch (err) {
+      setError(getApiErrorMessage(err));
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";

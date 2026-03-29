@@ -1,6 +1,7 @@
 import React, { useRef, useState, useCallback } from "react";
 import { Upload, X, Loader2, ImageIcon, Video, GripVertical, Plus, Link2 } from "lucide-react";
 import api from "../../lib/api";
+import { getApiErrorMessage } from "../../lib/api";
 
 export type GalleryItem = {
   url: string;
@@ -67,8 +68,8 @@ export const GalleryUploader: React.FC<GalleryUploaderProps> = ({
         formData.append("file", file);
         const res = await api.post("/products/upload-gallery", formData);
         newItems.push({ url: res.data.url, type: res.data.type });
-      } catch (err: any) {
-        setError(err.response?.data?.error || `Failed to upload ${file.name}`);
+      } catch (err) {
+        setError(getApiErrorMessage(err));
       }
     }
 
