@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Plus, Search, Trash2, Pencil, ChevronLeft, ChevronRight, Filter, X, Loader2, Upload, Download, Package } from "lucide-react";
 import api from "../../lib/api";
+import { getApiErrorMessage } from "../../lib/api";
 import { Skeleton, ProductCardSkeleton, StatCardSkeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
@@ -119,11 +120,12 @@ export const AdminProductsPage: React.FC = () => {
       setLastUpdated(new Date());
     } catch (err) {
       console.error("Failed to load products:", err);
+      push(getApiErrorMessage(err), "error");
       setAllProducts([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [push]);
 
   const load = useCallback(async () => {
     try {
@@ -139,8 +141,9 @@ export const AdminProductsPage: React.FC = () => {
       setYears(yearRes.data || []);
     } catch (err) {
       console.error("Failed to load options:", err);
+      push(getApiErrorMessage(err), "error");
     }
-  }, []);
+  }, [push]);
 
   useEffect(() => {
     loadProducts();
@@ -167,8 +170,9 @@ export const AdminProductsPage: React.FC = () => {
       link.download = "products.csv";
       link.click();
       window.URL.revokeObjectURL(url);
-    } catch {
-      push("Failed to export products", "error");
+      push("Export complete", "success");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setExporting(false);
     }
@@ -182,8 +186,8 @@ export const AdminProductsPage: React.FC = () => {
       await api.post("/products/import", { csv: text });
       push("Products imported", "success");
       loadProducts();
-    } catch {
-      push("Failed to import products", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setImporting(false);
       if (importInputRef.current) {
@@ -194,6 +198,7 @@ export const AdminProductsPage: React.FC = () => {
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
     try {
       let finalYearId = yearId;
@@ -227,8 +232,8 @@ export const AdminProductsPage: React.FC = () => {
       setOpen(false);
       resetForm();
       loadProducts();
-    } catch {
-      push("Failed to create product", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -270,8 +275,8 @@ export const AdminProductsPage: React.FC = () => {
       setNewCategory("");
       setAddCategoryOpen(false);
       push("Category created", "success");
-    } catch {
-      push("Failed to create category", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     }
   };
 
@@ -283,8 +288,8 @@ export const AdminProductsPage: React.FC = () => {
       setNewBrand("");
       setAddBrandOpen(false);
       push("Brand created", "success");
-    } catch {
-      push("Failed to create brand", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     }
   };
 
@@ -296,8 +301,8 @@ export const AdminProductsPage: React.FC = () => {
       setNewModel("");
       setAddModelOpen(false);
       push("Model created", "success");
-    } catch {
-      push("Failed to create model", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     }
   };
 
@@ -309,14 +314,14 @@ export const AdminProductsPage: React.FC = () => {
       setNewYear("");
       setAddYearOpen(false);
       push("Year created", "success");
-    } catch {
-      push("Failed to create year", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     }
   };
 
   const onUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editing) return;
+    if (!editing || submitting) return;
     setSubmitting(true);
     try {
       let finalYearId = yearId;
@@ -351,8 +356,8 @@ export const AdminProductsPage: React.FC = () => {
       setEditing(null);
       resetForm();
       loadProducts();
-    } catch {
-      push("Failed to update product", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -361,13 +366,14 @@ export const AdminProductsPage: React.FC = () => {
   const onDelete = async (id: string) => {
     const confirmed = window.confirm("Are you sure you want to delete this product?");
     if (!confirmed) return;
+    if (submitting) return;
     setSubmitting(true);
     try {
       await api.delete(`/products/${id}`);
       push("Product deleted", "success");
       loadProducts();
-    } catch {
-      push("Failed to delete product", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }

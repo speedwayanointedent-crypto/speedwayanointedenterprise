@@ -1,6 +1,7 @@
 import React from "react";
 import { Plus, Search, Tag, Pencil, Trash2, ImageIcon, Loader2 } from "lucide-react";
 import api from "../../lib/api";
+import { getApiErrorMessage } from "../../lib/api";
 import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -32,12 +33,13 @@ export const AdminCategoriesPage: React.FC = () => {
       const res = await api.get<Category[]>("/categories");
       setItems(res.data);
       setLastUpdated(new Date());
-    } catch {
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
       setItems([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [push]);
 
   React.useEffect(() => {
     load();
@@ -51,6 +53,7 @@ export const AdminCategoriesPage: React.FC = () => {
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
     try {
       await api.post("/categories", { name, image_url: imageUrl || null, show_by_brand: showByBrand });
@@ -58,8 +61,8 @@ export const AdminCategoriesPage: React.FC = () => {
       resetForm();
       setOpen(false);
       load();
-    } catch {
-      push("Failed to create category", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -75,7 +78,7 @@ export const AdminCategoriesPage: React.FC = () => {
 
   const onUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editing) return;
+    if (!editing || submitting) return;
     setSubmitting(true);
     try {
       await api.put(`/categories/${editing.id}`, { name, image_url: imageUrl || null, show_by_brand: showByBrand });
@@ -84,8 +87,8 @@ export const AdminCategoriesPage: React.FC = () => {
       setEditing(null);
       resetForm();
       load();
-    } catch {
-      push("Failed to update category", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -94,13 +97,14 @@ export const AdminCategoriesPage: React.FC = () => {
   const onDelete = async (id: string) => {
     const confirmed = window.confirm("Are you sure you want to delete this category? This may affect products using this category.");
     if (!confirmed) return;
+    if (submitting) return;
     setSubmitting(true);
     try {
       await api.delete(`/categories/${id}`);
       push("Category deleted", "success");
       load();
-    } catch {
-      push("Failed to delete category", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }

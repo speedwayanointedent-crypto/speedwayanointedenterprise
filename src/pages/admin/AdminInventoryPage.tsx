@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { Search, Edit3, Loader2, ChevronLeft, ChevronRight, Filter, X, Package, AlertTriangle, CheckCircle, TrendingUp, RefreshCw } from "lucide-react";
 import api from "../../lib/api";
+import { getApiErrorMessage } from "../../lib/api";
 import { fetchAllProducts } from "../../lib/productsApi";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Modal } from "../../components/ui/Modal";
@@ -12,6 +13,7 @@ import { Input, Select } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { StatCard } from "../../components/ui/StatCard";
 import { useSearch } from "../../lib/useSearch";
+import { useToast } from "../../components/ui/Toast";
 import type { Product } from "../../types/sale";
 
 const PRODUCTS_PER_PAGE = 50;
@@ -30,6 +32,7 @@ export const AdminInventoryPage: React.FC = () => {
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const { push } = useToast();
 
   const searchFields = useMemo(() => [
     'name',
@@ -79,11 +82,12 @@ export const AdminInventoryPage: React.FC = () => {
       setLastUpdated(new Date());
     } catch (err) {
       console.error('[Inventory] Load failed:', err);
+      push(getApiErrorMessage(err), "error");
       setAllProducts([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [push]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -96,7 +100,7 @@ export const AdminInventoryPage: React.FC = () => {
   };
 
   const saveEdit = async () => {
-    if (!editing) return;
+    if (!editing || saving) return;
     setSaving(true);
     try {
       await api.put(`/products/${editing.id}`, { quantity: Number(editQuantity) });
@@ -105,8 +109,9 @@ export const AdminInventoryPage: React.FC = () => {
       ));
       setEditOpen(false);
       setEditing(null);
+      push("Quantity updated successfully", "success");
     } catch (err) {
-      console.error("Failed to update:", err);
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSaving(false);
     }
@@ -141,8 +146,8 @@ export const AdminInventoryPage: React.FC = () => {
         subtitle="Manage product stock levels and track inventory"
         meta={<>{allProducts.length} products loaded</>}
         actions={
-          <Button variant="primary" onClick={load}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+          <Button variant="primary" onClick={load} disabled={loading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         }

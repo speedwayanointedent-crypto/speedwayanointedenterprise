@@ -6,11 +6,6 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell
 } from "recharts";
 import { 
   DollarSign, 
@@ -19,23 +14,21 @@ import {
   Users, 
   ShoppingCart, 
   AlertTriangle,
-  ArrowUpRight,
-  ArrowDownRight,
   RefreshCw,
   Download,
-  Calendar,
-  Eye,
-  Truck,
   CheckCircle,
-  Clock
+  Clock,
+  Truck
 } from "lucide-react";
 import api from "../../lib/api";
+import { getApiErrorMessage } from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/Card";
 import { StatCard } from "../../components/ui/StatCard";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { useToast } from "../../components/ui/Toast";
 
 type Summary = {
   revenue: number;
@@ -71,14 +64,6 @@ type Sale = {
   quantity: number;
   created_at: string;
   products?: { name: string };
-};
-
-type ActivityItem = {
-  id: string;
-  type: 'order' | 'sale' | 'inventory' | 'user';
-  title: string;
-  description: string;
-  created_at: string;
 };
 
 const CHART_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
@@ -125,6 +110,25 @@ const getStockStatus = (quantity: number) => {
   return { label: 'In Stock', variant: 'success' as const };
 };
 
+function Receipt({ className }: { className?: string }) {
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      className={className}
+    >
+      <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/>
+      <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
+      <path d="M12 17.5v-11"/>
+    </svg>
+  );
+}
+
 export const AdminDashboardPage: React.FC = () => {
   const [summary, setSummary] = React.useState<SummaryResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -134,6 +138,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [revenueData, setRevenueData] = React.useState<{ name: string; revenue: number }[]>([]);
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const [dateRange, setDateRange] = React.useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const { push } = useToast();
 
   const load = React.useCallback(async () => {
     try {
@@ -161,12 +166,14 @@ export const AdminDashboardPage: React.FC = () => {
       setLastUpdated(new Date());
     } catch (error) {
       console.error("Failed to fetch dashboard data", error);
+      push(getApiErrorMessage(error), "error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [push]);
 
   const refresh = async () => {
+    if (refreshing) return;
     setRefreshing(true);
     await load();
     setRefreshing(false);
@@ -183,7 +190,7 @@ export const AdminDashboardPage: React.FC = () => {
   const getOrderStatusBadge = (status: string) => {
     const statusMap: Record<string, { variant: 'success' | 'warning' | 'destructive' | 'muted'; label: string }> = {
       pending: { variant: 'warning', label: 'Pending' },
-      processing: { variant: 'primary', label: 'Processing' },
+      processing: { variant: 'warning', label: 'Processing' },
       completed: { variant: 'success', label: 'Completed' },
       delivered: { variant: 'success', label: 'Delivered' },
       cancelled: { variant: 'destructive', label: 'Cancelled' }
@@ -402,9 +409,9 @@ export const AdminDashboardPage: React.FC = () => {
                 <CardTitle>Recent Orders</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">Latest customer orders</p>
               </div>
-              <Button variant="ghost" size="sm" asChild>
-                <a href="/admin/orders">View all</a>
-              </Button>
+              <a href="/admin/orders" className="btn-ghost text-sm">
+                View all
+              </a>
             </div>
           </CardHeader>
           <CardContent className="px-5 pb-5">
@@ -504,22 +511,3 @@ export const AdminDashboardPage: React.FC = () => {
     </div>
   );
 };
-
-function Receipt({ className }: { className?: string }) {
-  return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      className={className}
-    >
-      <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/>
-      <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
-      <path d="M12 17.5v-11"/>
-    </svg>
-  );
-}

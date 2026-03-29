@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import classNames from 'classnames';
 import api from '../../lib/api';
+import { getApiErrorMessage } from '../../lib/api';
 import { salesApi, formatSaleForCompletion } from '../../lib/salesApi';
 import { fetchAllProducts } from '../../lib/productsApi';
 import { useToast } from '../../components/ui/Toast';
@@ -87,7 +88,7 @@ export const AdminSalesPage: React.FC = () => {
       setAllProducts(new Map(productsData.map((p) => [p.id, p])));
     } catch (err) {
       console.error('Failed to load data:', err);
-      push('Failed to load data', 'error');
+      push(getApiErrorMessage(err), 'error');
     } finally {
       setLoading(false);
     }
@@ -222,6 +223,7 @@ export const AdminSalesPage: React.FC = () => {
       push('Add at least one product before checkout', 'error');
       return;
     }
+    if (saving) return;
 
     for (const item of cartItems) {
       if (item.unit_price <= 0) {
@@ -257,11 +259,11 @@ export const AdminSalesPage: React.FC = () => {
       clearCart();
       await loadData();
     } catch (error: any) {
-      push(error?.response?.data?.error || 'Failed to complete sale', 'error');
+      push(getApiErrorMessage(error), 'error');
     } finally {
       setSaving(false);
     }
-  }, [cartItems, allProducts, cartCount, discount, note, clearCart, loadData, push]);
+  }, [cartItems, allProducts, cartCount, discount, note, clearCart, loadData, push, saving]);
 
   const salesSearchFields = useMemo(() => [
     'product_name',

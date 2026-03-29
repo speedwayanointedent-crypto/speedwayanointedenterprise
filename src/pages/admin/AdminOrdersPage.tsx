@@ -1,6 +1,7 @@
 import React from "react";
 import { Eye, Search, Package, RefreshCw } from "lucide-react";
 import api from "../../lib/api";
+import { getApiErrorMessage } from "../../lib/api";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
@@ -30,7 +31,7 @@ type OrderReturn = {
 
 const statusConfig: Record<string, { variant: 'default' | 'success' | 'warning' | 'destructive'; label: string }> = {
   pending: { variant: 'warning', label: 'Pending' },
-  processing: { variant: 'primary', label: 'Processing' },
+  processing: { variant: 'warning', label: 'Processing' },
   completed: { variant: 'success', label: 'Completed' },
   cancelled: { variant: 'destructive', label: 'Cancelled' }
 };
@@ -63,15 +64,16 @@ export const AdminOrdersPage: React.FC = () => {
       }
       
       setLastUpdated(new Date());
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to load orders:", err);
-      setError(err?.message || "Failed to load orders");
+      setError(getApiErrorMessage(err));
+      push(getApiErrorMessage(err), "error");
       setOrders([]);
       setReturns([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [push]);
 
   React.useEffect(() => {
     load();
@@ -82,8 +84,8 @@ export const AdminOrdersPage: React.FC = () => {
       await api.patch(`/orders/${id}/status`, { status });
       push("Order status updated", "success");
       load();
-    } catch (err: any) {
-      push(err?.message || "Failed to update order", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     }
   };
 
@@ -92,8 +94,8 @@ export const AdminOrdersPage: React.FC = () => {
       await api.patch(`/orders/returns/${id}`, { status });
       push("Return updated", "success");
       load();
-    } catch (err: any) {
-      push(err?.message || "Failed to update return", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     }
   };
 

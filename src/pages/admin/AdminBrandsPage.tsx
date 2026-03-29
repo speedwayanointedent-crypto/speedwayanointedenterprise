@@ -1,6 +1,7 @@
 import React from "react";
 import { Plus, Search, Layers, Pencil, Trash2, ImageIcon, Loader2 } from "lucide-react";
 import api from "../../lib/api";
+import { getApiErrorMessage } from "../../lib/api";
 import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -29,12 +30,13 @@ export const AdminBrandsPage: React.FC = () => {
       const res = await api.get<Brand[]>("/brands");
       setItems(res.data);
       setLastUpdated(new Date());
-    } catch {
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
       setItems([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [push]);
 
   React.useEffect(() => {
     load();
@@ -47,6 +49,7 @@ export const AdminBrandsPage: React.FC = () => {
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
     try {
       await api.post("/brands", { name, logo_url: logoUrl || null });
@@ -54,8 +57,8 @@ export const AdminBrandsPage: React.FC = () => {
       resetForm();
       setOpen(false);
       load();
-    } catch {
-      push("Failed to create brand", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -70,7 +73,7 @@ export const AdminBrandsPage: React.FC = () => {
 
   const onUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editing) return;
+    if (!editing || submitting) return;
     setSubmitting(true);
     try {
       await api.put(`/brands/${editing.id}`, { name, logo_url: logoUrl || null });
@@ -79,8 +82,8 @@ export const AdminBrandsPage: React.FC = () => {
       setEditing(null);
       resetForm();
       load();
-    } catch {
-      push("Failed to update brand", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -89,13 +92,14 @@ export const AdminBrandsPage: React.FC = () => {
   const onDelete = async (id: string) => {
     const confirmed = window.confirm("Are you sure you want to delete this brand? This may affect products using this brand.");
     if (!confirmed) return;
+    if (submitting) return;
     setSubmitting(true);
     try {
       await api.delete(`/brands/${id}`);
       push("Brand deleted", "success");
       load();
-    } catch {
-      push("Failed to delete brand", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }

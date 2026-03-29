@@ -1,6 +1,7 @@
 import React from "react";
 import { Plus, Search, Truck, Pencil, Trash2, X, ImageIcon, Loader2 } from "lucide-react";
 import api from "../../lib/api";
+import { getApiErrorMessage } from "../../lib/api";
 import { Modal } from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -43,19 +44,20 @@ export const AdminModelsPage: React.FC = () => {
         api.get<Model[]>("/models"),
         api.get<Brand[]>("/brands")
       ]);
-      const modelsData = Array.isArray(modelsRes.data) ? modelsRes.data : (modelsRes.data?.data || []);
-      const brandsData = Array.isArray(brandsRes.data) ? brandsRes.data : (brandsRes.data?.data || []);
+      const modelsData = Array.isArray(modelsRes.data) ? modelsRes.data : [];
+      const brandsData = Array.isArray(brandsRes.data) ? brandsRes.data : [];
       setItems(modelsData);
       setBrands(brandsData);
       setLastUpdated(new Date());
     } catch (err) {
       console.error("Failed to load models:", err);
+      push(getApiErrorMessage(err), "error");
       setItems([]);
       setBrands([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [push]);
 
   React.useEffect(() => {
     load();
@@ -75,6 +77,7 @@ export const AdminModelsPage: React.FC = () => {
       push("Please select a brand", "error");
       return;
     }
+    if (submitting) return;
     setSubmitting(true);
     try {
       await api.post("/models", { 
@@ -88,8 +91,8 @@ export const AdminModelsPage: React.FC = () => {
       resetForm();
       setOpen(false);
       load();
-    } catch {
-      push("Failed to create model", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -111,6 +114,7 @@ export const AdminModelsPage: React.FC = () => {
       push("Please select a brand", "error");
       return;
     }
+    if (submitting) return;
     setSubmitting(true);
     try {
       await api.put(`/models/${editing.id}`, { 
@@ -125,8 +129,8 @@ export const AdminModelsPage: React.FC = () => {
       setEditing(null);
       resetForm();
       load();
-    } catch {
-      push("Failed to update model", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -135,13 +139,14 @@ export const AdminModelsPage: React.FC = () => {
   const onDelete = async (id: string) => {
     const confirmed = window.confirm("Are you sure you want to delete this model? This may affect products using this model.");
     if (!confirmed) return;
+    if (submitting) return;
     setSubmitting(true);
     try {
       await api.delete(`/models/${id}`);
       push("Model deleted", "success");
       load();
-    } catch {
-      push("Failed to delete model", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }

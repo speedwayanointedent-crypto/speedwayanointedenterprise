@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import classNames from "classnames";
 import api from "../../lib/api";
+import { getApiErrorMessage } from "../../lib/api";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -125,9 +126,9 @@ export const AdminUsersPage: React.FC = () => {
     try {
       const res = await api.get<User[]>("/users");
       setUsers(Array.isArray(res.data) ? res.data : []);
-    } catch (err: any) {
+    } catch (err) {
       console.error("[Users] Load failed:", err);
-      push("Failed to load users", "error");
+      push(getApiErrorMessage(err), "error");
       setUsers([]);
     } finally {
       setLoading(false);
@@ -193,14 +194,15 @@ export const AdminUsersPage: React.FC = () => {
 
   const saveRole = async () => {
     if (!editingUser || newRole === editingUser.role) { setEditingUser(null); return; }
+    if (saving) return;
     setSaving(true);
     try {
       await api.patch(`/users/${editingUser.id}/role`, { role: newRole });
       setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, role: newRole } : u));
       push(`Updated ${editingUser.full_name || editingUser.email} to ${newRole}`, "success");
       setEditingUser(null);
-    } catch {
-      push("Failed to update role", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSaving(false);
     }
@@ -223,7 +225,7 @@ export const AdminUsersPage: React.FC = () => {
   };
 
   const bulkUpdateRole = async () => {
-    if (selected.size === 0) return;
+    if (selected.size === 0 || bulkSaving) return;
     setBulkSaving(true);
     const ids = Array.from(selected);
     let success = 0;
@@ -231,7 +233,9 @@ export const AdminUsersPage: React.FC = () => {
       try {
         await api.patch(`/users/${id}/role`, { role: bulkRole });
         success++;
-      } catch { /* skip failed */ }
+      } catch (err) {
+        console.error(`Failed to update user ${id}:`, getApiErrorMessage(err));
+      }
     }
     setUsers(prev => prev.map(u => selected.has(u.id) ? { ...u, role: bulkRole } : u));
     push(`Updated ${success} of ${ids.length} users to ${bulkRole}`, success > 0 ? "success" : "error");

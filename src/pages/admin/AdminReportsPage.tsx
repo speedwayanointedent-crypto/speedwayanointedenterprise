@@ -1,6 +1,7 @@
 ﻿import React from "react";
 import { Calendar, Download } from "lucide-react";
 import api from "../../lib/api";
+import { getApiErrorMessage } from "../../lib/api";
 import { useToast } from "../../components/ui/Toast";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -39,8 +40,8 @@ export const AdminReportsPage: React.FC = () => {
       setResult(res.data);
       setProductBreakdown(productRes.data || []);
       setInsights(insightsRes.data || null);
-    } catch {
-      push("Failed to load report. Check dates and backend.", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     }
   };
 

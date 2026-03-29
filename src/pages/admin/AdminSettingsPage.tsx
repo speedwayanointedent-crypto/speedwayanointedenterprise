@@ -14,6 +14,7 @@ import {
   Globe
 } from "lucide-react";
 import api from "../../lib/api";
+import { getApiErrorMessage } from "../../lib/api";
 import { useToast } from "../../components/ui/Toast";
 
 type SettingsForm = {
@@ -65,9 +66,9 @@ export const AdminSettingsPage: React.FC = () => {
           linkedin_url: res.data?.linkedin_url || "",
           whatsapp_url: res.data?.whatsapp_url || ""
         }));
-      } catch {
+      } catch (err) {
         if (isMounted) {
-          push("Unable to load settings", "error");
+          push(getApiErrorMessage(err), "error");
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -84,6 +85,7 @@ export const AdminSettingsPage: React.FC = () => {
   };
 
   const saveSettings = async () => {
+    if (saving) return;
     setSaving(true);
     try {
       const res = await api.put("/settings", form);
@@ -93,7 +95,7 @@ export const AdminSettingsPage: React.FC = () => {
       }));
       push("Settings saved", "success");
     } catch (err) {
-      push("Failed to save settings", "error");
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSaving(false);
     }
