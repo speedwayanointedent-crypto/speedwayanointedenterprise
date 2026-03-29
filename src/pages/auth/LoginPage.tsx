@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PublicNavbar } from "../../components/layout/PublicNavbar";
 import api from "../../lib/api";
+import { getApiErrorMessage } from "../../lib/api";
 import { useToast } from "../../components/ui/Toast";
 import { Eye, EyeOff, Mail, Lock, Car, Shield, Zap, Award } from "lucide-react";
 import { PublicFooterCTA } from "../../components/layout/PublicFooterCTA";
@@ -17,6 +18,7 @@ export const LoginPage: React.FC = () => {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError("");
     try {
@@ -31,10 +33,7 @@ export const LoginPage: React.FC = () => {
       push("Logged in successfully", "success");
       navigate(role === "admin" ? "/admin" : "/shop");
     } catch (err) {
-      const message =
-        (err as any)?.response?.data?.message ||
-        (err as any)?.response?.data?.error ||
-        "Login failed. Check your credentials and server.";
+      const message = getApiErrorMessage(err);
       setError(message);
       push(message, "error");
     } finally {

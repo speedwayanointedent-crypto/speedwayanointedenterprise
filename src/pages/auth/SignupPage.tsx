@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PublicNavbar } from "../../components/layout/PublicNavbar";
 import api from "../../lib/api";
+import { getApiErrorMessage } from "../../lib/api";
 import { useToast } from "../../components/ui/Toast";
 import { Eye, EyeOff, Mail, Lock, User, Car, Shield, CheckCircle, Users, Gift } from "lucide-react";
 import { PublicFooterCTA } from "../../components/layout/PublicFooterCTA";
@@ -18,6 +19,7 @@ export const SignupPage: React.FC = () => {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError("");
     try {
@@ -29,8 +31,8 @@ export const SignupPage: React.FC = () => {
       window.localStorage.setItem("auth_token", res.data.token);
       push("Account created successfully!", "success");
       navigate("/shop");
-    } catch (err: any) {
-      const message = err?.response?.data?.message || err?.response?.data?.error || "Failed to create account";
+    } catch (err) {
+      const message = getApiErrorMessage(err);
       setError(message);
       push(message, "error");
     } finally {
