@@ -2,6 +2,7 @@ import React from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ShieldCheck, Truck, CheckCircle2, Heart, ShoppingCart, ChevronLeft, ChevronRight, X, Star, Minus, Plus, Package, Video } from "lucide-react";
 import api from "../lib/api";
+import { getApiErrorMessage } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { addToCart } from "../lib/cart";
@@ -57,7 +58,8 @@ export const ProductDetailsPage: React.FC = () => {
         const filtered = all.filter((p: Product) => p.id !== res.data.id).slice(0, 4);
         setRecommended(filtered);
         setReviews(revRes.data || []);
-      } catch {
+      } catch (err) {
+        console.error("Failed to load product:", err);
         setProduct(null);
       } finally {
         setLoading(false);
@@ -80,23 +82,31 @@ export const ProductDetailsPage: React.FC = () => {
   const addToWishlist = async () => {
     if (!product) return;
     if (!isAuthed) { push("Please sign in to save to wishlist", "error"); return; }
+    if (wishlistBusy) return;
     try {
       setWishlistBusy(true);
       await api.post("/wishlist/items", { product_id: product.id });
       push("Added to wishlist", "success");
-    } catch { push("Failed to add to wishlist", "error"); }
-    finally { setWishlistBusy(false); }
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
+    } finally {
+      setWishlistBusy(false);
+    }
   };
 
   const notifyWhenInStock = async () => {
     if (!product) return;
     if (!isAuthed) { push("Please sign in to get alerts", "error"); return; }
+    if (subscribeBusy) return;
     try {
       setSubscribeBusy(true);
       await api.post("/stock-subscriptions", { product_id: product.id });
       push("We'll notify you when it's back", "success");
-    } catch { push("Alert already set", "error"); }
-    finally { setSubscribeBusy(false); }
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
+    } finally {
+      setSubscribeBusy(false);
+    }
   };
 
   const submitReview = async (e: React.FormEvent) => {
@@ -107,7 +117,9 @@ export const ProductDetailsPage: React.FC = () => {
       setReviews(prev => [res.data, ...prev]);
       setReviewForm({ rating: 5, title: "", body: "" });
       push("Thanks for your review!", "success");
-    } catch { push("Failed to submit review", "error"); }
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
+    }
   };
 
   const productImage = product?.model_id ? product.models?.image_url : product?.image_url;

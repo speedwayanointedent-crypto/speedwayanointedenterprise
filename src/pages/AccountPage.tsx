@@ -21,6 +21,7 @@ import {
   Star
 } from "lucide-react";
 import api from "../lib/api";
+import { getApiErrorMessage } from "../lib/api";
 import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
 import { Card } from "../components/ui/Card";
@@ -113,12 +114,13 @@ export const AccountPage: React.FC = () => {
       setAddresses(addressRes.data || []);
       setWishlist(wishlistRes.data.items || []);
       setNotifications(notificationsRes.data || []);
-    } catch {
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
       setProfile(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [push]);
 
   useEffect(() => {
     load();
@@ -126,13 +128,14 @@ export const AccountPage: React.FC = () => {
 
   const updateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
     try {
       const res = await api.patch<Profile>("/users/me", profileForm);
       setProfile(res.data);
       push("Profile updated successfully", "success");
-    } catch {
-      push("Failed to update profile", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -140,6 +143,7 @@ export const AccountPage: React.FC = () => {
 
   const addAddress = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
     try {
       const res = await api.post<Address>("/addresses", addressForm);
@@ -157,8 +161,8 @@ export const AccountPage: React.FC = () => {
       });
       setShowAddressForm(false);
       push("Address saved successfully", "success");
-    } catch {
-      push("Failed to save address", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -169,8 +173,8 @@ export const AccountPage: React.FC = () => {
       await api.delete(`/addresses/${id}`);
       setAddresses((prev) => prev.filter((a) => a.id !== id));
       push("Address removed", "success");
-    } catch {
-      push("Failed to remove address", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     }
   };
 
@@ -179,8 +183,8 @@ export const AccountPage: React.FC = () => {
       await api.delete(`/wishlist/items/${id}`);
       setWishlist((prev) => prev.filter((item) => item.id !== id));
       push("Removed from wishlist", "success");
-    } catch {
-      push("Failed to remove item", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     }
   };
 
@@ -193,8 +197,8 @@ export const AccountPage: React.FC = () => {
         prev.map((n) => (ids.includes(n.id) ? { ...n, read_at: new Date().toISOString() } : n))
       );
       push("All notifications marked as read", "success");
-    } catch {
-      push("Failed to mark as read", "error");
+    } catch (err) {
+      push(getApiErrorMessage(err), "error");
     }
   };
 

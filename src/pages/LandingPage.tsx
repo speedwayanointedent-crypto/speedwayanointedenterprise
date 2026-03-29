@@ -13,6 +13,7 @@ import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
 import { AnimatedCounter } from "../components/ui/AnimatedCounter";
 import { useScrollReveal, useScrollRevealBatch } from "../lib/useScrollReveal";
 import api from "../lib/api";
+import { getApiErrorMessage } from "../lib/api";
 
 /* ─── Data ──────────────────────────────────────────────────────── */
 

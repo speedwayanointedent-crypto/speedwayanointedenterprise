@@ -5,6 +5,7 @@ import { PublicNavbar } from "../components/layout/PublicNavbar";
 import { clearCart, getCart, CartItem } from "../lib/cart";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../lib/api";
+import { getApiErrorMessage } from "../lib/api";
 import { PublicFooterCTA } from "../components/layout/PublicFooterCTA";
 
 export const CheckoutPage: React.FC = () => {
@@ -37,7 +38,8 @@ export const CheckoutPage: React.FC = () => {
         setAddresses(list);
         const defaultAddress = list.find((a: any) => a.is_default);
         if (defaultAddress) setAddressId(defaultAddress.id);
-      } catch {
+      } catch (err) {
+        console.error("Failed to load addresses:", err);
         setAddresses([]);
       }
     }
@@ -63,6 +65,7 @@ export const CheckoutPage: React.FC = () => {
       navigate("/login");
       return;
     }
+    if (submitting) return;
 
     try {
       setSubmitting(true);
@@ -88,23 +91,22 @@ export const CheckoutPage: React.FC = () => {
       push("Order placed successfully!", "success");
       navigate("/orders");
     } catch (err) {
-      const message = (err as any)?.response?.data?.error || "Failed to place order.";
-      push(message, "error");
+      push(getApiErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
   };
 
   const applyCoupon = async () => {
-    if (!couponCode) return;
+    if (!couponCode || applyingCoupon) return;
     try {
       setApplyingCoupon(true);
       const res = await api.post<{ discount: number }>("/coupons/validate", { code: couponCode, total: subtotal });
       setDiscount(res.data.discount || 0);
       push("Coupon applied!", "success");
-    } catch {
+    } catch (err) {
       setDiscount(0);
-      push("Invalid coupon code", "error");
+      push(getApiErrorMessage(err), "error");
     } finally {
       setApplyingCoupon(false);
     }
