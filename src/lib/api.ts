@@ -3,7 +3,7 @@ import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } f
 // ─── Configuration ──────────────────────────────────────────────────────────
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
-const DEFAULT_TIMEOUT = 15000; // 15 seconds
+const DEFAULT_TIMEOUT = 60000; // 60 seconds (Render cold start can take 30-60s)
 const UPLOAD_TIMEOUT = 120000; // 2 minutes for uploads
 const MAX_RETRIES = 3;
 const BASE_DELAY = 500; // 500ms initial retry delay
