@@ -127,28 +127,37 @@ export const AdminProductsPage: React.FC = () => {
     }
   }, [push]);
 
+  const warmupRender = useCallback(async () => {
+    try {
+      await api.get("/health", { timeout: 60000, skipRetry: true } as any);
+    } catch {
+      // Render cold start - ignore, subsequent requests will work
+    }
+  }, []);
+
   const load = useCallback(async () => {
     try {
-      const [catRes, brandRes, modelRes, yearRes] = await Promise.all([
+      const results = await Promise.allSettled([
         api.get<Option[]>("/categories"),
         api.get<Option[]>("/brands"),
         api.get<Option[]>("/models"),
         api.get<Option[]>("/years")
       ]);
-      setCategories(catRes.data || []);
-      setBrands(brandRes.data || []);
-      setModels(modelRes.data || []);
-      setYears(yearRes.data || []);
+      if (results[0].status === "fulfilled") setCategories(results[0].value.data || []);
+      if (results[1].status === "fulfilled") setBrands(results[1].value.data || []);
+      if (results[2].status === "fulfilled") setModels(results[2].value.data || []);
+      if (results[3].status === "fulfilled") setYears(results[3].value.data || []);
     } catch (err) {
       console.error("Failed to load options:", err);
-      push(getApiErrorMessage(err), "error");
     }
-  }, [push]);
+  }, []);
 
   useEffect(() => {
-    loadProducts();
-    load();
-  }, [loadProducts, load]);
+    warmupRender().then(() => {
+      loadProducts();
+      load();
+    });
+  }, [loadProducts, load, warmupRender]);
 
   useEffect(() => {
     setPage(1);
