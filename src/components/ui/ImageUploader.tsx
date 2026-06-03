@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { Upload, X, Loader2, ImageIcon } from "lucide-react";
-import api, { UPLOAD_TIMEOUT } from "../../lib/api";
+import api, { UPLOAD_TIMEOUT, type ApiRequestConfig } from "../../lib/api";
 import { getApiErrorMessage } from "../../lib/api";
 
 interface ImageUploaderProps {
@@ -56,7 +56,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       const res = await api.post(endpoint, formData, { 
         timeout: UPLOAD_TIMEOUT,
         skipRetry: true 
-      });
+      } as ApiRequestConfig);
       if (res.data?.url) {
         onChange(res.data.url);
       } else {
